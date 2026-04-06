@@ -111,15 +111,16 @@
         setTimeout(function() {
           loadingScreen.style.display = 'none';
 
-          // ── Route to 3D camp when init succeeded OR when returning from sandbox ──
-          // On a clean boot with init errors we fall back to the main menu so the
-          // player can retry; but if they were already playing (returnFromSandbox) we
-          // try the camp regardless because camp-world.js runs independently.
+          // ── ENGINE 2.0: ALWAYS route to 3D camp, bypass main menu ──
+          // The main menu is now permanently hidden. index.html is the 3D Camp Hub.
+          // On init success OR returning from sandbox, boot directly into the camp.
+          // Only fall back to main menu if init failed AND not returning from sandbox.
           if (typeof window.updateCampScreen === 'function' && (initOk || returnFromSandbox)) {
-            console.log('[Loading] Routing to 3D camp screen' + (returnFromSandbox ? ' (return from sandbox)' : ''));
+            console.log('[Loading] Routing to 3D camp screen' + (returnFromSandbox ? ' (return from sandbox)' : ' (auto-boot)'));
             var campScreen = document.getElementById('camp-screen');
             var mainMenuEl = document.getElementById('main-menu');
             var campInitOk = false;
+            // Keep main menu permanently hidden
             if (mainMenuEl) mainMenuEl.style.display = 'none';
             if (campScreen) {
               campScreen.classList.remove('camp-subsection-active');
@@ -130,11 +131,14 @@
               campInitOk = true;
             } catch (e) {
               console.error('[Loading] updateCampScreen error:', e);
-              if (campScreen) {
-                campScreen.style.display = 'none';
-                campScreen.classList.remove('camp-subsection-active');
+              // On camp init error, only show main menu if this is a clean boot (not returning from sandbox)
+              if (!returnFromSandbox) {
+                if (campScreen) {
+                  campScreen.style.display = 'none';
+                  campScreen.classList.remove('camp-subsection-active');
+                }
+                if (mainMenuEl) mainMenuEl.style.display = 'flex';
               }
-              if (mainMenuEl) mainMenuEl.style.display = 'flex';
             }
             if (campInitOk) {
               return;
@@ -142,7 +146,7 @@
           }
 
           // If init failed (and this is not a sandbox return), fall back to main menu
-          if (!initOk) {
+          if (!initOk && !returnFromSandbox) {
             var mainMenu = document.getElementById('main-menu');
             if (mainMenu) mainMenu.style.display = 'flex';
             var buttons = mainMenu ? mainMenu.querySelectorAll('.menu-btn') : [];
@@ -164,9 +168,33 @@
             return;
           }
 
-          // Final fallback: show main menu
-          var mainMenu = document.getElementById('main-menu');
-          if (mainMenu) mainMenu.style.display = 'flex';
+          // If returning from sandbox but camp init failed, try again (don't show main menu)
+          if (returnFromSandbox) {
+            console.log('[Loading] Returning from sandbox but camp init failed - attempting camp boot anyway');
+            var campScreen = document.getElementById('camp-screen');
+            if (campScreen) {
+              campScreen.style.display = 'flex';
+              campScreen.classList.remove('camp-subsection-active');
+            }
+            return;
+          }
+
+          // Final fallback: bypass main menu and show camp directly (ENGINE 2.0)
+          console.log('[Loading] Final fallback: auto-booting to 3D camp');
+          var mainMenuEl = document.getElementById('main-menu');
+          if (mainMenuEl) mainMenuEl.style.display = 'none';
+          var campScreen = document.getElementById('camp-screen');
+          if (campScreen) {
+            campScreen.style.display = 'flex';
+            campScreen.classList.remove('camp-subsection-active');
+          }
+          if (typeof window.updateCampScreen === 'function') {
+            try {
+              window.updateCampScreen();
+            } catch (e) {
+              console.error('[Loading] Final fallback updateCampScreen error:', e);
+            }
+          }
         }, 500);
       }
     })();

@@ -70,14 +70,11 @@
     if (goToCampBtn) {
       goToCampBtn.addEventListener('click', function() {
         closeSettings();
-        // Navigate to camp if CampWorld is available
-        if (window.updateCampScreen && typeof window.updateCampScreen === 'function') {
-          window.updateCampScreen();
-        } else if (window.CampWorld && window.CampWorld.enter && typeof window.CampWorld.enter === 'function') {
-          window.CampWorld.enter();
-        } else {
-          console.warn('[SettingsUI] Camp navigation functions not available');
-        }
+        // ENGINE 2.0: Redirect to index.html (3D Camp Hub)
+        try {
+          localStorage.setItem('wds_fromSandbox', '1');
+        } catch (e) { /* ignore */ }
+        window.location.href = 'index.html';
       });
     }
 
