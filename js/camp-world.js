@@ -5495,7 +5495,7 @@
     badge.style.cssText = [
       'width:18px', 'height:18px', 'border-radius:50%',
       'background:radial-gradient(circle, #cc0000, #880000)',
-      'border:1.5px solid #ff4444',
+      'border:2px solid #ff4444',
       'color:#fff', 'font-weight:bold', 'font-size:11px',
       'display:none', 'align-items:center', 'justify-content:center',
       'animation:camp-badge-pulse 1s ease-in-out infinite alternate',
@@ -5804,7 +5804,7 @@
 
     // Find best answer
     let answer = '> ...query unrecognised. Ask about lore, resources, skills, or gameplay.';
-    for (var i = 0; i < _WATERBOT_FAQ.length; i++) {
+    for (let i = 0; i < _WATERBOT_FAQ.length; i++) {
       if (query.indexOf(_WATERBOT_FAQ[i].q) !== -1) {
         answer = _WATERBOT_FAQ[i].a;
         break;

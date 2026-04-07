@@ -359,7 +359,7 @@
             </pattern>
           </defs>
         </svg>
-        <div style="color:#00ffff;font-family:'Courier New',monospace;font-size:10px;letter-spacing:2px;margin-top:4px;opacity:0.7;text-transform:uppercase;">A.I.D.A</div>
+        <div style="color:#00ffff;font-family:'Courier New',monospace;font-size:10px;letter-spacing:2px;margin-top:4px;opacity:0.7;text-transform:uppercase;">A.I.D.A.</div>
       `;
 
       // ── Text content area (right side) ──

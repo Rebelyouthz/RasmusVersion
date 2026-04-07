@@ -5306,7 +5306,8 @@
           // After animation frame, settle to loaded
           if (chambers[i]._reloadDone !== _reloadAnimFrame) {
             chambers[i]._reloadDone = _reloadAnimFrame;
-            setTimeout((el => () => { if (el.className === 'revolver-chamber reloading') el.className = 'revolver-chamber loaded'; })(chambers[i]), 180);
+            const chamber = chambers[i];
+            setTimeout(() => { if (chamber.className === 'revolver-chamber reloading') chamber.className = 'revolver-chamber loaded'; }, 180);
           }
         } else {
           chambers[i].className = 'revolver-chamber empty';
