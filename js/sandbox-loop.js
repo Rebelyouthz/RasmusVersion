@@ -5573,10 +5573,10 @@
   // Called once at boot (from saved preference) and dynamically when user changes.
   const QUALITY_DESCS = {
     ultralow: 'Shadows OFF · Pixel ratio 0.5× · No tone mapping · No post-FX — best for budget phones',
-    low:      'Shadows OFF · Pixel ratio 1× · Linear tone mapping · No post-FX — good for S10/mid-range',
+    low:      'Shadows OFF · Pixel ratio 0.75× (mobile) / 1× (desktop) · Linear tone mapping · No post-FX — good for S10/mid-range',
     medium:   'Shadows ON  · Pixel ratio 1× · Linear tone mapping · Bloom — balanced (default)',
-    high:     'Shadows ON (PCF) · Pixel ratio ≤1.5× · Filmic tone mapping · Bloom + Motion Blur — modern phones',
-    ultra:    'Shadows ON (PCFSoft) · Native pixel ratio · Filmic tone mapping · Bloom + Motion Blur — iPhone 16 / PC',
+    high:     'Shadows ON (PCF) · Pixel ratio 1.5× (mobile) / ≤2× (desktop) · Filmic tone mapping · Bloom + Motion Blur — modern phones',
+    ultra:    'Shadows ON (PCFSoft) · Pixel ratio 1.5× (mobile) / ≤2× (desktop) · Filmic tone mapping · Bloom + Motion Blur — iPhone 16 / PC',
   };
   const DEFAULT_QUALITY = 'ultra';
 
@@ -5700,7 +5700,7 @@
         renderer.toneMappingExposure = 1.0;
         break;
       case 'medium':
-        renderer.setPixelRatio(_isMobile ? 1.0 : 1.0);
+        renderer.setPixelRatio(1.0);
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.BasicShadowMap;
         renderer.toneMapping = THREE.LinearToneMapping;

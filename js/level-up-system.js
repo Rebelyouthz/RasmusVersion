@@ -288,13 +288,6 @@ function showRelicLootScreen(goldBonus) {
       holdT = setTimeout(() => {
         holdT = null;
         try { relic.apply(); } catch(e) { console.error('[Relic]', e); }
-        // PERF FIX: Clean up event listeners before removing overlay to prevent memory leaks
-        picks.forEach((r, i) => {
-          const c = row.children[i];
-          if (c) {
-            c.replaceWith(c.cloneNode(true)); // Remove all event listeners by replacing with clone
-          }
-        });
         overlay.remove();
         if (typeof forceGameUnpause === 'function') forceGameUnpause();
         if (typeof addGold === 'function') addGold(goldBonus);

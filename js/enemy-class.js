@@ -4180,7 +4180,6 @@
               dyingMesh.scale.multiplyScalar(0.97);
             } else if (fallFrame <= FALL_FRAMES + LINGER_FRAMES + EXPLODE_FRAMES + FADE_FRAMES) {
               // Phase 4: Continue sinking and shrinking to zero
-              const fadeProgress = (fallFrame - FALL_FRAMES - LINGER_FRAMES - EXPLODE_FRAMES) / FADE_FRAMES;
               dyingMesh.position.y -= 0.025;
               dyingMesh.scale.multiplyScalar(0.92);
             } else {
