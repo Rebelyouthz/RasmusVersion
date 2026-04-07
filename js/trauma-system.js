@@ -21,6 +21,9 @@
   const HEARTBEAT_INTERVAL = 400;        // Blood pump interval (ms)
   const CORPSE_FADE_DURATION_S = 1.0;    // Seconds for blood-pool fade-out after pumping ends
   const GRAVITY = -0.025;                // Physics gravity for chunks
+  // Named constants for arterial pump helper
+  const ARTERIAL_PUMP_WEAPON_TYPE = 'pistol';  // Weapon profile to use for fake arterial hit via BloodV2
+  const ARTERIAL_PUMP_Y_OFFSET    = 0.1;       // Vertical offset above wound origin for pump spawn point
 
   // ─── Internal State ─────────────────────────────────────────────────────────
   let _scene = null;
@@ -648,11 +651,11 @@
 
   function spawnSmear(startPos, endPos, color, count) {
     if (!startPos || !endPos) return;
-    var n = count || 10;
+    var smearChunkCount = count || 10;
     var dx = endPos.x - startPos.x;
     var dz = endPos.z - startPos.z;
-    for (var i = 0; i < n; i++) {
-      var t = i / Math.max(n - 1, 1);
+    for (var i = 0; i < smearChunkCount; i++) {
+      var t = i / Math.max(smearChunkCount - 1, 1);
       var idx = _fleshHead % MAX_FLESH_CHUNKS;
       _fleshHead++;
       _fleshPX[idx] = startPos.x + dx * t + (Math.random() - 0.5) * 0.08;
@@ -684,12 +687,12 @@
       var fakeEnemy = {
         alive: true,
         enemyType: 'default',
-        id: 'pump_' + (++_arterialPumpIdCounter),
+        id: 'ts_pump_' + (++_arterialPumpIdCounter),  // 'ts_pump_' namespace avoids collision with real enemy IDs
         hp: 1, maxHp: 1,
         mesh: { position: { x: position.x, y: position.y, z: position.z }, scale: { y: 1 } }
       };
-      window.BloodV2.hit(fakeEnemy, 'pistol',
-        { x: position.x, y: position.y + 0.1, z: position.z },
+      window.BloodV2.hit(fakeEnemy, ARTERIAL_PUMP_WEAPON_TYPE,
+        { x: position.x, y: position.y + ARTERIAL_PUMP_Y_OFFSET, z: position.z },
         { x: dirX, y: dirY, z: dirZ });
     }
     spawnGuts(position, 3, { x: dirX * 0.15, y: Math.abs(dirY) * 0.2 + 0.15, z: dirZ * 0.15 });

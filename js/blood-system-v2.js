@@ -1198,7 +1198,7 @@ var ey = s.enemy.mesh ? s.enemy.mesh.position.y : 0;
 var ez = s.enemy.mesh ? s.enemy.mesh.position.z : 0;
 var wx = ex + s.lx, wy = ey + s.ly, wz = ez + s.lz;
 
-s.phase = (s.phase || 0) + CFG.ARTERIAL_PHASE_INCREMENT;
+s.phase = ((s.phase || 0) + CFG.ARTERIAL_PHASE_INCREMENT) % (Math.PI * 2);
 var sineBoost = 1.0 + Math.sin(s.phase) * 0.55;
 var spd   = (3.5 + s.pressure * 9.5) * sineBoost;
 var count = Math.max(1, Math.ceil(s.pressure * 6 * (0.5 + 0.5 * Math.abs(Math.sin(s.phase)))));
@@ -1303,16 +1303,19 @@ var spd  = sMin + Math.random() * (sMax - sMin);
 d.alive  = true;
 d.px = hx; d.py = hy; d.pz = hz;
 if (i < coneCount) {
+// Per-particle angle for accurate V-cone distribution (cos/sin intentional per drop)
 var angle = (i / coneCount) * Math.PI * 2;
 var cosA = Math.cos(angle), sinA = Math.sin(angle);
 d.vx = nx * spd * cosCone + (tx * cosA + bx * sinA) * spd * sinCone;
 d.vy = ny * spd * cosCone + (ty * cosA + by * sinA) * spd * sinCone + gravBias;
 d.vz = nz * spd * cosCone + (tz * cosA + bz * sinA) * spd * sinCone;
 } else {
+// Wider scatter (8× vs 6×) for mist-edge drops outside the cone
 var sctr = wp.woundR * 5;
-d.vx = nx * spd + (Math.random()-0.5) * sctr * 8;
-d.vy = ny * spd + Math.random() * 1.2 + gravBias;
-d.vz = nz * spd + (Math.random()-0.5) * sctr * 8;
+var SCATTER_MULT = 8, VERTICAL_BOOST = 1.2; // wider edge scatter + slight upward jitter
+d.vx = nx * spd + (Math.random()-0.5) * sctr * SCATTER_MULT;
+d.vy = ny * spd + Math.random() * VERTICAL_BOOST + gravBias;
+d.vz = nz * spd + (Math.random()-0.5) * sctr * SCATTER_MULT;
 }
 d.r         = 0.006 + Math.random()*0.009;
 d.maxLife   = 2.5 + Math.random()*1.5;

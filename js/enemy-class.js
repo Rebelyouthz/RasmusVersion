@@ -3233,7 +3233,8 @@
               if (this.mesh) {
                 var _px = hitPoint.x - this.mesh.position.x;
                 var _pz = hitPoint.z - this.mesh.position.z;
-                var _pl = Math.sqrt(_px*_px + _pz*_pz) + 0.001;
+                var EPSILON_DISTANCE = 0.001; // avoid division-by-zero when hit is exactly at enemy center
+                var _pl = Math.sqrt(_px*_px + _pz*_pz) + EPSILON_DISTANCE;
                 _blastDir.x = _px/_pl; _blastDir.z = _pz/_pl;
               }
               window.TraumaSystem.shotgunBlast(hitPoint, _blastDir, _eColor);
