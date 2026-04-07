@@ -5539,6 +5539,19 @@
   }
 
   // ──────────────────────────────────────────────────────────
+  // Mobile error overlay helper
+  // ──────────────────────────────────────────────────────────
+  function _showMobileError(err, context) {
+    const div = document.createElement('div');
+    div.style.cssText = 'position:fixed;top:10%;left:5%;width:90%;background:rgba(200,0,0,0.9);color:white;z-index:999999;padding:20px;border:3px solid yellow;font-family:monospace;border-radius:10px;overflow:auto;max-height:80vh;';
+    div.innerHTML = `<h3>🚨 CRASH IN ${context} 🚨</h3>
+                     <b>Message:</b> ${err.message}<br><br>
+                     <b>Stack:</b><br><pre style="white-space:pre-wrap;font-size:10px;">${err.stack}</pre>
+                     <br><br><button onclick="this.parentNode.remove()" style="padding:10px;background:black;color:white;border:1px solid white;">Close (Screenshot this first!)</button>`;
+    document.body.appendChild(div);
+  }
+
+  // ──────────────────────────────────────────────────────────
   // Public API
   // ──────────────────────────────────────────────────────────
 
@@ -5560,7 +5573,8 @@
       _buildScene();
       console.log('[CampWorld] Scene pre-warmed successfully');
     } catch (e) {
-      console.warn('[CampWorld] Pre-warm failed:', e);
+      console.error('[CampWorld]', '_buildScene() in warmUp', 'failed:', e);
+      _showMobileError(e, '_buildScene() in warmUp');
       _campScene = null;
     }
     _isBuilding = false;
@@ -5601,7 +5615,8 @@
       try {
         _buildScene();
       } catch (e) {
-        console.error('[CampWorld] _buildScene() failed — will retry on next enter():', e);
+        console.error('[CampWorld]', '_buildScene() in enter', 'failed:', e);
+        _showMobileError(e, '_buildScene() in enter');
         _campScene = null; // ensure a full rebuild is attempted next time
         _isBuilding = false;
         return;
