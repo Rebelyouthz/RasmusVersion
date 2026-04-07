@@ -35,6 +35,18 @@
           console.error('[Loading] Loading elements not found');
           return;
         }
+
+        // Fast-boot path: when returning from a sandbox run skip the fake progress
+        // animation and poll for gameModuleReady immediately so camp appears faster.
+        var quickBoot = false;
+        try { quickBoot = !!localStorage.getItem('wds_fromSandbox'); } catch (e) {}
+        if (quickBoot) {
+          console.log('[Loading] wds_fromSandbox detected — skipping loading animation, fast-booting camp');
+          loadingBar.style.width = '100%';
+          window.loadingComplete = true;
+          waitForModuleReady();
+          return;
+        }
         
         let progress = 0;
         let progressInterval;
@@ -106,58 +118,63 @@
           'gameModuleReady:', window.gameModuleReady,
           'initError:', !!window.gameInitError, 'returnFromSandbox:', returnFromSandbox);
 
-        // Fade out loading screen
-        loadingScreen.classList.add('fade-out');
+        // ── FORCE CAMP BOOT: show camp screen WHILE loading screen is still fully opaque ──
+        // This prevents any flash of the raw THREE.js scene or 2D building cards.
+        var campScreen = document.getElementById('camp-screen');
+        var mainMenuEl = document.getElementById('main-menu');
 
-        setTimeout(function() {
-          loadingScreen.style.display = 'none';
+        // Force hide main menu permanently
+        if (mainMenuEl) mainMenuEl.style.display = 'none';
 
-          // ── FORCE CAMP BOOT: ALWAYS route to 3D camp, completely bypass main menu ──
-          // The main menu is permanently disabled. index.html boots directly to 3D CampWorld.
-          console.log('[Loading] FORCE BOOT: Launching 3D camp screen' + (returnFromSandbox ? ' (return from sandbox)' : ' (auto-boot)'));
-          var campScreen = document.getElementById('camp-screen');
-          var mainMenuEl = document.getElementById('main-menu');
+        // Show camp screen (still hidden behind the opaque loading screen)
+        if (campScreen) {
+          campScreen.classList.remove('camp-subsection-active');
+          campScreen.style.display = 'flex';
+        }
 
-          // Force hide main menu permanently
-          if (mainMenuEl) mainMenuEl.style.display = 'none';
+        // Helper: fade out the loading screen after CampWorld has rendered its first frame
+        function fadeLoadingScreen() {
+          loadingScreen.classList.add('fade-out');
+          setTimeout(function() { loadingScreen.style.display = 'none'; }, 500);
+        }
 
-          // Show camp screen
-          if (campScreen) {
-            campScreen.classList.remove('camp-subsection-active');
-            campScreen.style.display = 'flex';
+        // Helper: call updateCampScreen, then wait 2 rAFs so CampWorld renders before revealing
+        function bootCamp() {
+          try {
+            window.updateCampScreen();
+            console.log('[Loading] CampWorld initialized successfully');
+          } catch (e) {
+            console.error('[Loading] updateCampScreen error:', e);
+            console.log('[Loading] Continuing with camp display despite error - CampWorld may self-initialize');
           }
+          // Wait two animation frames: the first lets CampWorld.enter() dispatch its
+          // render call; the second ensures the GPU has actually drawn a frame before
+          // we remove the loading screen overlay.
+          requestAnimationFrame(function() {
+            requestAnimationFrame(fadeLoadingScreen);
+          });
+        }
 
-          // Initialize camp - attempt even if init wasn't perfect
-          if (typeof window.updateCampScreen === 'function') {
-            try {
-              window.updateCampScreen();
-              console.log('[Loading] CampWorld initialized successfully');
-            } catch (e) {
-              console.error('[Loading] updateCampScreen error:', e);
-              console.log('[Loading] Continuing with camp display despite error - CampWorld may self-initialize');
-              // DO NOT fall back to main menu - keep camp visible
+        // Initialize camp - attempt even if init wasn't perfect
+        if (typeof window.updateCampScreen === 'function') {
+          bootCamp();
+        } else {
+          console.warn('[Loading] updateCampScreen not yet available - polling until ready (max 10s)');
+          // Poll for updateCampScreen to become available (100 × 100ms = 10s max)
+          var pollAttempts = 0;
+          var maxPollAttempts = 100;
+          var campPollInterval = setInterval(function() {
+            pollAttempts++;
+            if (typeof window.updateCampScreen === 'function') {
+              clearInterval(campPollInterval);
+              console.log('[Loading] updateCampScreen available after ' + pollAttempts + ' polls — initializing camp');
+              bootCamp();
+            } else if (pollAttempts >= maxPollAttempts) {
+              clearInterval(campPollInterval);
+              console.warn('[Loading] updateCampScreen never became available after 10s — fading anyway');
+              fadeLoadingScreen();
             }
-          } else {
-            console.warn('[Loading] updateCampScreen not yet available - polling until ready (max 10s)');
-            // Poll for updateCampScreen to become available (100 × 100ms = 10s max)
-            var pollAttempts = 0;
-            var maxPollAttempts = 100;
-            var campPollInterval = setInterval(function() {
-              pollAttempts++;
-              if (typeof window.updateCampScreen === 'function') {
-                clearInterval(campPollInterval);
-                console.log('[Loading] updateCampScreen available after ' + pollAttempts + ' polls — initializing camp');
-                try {
-                  window.updateCampScreen();
-                } catch (pollErr) {
-                  console.error('[Loading] updateCampScreen (delayed) error:', pollErr);
-                }
-              } else if (pollAttempts >= maxPollAttempts) {
-                clearInterval(campPollInterval);
-                console.warn('[Loading] updateCampScreen never became available after 10s — camp may not initialize');
-              }
-            }, 100);
-          }
-        }, 500);
+          }, 100);
+        }
       }
     })();

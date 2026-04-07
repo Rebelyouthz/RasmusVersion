@@ -4774,11 +4774,14 @@
       document.getElementById('main-menu').style.display = 'none';
       document.getElementById('gameover-screen').style.display = 'none';
 
-      // Toggle 3D mode class only when the 3D camp is actually available,
-      // so the 2D fallback UI remains usable if CampWorld or renderer is missing.
+      // Always force 3D mode — index.html is a pure 3D Camp Hub.
+      // The 2D building cards must never be visible; CSS hides them when camp-3d-mode is set.
       const _campScreenEl = document.getElementById('camp-screen');
       const canUse3DCamp = !!(window.CampWorld && renderer);
-      if (_campScreenEl) _campScreenEl.classList.toggle('camp-3d-mode', canUse3DCamp);
+      if (_campScreenEl) _campScreenEl.classList.add('camp-3d-mode');
+      // Belt-and-suspenders: also hide the buildings section directly
+      const _campBuildingsEl = document.getElementById('camp-buildings-section');
+      if (_campBuildingsEl) _campBuildingsEl.style.display = 'none';
 
       // First-run tutorial hook: fire after current call stack (by then camp-screen is visible)
       // Update action button label based on game state
