@@ -3171,6 +3171,38 @@
     chunk.mesh.material.opacity = 1;
   }
 
+  // Shared geometry for skin-flap meshes spawned by shockwave skin-rip zones.
+  // Created lazily once on first shockwave, reused for all subsequent skin flaps.
+  let _skinFlapGeo = null;
+
+  // Spawns 2-4 skin-flap PlaneGeometry meshes as children of enemy.mesh.
+  // origColor is the hex color of the skin flap (typically e._originalColor).
+  // All errors are silently suppressed — this is a visual-only effect.
+  function _spawnSkinFlaps(enemy, origColor) {
+    if (!enemy || !enemy.mesh) return;
+    try {
+      if (!_skinFlapGeo) _skinFlapGeo = new THREE.PlaneGeometry(0.06, 0.06);
+      const flapCount = 2 + Math.floor(Math.random() * 3);
+      for (let fi = 0; fi < flapCount; fi++) {
+        const flapMat = new THREE.MeshBasicMaterial({
+          color: origColor, side: THREE.DoubleSide, transparent: true, opacity: 0.85
+        });
+        const flap = new THREE.Mesh(_skinFlapGeo, flapMat);
+        flap.position.set(
+          (Math.random() - 0.5) * 0.3,
+          (Math.random() - 0.5) * 0.3,
+          0.08 + Math.random() * 0.07
+        );
+        flap.rotation.set(
+          (Math.random() - 0.5) * 0.4,
+          (Math.random() - 0.5) * 0.4,
+          Math.random() * Math.PI * 2
+        );
+        enemy.mesh.add(flap);
+      }
+    } catch(e2) { /* visual-only — suppress to prevent game disruption */ }
+  }
+
   // Spawn flying flesh chunks using pre-allocated pool (no new THREE.Mesh during gameplay)
   // color parameter can be either a single hex color or an array of colors to choose from
   // forceOpts (optional 5th param): { dirX, dirZ, power, spread } — applies a strong
@@ -4009,29 +4041,8 @@
             e.isSkinned = true;
             try {
               if (e.mesh && e.mesh.material) e.mesh.material.color.setHex(0x6B1010);
-            } catch(e2) {}
-            try {
-              const origColor = e._originalColor ? e._originalColor.getHex() : 0x44AA44;
-              const flapCount = 2 + Math.floor(Math.random() * 3);
-              for (let fi = 0; fi < flapCount; fi++) {
-                const flapGeo = new THREE.PlaneGeometry(0.06, 0.06);
-                const flapMat = new THREE.MeshBasicMaterial({
-                  color: origColor, side: THREE.DoubleSide, transparent: true, opacity: 0.85
-                });
-                const flap = new THREE.Mesh(flapGeo, flapMat);
-                flap.position.set(
-                  (Math.random() - 0.5) * 0.3,
-                  (Math.random() - 0.5) * 0.3,
-                  0.08 + Math.random() * 0.07
-                );
-                flap.rotation.set(
-                  (Math.random() - 0.5) * 0.4,
-                  (Math.random() - 0.5) * 0.4,
-                  Math.random() * Math.PI * 2
-                );
-                e.mesh.add(flap);
-              }
-            } catch(e2) {}
+            } catch(e2) { /* visual-only */ }
+            _spawnSkinFlaps(e, e._originalColor ? e._originalColor.getHex() : 0x44AA44);
           } else {
             // ── ZONE 3: 2-5m — half HP, ~1/3 skin ripped ──
             e.hp = Math.max(1, Math.floor((e.hp || _gunDmg * 2) * 0.5));
@@ -4059,29 +4070,8 @@
             e.isSkinned = true;
             try {
               if (e.mesh && e.mesh.material) e.mesh.material.color.setHex(0x8B2020);
-            } catch(e2) {}
-            try {
-              const origColor = e._originalColor ? e._originalColor.getHex() : 0x44AA44;
-              const flapCount = 2 + Math.floor(Math.random() * 3);
-              for (let fi = 0; fi < flapCount; fi++) {
-                const flapGeo = new THREE.PlaneGeometry(0.06, 0.06);
-                const flapMat = new THREE.MeshBasicMaterial({
-                  color: origColor, side: THREE.DoubleSide, transparent: true, opacity: 0.85
-                });
-                const flap = new THREE.Mesh(flapGeo, flapMat);
-                flap.position.set(
-                  (Math.random() - 0.5) * 0.3,
-                  (Math.random() - 0.5) * 0.3,
-                  0.08 + Math.random() * 0.07
-                );
-                flap.rotation.set(
-                  (Math.random() - 0.5) * 0.4,
-                  (Math.random() - 0.5) * 0.4,
-                  Math.random() * Math.PI * 2
-                );
-                e.mesh.add(flap);
-              }
-            } catch(e2) {}
+            } catch(e2) { /* visual-only */ }
+            _spawnSkinFlaps(e, e._originalColor ? e._originalColor.getHex() : 0x44AA44);
           }
         }
 
