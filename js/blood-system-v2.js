@@ -54,7 +54,7 @@
 // ══════════════════════════════════════════
 var CFG = {
 DROP_COUNT:       80,    // blood drop instances (reduced from 500 to cap at 120 total)
-MIST_COUNT:       40,    // fine mist instances  (reduced from 250 to cap at 120 total)
+MIST_COUNT:       64,    // fine mist instances  (increased from 40 to 64 to accommodate mist-cloud puffs)
 CHUNK_COUNT:      40,    // flesh/slime chunks   (pooled Mesh)
 DECAL_COUNT:      200,   // ground blood decals  (pooled Mesh)
 WOUND_PER_ENEMY:  8,     // max wounds on one enemy body
@@ -70,6 +70,12 @@ BLOOD_SPRAY_CONE_HALF_ANGLE: 0.61, // ~35 degrees — aperture of bullet exit V-
 BLOOD_SPRAY_GRAVITY_MULTIPLIER: -2.0, // downward arc bias for exit spray drops
 // Arterial pumping constants
 ARTERIAL_PHASE_INCREMENT: 0.45, // phase step per pump tick for sine-wave pulsation
+// Blood mist cloud constants
+MIST_CLOUD_GRAVITY_FACTOR: 0.04, // fraction of GRAVITY applied to cloud puffs (nearly weightless)
+MIST_CLOUD_DRAG_BOOST:     2.5,  // extra drag multiplier so clouds decelerate into a floating hover
+MIST_CLOUD_EXPAND_SCALE:   0.55, // cloud base-radius is multiplied by this to get per-frame expand rate
+MIST_CLOUD_MAX_COUNT:      10,   // cap cloud puffs per hit for non-explosive weapons
+MIST_CLOUD_MAX_COUNT_EXP:  16,   // cap for explosive weapons
 };
 
 // ══════════════════════════════════════════
@@ -555,6 +561,8 @@ color:    0xcc0000,
 frozen:   false,
 charred:  false,
 isMist:   false,
+isCloud:  false,    // true → billowing mist-cloud puff; uses special update path
+expandRate: 0,      // radius growth per second (only used when isCloud=true)
 };
 }
 
@@ -862,6 +870,17 @@ if (wp.supersonicCavity) _fxSupersonic(hx, hy, hz, wp, col);
 if (wp.shockwave) _fxShockwave(hx, hy, hz, wp, col);
 }
 
+// ── Blood mist cloud puff ──────────────────────────────────────────────────
+// Spawn a billowing cloud of blood vapour at the impact site.
+// Skipped for cauterize / freezing / electric weapons (they have their own visual).
+// Count scales from wp.mistCount (weapon power); radius scales from wp.woundR (wound size).
+if (!wp.cauterizes && !wp.freezesBlood && !wp.electricEffect) {
+var _maxCloud = wp.isExplosive ? CFG.MIST_CLOUD_MAX_COUNT_EXP : CFG.MIST_CLOUD_MAX_COUNT;
+var _cloudN   = Math.min(Math.max(3, Math.floor(wp.mistCount * 0.3)), _maxCloud);
+var _cloudR   = Math.max(0.04, wp.woundR * 1.3);
+_fxMistCloud(hx, hy, hz, col, _cloudN, _cloudR);
+}
+
 // Chunks
 if (Math.random() < wp.chunkChance) {
 var nc = wp.chunkCount[0] + Math.floor(Math.random() * (wp.chunkCount[1] - wp.chunkCount[0] + 1));
@@ -1031,6 +1050,33 @@ d.life -= dt;
 if (d.life <= 0) { _killDrop(d, im); return; }
 
 var misty = isMist || d.isMist;
+
+// ── Blood mist cloud: billowing puff that expands and fades in-air ──
+if (d.isCloud) {
+  // Expand radius over time — cloud puffs billow outward
+  d.r += d.expandRate * dt;
+  // Extremely weak gravity — cloud stays at roughly the same height
+  d.vy += CFG.GRAVITY * dt * CFG.MIST_CLOUD_GRAVITY_FACTOR;
+  // High drag — cloud slows almost immediately into a hovering drift
+  var cSpd2 = d.vx*d.vx + d.vy*d.vy + d.vz*d.vz;
+  var cDrag  = 1.0 - d.viscosity * dt * Math.sqrt(cSpd2) * 0.5 * CFG.MIST_CLOUD_DRAG_BOOST;
+  if (cDrag < 0) cDrag = 0;
+  d.vx *= cDrag; d.vy *= cDrag; d.vz *= cDrag;
+  // Integrate position
+  d.px += d.vx * dt;
+  d.py += d.vy * dt;
+  d.pz += d.vz * dt;
+  // Clamp: cloud puffs float just above the ground surface
+  if (d.py < CFG.GROUND_Y + 0.05) d.py = CFG.GROUND_Y + 0.05;
+  // Fade opacity linearly with remaining life (full at birth → invisible at death)
+  var cFade = d.life / d.maxLife;
+  var cS    = d.r * cFade;
+  _m4.makeScale(cS, cS, cS);
+  _m4.setPosition(d.px, d.py, d.pz);
+  im.setMatrixAt(d.idx, _m4);
+  im.setColorAt(d.idx, _col.setHex(d.color));
+  return;
+}
 
 if (d.onGround) {
   if (misty) {
@@ -1527,6 +1573,48 @@ d.bounces   = 0; d.maxBounces = 0;
 d.onGround  = false;
 d.color     = color || 0xaa0000;
 d.frozen    = false; d.charred = false;
+}
+}
+
+// ══════════════════════════════════════════
+//  BLOOD MIST CLOUD
+//  Spawns a billowing puff-cloud of blood mist at the hit point.
+//  Particles expand radially (radius grows over life), drift slowly outward,
+//  decelerate quickly into a hovering float, and fade with remaining life.
+//  count  — number of puff particles (scaled by weapon power)
+//  baseR  — starting radius of each puff (scaled by wound size)
+// ══════════════════════════════════════════
+function _fxMistCloud(hx, hy, hz, col, count, baseR) {
+var n = count || 6;
+for (var i = 0; i < n; i++) {
+var d = _getFreeDrop(_mistData);
+if (!d) break;
+// Spread origin slightly so the cloud isn't a perfect ball
+var offR = baseR * 0.4;
+d.alive      = true;
+d.isCloud    = true;
+d.isMist     = true;
+d.px = hx + (Math.random()-0.5)*offR;
+d.py = hy + (Math.random()-0.5)*offR;
+d.pz = hz + (Math.random()-0.5)*offR;
+// Slow outward drift — cloud stays roughly at the wound location
+var a   = Math.random() * Math.PI * 2;
+var e   = (Math.random()-0.5) * Math.PI;
+var spd = 0.25 + Math.random() * 0.75;
+d.vx = Math.cos(a) * Math.cos(e) * spd;
+d.vy = Math.abs(Math.sin(e)) * spd * 0.35 + 0.08;  // slight upward
+d.vz = Math.sin(a) * Math.cos(e) * spd;
+// Starting radius: vary each puff so the cloud looks uneven/organic
+d.r          = baseR * (0.45 + Math.random() * 0.55);
+// Each puff expands at a different rate — gives the cloud a billowing feel
+d.expandRate = baseR * CFG.MIST_CLOUD_EXPAND_SCALE * (0.5 + Math.random() * 1.0);
+d.maxLife    = 1.4 + Math.random() * 2.2;
+d.life       = d.maxLife;
+d.viscosity  = 0.88;   // high drag — puffs stop drifting quickly
+d.bounces    = 0; d.maxBounces = 0;
+d.onGround   = false;
+d.color      = col.mist;
+d.frozen     = false; d.charred = false;
 }
 }
 
@@ -2194,6 +2282,28 @@ _burstUpward(ox, oy, oz,
 smearBlood: function(x1, y1, z1, x2, y2, z2, count, color) {
 if (!_ready) return;
 _fxSmear(x1, y1, z1, x2, y2, z2, count || 12, color || 0xaa0000);
+},
+
+// Spawn a blood mist cloud at (ox, oy, oz).
+// opts: { count, baseR, color, enemyType }
+//   count   — number of puff particles (default 6)
+//   baseR   — starting radius of each puff (default 0.06)
+//   color   — hex mist colour; if enemyType is given it overrides this with ENEMY_BLOOD mist colour
+//   enemyType — enemy type key for automatic colour selection
+spawnMistCloud: function(ox, oy, oz, opts) {
+if (!_ready) return;
+var o = opts || {};
+var mistColor = 0xee2200; // default red mist
+if (o.enemyType && ENEMY_BLOOD[o.enemyType]) {
+  mistColor = ENEMY_BLOOD[o.enemyType].mist;
+} else if (o.color !== undefined) {
+  mistColor = o.color;
+}
+var col = { mist: mistColor };
+_fxMistCloud(ox, oy, oz, col,
+  o.count  !== undefined ? o.count  : 6,
+  o.baseR  !== undefined ? o.baseR  : 0.06
+);
 },
 
 };
