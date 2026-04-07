@@ -155,6 +155,7 @@
     _fleshChunkIM.frustumCulled = false;
     _fleshChunkIM.castShadow = false;
     _fleshChunkIM.receiveShadow = false;
+    _fleshChunkIM.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 9999);
     _scene.add(_fleshChunkIM);
 
     // Allocate physics arrays
@@ -200,6 +201,7 @@
     _gutIM.frustumCulled = false;
     _gutIM.castShadow = false;
     _gutIM.receiveShadow = false;
+    _gutIM.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 9999);
     _scene.add(_gutIM);
 
     _gutPX = new Float32Array(MAX_GUT_INSTANCES);
@@ -237,6 +239,7 @@
     _brainIM.frustumCulled = false;
     _brainIM.castShadow = false;
     _brainIM.receiveShadow = false;
+    _brainIM.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 9999);
     _scene.add(_brainIM);
 
     _brainPX = new Float32Array(MAX_BRAIN_INSTANCES);
@@ -274,6 +277,7 @@
     _boneIM.frustumCulled = false;
     _boneIM.castShadow = false;
     _boneIM.receiveShadow = false;
+    _boneIM.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 9999);
     _scene.add(_boneIM);
 
     _bonePX = new Float32Array(MAX_BONE_INSTANCES);
@@ -311,6 +315,7 @@
     _stuckArrowIM.frustumCulled = false;
     _stuckArrowIM.castShadow = false;
     _stuckArrowIM.receiveShadow = false;
+    _stuckArrowIM.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 9999);
     _scene.add(_stuckArrowIM);
 
     _arrowPX = new Float32Array(MAX_STUCK_ARROWS);

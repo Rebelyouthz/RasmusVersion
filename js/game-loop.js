@@ -451,9 +451,11 @@
       const _MAX_DAMAGE_PARTICLES_PER_FRAME = 5;
 
       window.spawnParticles = function(position, color, count) {
-        // Combine FPS-based throttle with quality-preset particle scale
+        // Combine FPS-based throttle with quality-preset particle scale.
+        // Apply an additional 80% base reduction for generic spark/smoke — blood V2
+        // uses its own InstancedMesh path and is the primary visual reference.
         const qualityScale = performanceLog.qualityParticleScale || 1.0;
-        const adjustedCount = Math.ceil(count * performanceLog.particleThrottleScale * qualityScale);
+        const adjustedCount = Math.ceil(count * 0.2 * performanceLog.particleThrottleScale * qualityScale);
         if (adjustedCount <= 0) return;
 
         // Per-frame cap: max 5 particle spawn calls per frame to prevent GC stutter.

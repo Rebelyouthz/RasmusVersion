@@ -5270,19 +5270,74 @@
   function _updateRevolverUI() {
     const ui = document.getElementById('revolver-ui');
     if (!ui) return;
-    const bullets = ui.querySelectorAll('.revolver-bullet');
-    for (var _bi = 0; _bi < bullets.length; _bi++) {
-      var b = bullets[_bi];
-      if (_isReloading) {
-        b.className = 'revolver-bullet' + (_bi < _reloadAnimFrame ? ' loaded' : ' empty');
-      } else {
-        b.className = 'revolver-bullet' + (_bi < _revolverAmmo ? ' loaded' : ' empty');
+    const cylinder = document.getElementById('revolver-cylinder');
+    const chambersEl = document.getElementById('revolver-chambers');
+    const label = document.getElementById('revolver-ammo-label');
+    if (!cylinder || !chambersEl || !label) return;
+
+    const effMax = (playerStats && playerStats.magazineCapacity) || REVOLVER_MAX_AMMO;
+    const currentAmmo = _isReloading ? _reloadAnimFrame : _revolverAmmo;
+
+    // Rebuild chambers only when magSize changes
+    if (chambersEl._builtFor !== effMax) {
+      chambersEl._builtFor = effMax;
+      chambersEl.innerHTML = '';
+      const radius = 34; // px from cylinder centre
+      const cx = 50;
+      const cy = 50;
+      for (let i = 0; i < effMax; i++) {
+        const angle = (i / effMax) * Math.PI * 2 - Math.PI / 2;
+        const x = cx + radius * Math.cos(angle);
+        const y = cy + radius * Math.sin(angle);
+        const ch = document.createElement('div');
+        ch.className = 'revolver-chamber loaded';
+        ch.style.left = (x - 9) + 'px';
+        ch.style.top  = (y - 9) + 'px';
+        chambersEl.appendChild(ch);
       }
     }
-    const label = ui.querySelector('.revolver-label');
-    if (label) {
-      label.textContent = _isReloading ? 'RELOADING...' : (_revolverAmmo + '/' + REVOLVER_MAX_AMMO);
-      label.style.color = _isReloading ? '#FF8800' : (_revolverAmmo <= 1 ? '#FF4444' : '#FFD700');
+
+    // Update chamber states
+    const chambers = chambersEl.children;
+    for (let i = 0; i < chambers.length; i++) {
+      if (_isReloading) {
+        if (i < _reloadAnimFrame) {
+          chambers[i].className = 'revolver-chamber reloading';
+          // After animation frame, settle to loaded
+          if (chambers[i]._reloadDone !== _reloadAnimFrame) {
+            chambers[i]._reloadDone = _reloadAnimFrame;
+            setTimeout((el => () => { if (el.className === 'revolver-chamber reloading') el.className = 'revolver-chamber loaded'; })(chambers[i]), 180);
+          }
+        } else {
+          chambers[i].className = 'revolver-chamber empty';
+        }
+      } else {
+        chambers[i].className = 'revolver-chamber' + (i < _revolverAmmo ? ' loaded' : ' empty');
+      }
+    }
+
+    // Rotate cylinder on each shot — track via the stored rotation offset
+    if (!cylinder._rotDeg) cylinder._rotDeg = 0;
+    if (cylinder._lastAmmo !== undefined && !_isReloading && _revolverAmmo < cylinder._lastAmmo) {
+      const step = 360 / effMax;
+      cylinder._rotDeg += step;
+      cylinder.style.transition = 'transform 0.12s cubic-bezier(0.22,1,0.36,1)';
+      cylinder.style.transform = `rotate(${cylinder._rotDeg}deg)`;
+    } else if (_isReloading && cylinder._lastAmmo !== undefined) {
+      cylinder.style.transition = 'transform 0.5s ease-out';
+      cylinder.style.transform = `rotate(0deg)`;
+      cylinder._rotDeg = 0;
+    }
+    cylinder._lastAmmo = _isReloading ? -1 : _revolverAmmo;
+
+    // Update label
+    if (_isReloading) {
+      label.textContent = 'RELOAD';
+      label.className = 'revolver-label reloading';
+    } else {
+      label.textContent = _revolverAmmo + '/' + effMax;
+      label.className = 'revolver-label' + (_revolverAmmo <= 1 ? ' danger' : '');
+      label.style.color = _revolverAmmo <= 1 ? '#FF4444' : '#FFD700';
     }
   }
 
@@ -5599,6 +5654,8 @@
 
   function _trackFPS(dt) {
     if (!_autoQualityEnabled) return;
+    // Respect user's manual graphics selection — never auto-downgrade in manual mode.
+    if (window.gameSettings && window.gameSettings.graphicsMode === 'manual') return;
     // Skip sampling when the tab is backgrounded or gameplay is paused/frozen —
     // throttled rAF in background tabs produces artificially low frame times that
     // would wrongly trigger a quality drop.

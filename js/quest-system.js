@@ -264,6 +264,7 @@
      * showCinematicDialogue(speakerName, text, onClose)
      * Film-style letterboxed AIDA dialogue: black bars top/bottom (≈28% each),
      * typewriter text in the middle third, with the Annunaki cyan/purple aesthetic.
+     * Includes a static AIDA portrait on the left and suppresses floating bubbles.
      */
     function showCinematicDialogue(speakerName, text, onClose) {
       // Suppress in sandbox
@@ -271,6 +272,9 @@
         if (onClose) onClose();
         return;
       }
+
+      // Suppress floating speech bubbles while cinematic is active
+      if (typeof window._suppressAidaBubbles !== 'undefined') window._suppressAidaBubbles = true;
 
       const wasGameActive =
         typeof isGameActive !== 'undefined' &&
@@ -304,15 +308,71 @@
       const centreArea = document.createElement('div');
       centreArea.style.cssText = [
         'position:absolute', 'top:28%', 'left:0', 'width:100%', 'height:44%',
-        'background:rgba(0,0,0,0.82)',
-        'display:flex', 'flex-direction:column', 'align-items:center', 'justify-content:center',
-        'gap:14px', 'padding:0 8%', 'box-sizing:border-box'
+        'background:rgba(0,0,0,0.88)',
+        'display:flex', 'flex-direction:row', 'align-items:stretch',
+        'box-sizing:border-box'
+      ].join(';');
+
+      // ── AIDA Portrait Panel (left side) ──
+      const portraitPanel = document.createElement('div');
+      portraitPanel.style.cssText = [
+        'flex:0 0 auto', 'width:clamp(90px,18%,160px)',
+        'background:linear-gradient(180deg,#0a0a18 0%,#060610 100%)',
+        'border-right:1px solid rgba(0,255,255,0.25)',
+        'display:flex', 'flex-direction:column', 'align-items:center', 'justify-content:flex-end',
+        'padding-bottom:8px', 'position:relative', 'overflow:hidden'
+      ].join(';');
+
+      // CSS-art AIDA portrait
+      portraitPanel.innerHTML = `
+        <svg viewBox="0 0 80 120" xmlns="http://www.w3.org/2000/svg"
+             style="width:80%;max-width:120px;filter:drop-shadow(0 0 10px rgba(0,255,255,0.55))">
+          <!-- Head -->
+          <ellipse cx="40" cy="32" rx="20" ry="24" fill="#0d1a2a" stroke="#00ffff" stroke-width="1.2"/>
+          <!-- Eyes — glowing cyan slits -->
+          <ellipse cx="31" cy="30" rx="5" ry="2.5" fill="#00ffff" opacity="0.9"/>
+          <ellipse cx="49" cy="30" rx="5" ry="2.5" fill="#00ffff" opacity="0.9"/>
+          <!-- Pupil centres -->
+          <circle cx="31" cy="30" r="1.5" fill="#001a2a"/>
+          <circle cx="49" cy="30" r="1.5" fill="#001a2a"/>
+          <!-- Anunnaki crown/headband -->
+          <rect x="20" y="10" width="40" height="5" rx="2" fill="none" stroke="#b8860b" stroke-width="1"/>
+          <circle cx="40" cy="12" r="3.5" fill="#b8860b" opacity="0.9"/>
+          <circle cx="28" cy="12" r="2" fill="#b8860b" opacity="0.6"/>
+          <circle cx="52" cy="12" r="2" fill="#b8860b" opacity="0.6"/>
+          <!-- Neck -->
+          <rect x="34" y="56" width="12" height="12" rx="2" fill="#0d1a2a" stroke="#00ffff" stroke-width="0.8"/>
+          <!-- Shoulders -->
+          <path d="M14,90 Q14,68 40,68 Q66,68 66,90 L66,120 L14,120 Z" fill="#0d1a2a" stroke="#00ffff" stroke-width="1"/>
+          <!-- Chest circuit lines -->
+          <line x1="30" y1="80" x2="50" y2="80" stroke="#00ffff" stroke-width="0.7" opacity="0.5"/>
+          <line x1="35" y1="88" x2="45" y2="88" stroke="#00ffff" stroke-width="0.7" opacity="0.5"/>
+          <!-- Face markings — Annunaki glyphs -->
+          <line x1="36" y1="36" x2="44" y2="36" stroke="#b8860b" stroke-width="0.8" opacity="0.7"/>
+          <circle cx="40" cy="22" r="2.5" fill="none" stroke="#00ffff" stroke-width="0.7" opacity="0.5"/>
+          <!-- Scanline flicker hint -->
+          <rect x="0" y="0" width="80" height="120" fill="url(#cin-scan)" opacity="0.08"/>
+          <defs>
+            <pattern id="cin-scan" x="0" y="0" width="80" height="4" patternUnits="userSpaceOnUse">
+              <rect x="0" y="0" width="80" height="2" fill="#000"/>
+              <rect x="0" y="2" width="80" height="2" fill="transparent"/>
+            </pattern>
+          </defs>
+        </svg>
+        <div style="color:#00ffff;font-family:'Courier New',monospace;font-size:10px;letter-spacing:2px;margin-top:4px;opacity:0.7;text-transform:uppercase;">A.I.D.A</div>
+      `;
+
+      // ── Text content area (right side) ──
+      const textArea = document.createElement('div');
+      textArea.style.cssText = [
+        'flex:1 1 auto', 'display:flex', 'flex-direction:column', 'justify-content:center',
+        'gap:12px', 'padding:0 6% 0 4%', 'box-sizing:border-box', 'position:relative'
       ].join(';');
 
       // Speaker name badge
       const speakerEl = document.createElement('div');
       speakerEl.style.cssText = [
-        'color:#00ffff', 'font-family:Bangers,cursive', 'font-size:clamp(13px,2.5vw,20px)',
+        'color:#00ffff', 'font-family:Bangers,cursive', 'font-size:clamp(15px,3vw,24px)',
         'letter-spacing:4px', 'text-transform:uppercase',
         'text-shadow:0 0 12px rgba(0,255,255,0.9),0 0 24px rgba(0,255,255,0.5)',
         'border-bottom:1px solid rgba(0,255,255,0.35)', 'padding-bottom:6px',
@@ -320,30 +380,33 @@
       ].join(';');
       speakerEl.textContent = `◈ ${speakerName}`;
 
-      // Dialogue text container with typewriter effect
+      // Dialogue text container with typewriter effect — enlarged for readability
       const textEl = document.createElement('div');
       textEl.style.cssText = [
         'color:#E8D5A3', 'font-family:Courier New,monospace',
-        'font-size:clamp(13px,2.2vw,19px)', 'line-height:1.7',
+        'font-size:clamp(15px,2.8vw,22px)', 'line-height:1.8',
         'width:100%', 'text-align:left',
         'text-shadow:0 0 6px rgba(0,255,255,0.15)'
       ].join(';');
       textEl.textContent = '';
 
-      // "Tap to continue" hint at bottom of centre area
+      // "Tap to continue" hint
       const tapHint = document.createElement('div');
       tapHint.style.cssText = [
         'color:rgba(201,162,39,0.7)', 'font-family:Courier New,monospace',
         'font-size:clamp(10px,1.6vw,13px)', 'letter-spacing:2px',
-        'position:absolute', 'bottom:8%', 'right:5%',
+        'position:absolute', 'bottom:8%', 'right:0',
         'animation:cinematicTapPulse 1.4s ease-in-out infinite'
       ].join(';');
       tapHint.textContent = '▶  TAP TO CONTINUE';
       tapHint.style.opacity = '0';
 
-      centreArea.appendChild(speakerEl);
-      centreArea.appendChild(textEl);
-      centreArea.appendChild(tapHint);
+      textArea.appendChild(speakerEl);
+      textArea.appendChild(textEl);
+      textArea.appendChild(tapHint);
+
+      centreArea.appendChild(portraitPanel);
+      centreArea.appendChild(textArea);
 
       // Scanline overlay for CRT feel
       const scanline = document.createElement('div');
@@ -362,7 +425,7 @@
       // Typewriter effect
       let charIdx = 0;
       let typewriterDone = false;
-      const typeSpeed = 32; // ms per char
+      const typeSpeed = 30; // ms per char
       const typeTimer = setInterval(() => {
         if (charIdx < text.length) {
           textEl.textContent += text[charIdx];
@@ -383,6 +446,7 @@
         overlay.style.animation = 'cinematicFadeOut 0.4s ease-in forwards';
         setTimeout(() => {
           if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+          if (typeof window._suppressAidaBubbles !== 'undefined') window._suppressAidaBubbles = false;
           if (wasGameActive && typeof setGamePaused === 'function') setGamePaused(false);
           if (onClose) onClose();
         }, 380);
@@ -405,6 +469,7 @@
       setTimeout(closeCinematic, 18000);
     }
     window.showCinematicDialogue = showCinematicDialogue;
+
     function showQuestHall() {
       // Guard: Quest Hall must be built (level > 0) before it can be entered
       var _qmData = saveData.campBuildings && saveData.campBuildings.questMission;

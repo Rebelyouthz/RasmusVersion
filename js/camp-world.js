@@ -1495,7 +1495,9 @@
     }
 
     // ─ Robot proximity prompt ─
-    if (_aidaIntroState.chipPickedUp && !_aidaIntroState.chipInserted) {
+    // Guard: skip "Insert Chip" prompt once Quest Hall is built (level ≥ 1) — chip is already inserted / quest complete.
+    const _qmLevel = (typeof saveData !== 'undefined' && saveData && saveData.campBuildings && saveData.campBuildings.questMission && saveData.campBuildings.questMission.level) || 0;
+    if (_aidaIntroState.chipPickedUp && !_aidaIntroState.chipInserted && _qmLevel < 1) {
       const _rp = _getAidaRobotPos();
       const rdx = _playerPos.x - _rp.x;
       const rdz = _playerPos.z - _rp.z;
@@ -1843,6 +1845,8 @@
   }
 
   function _showBennySpeech(text) {
+    // Suppress bubbles while a cinematic dialogue is playing
+    if (window._suppressAidaBubbles) return;
     const DS = window.DialogueSystem;
     if (DS) {
       DS.show([{ text: text.replace(/\n/g, ' '), emotion: 'task' }]);
@@ -4174,13 +4178,17 @@
           }
         }
         if (_aidaIntroState.chipPickedUp && !_aidaIntroState.chipInserted) {
-          const _rp = _getAidaRobotPos();
-          const rdx = _playerPos.x - _rp.x;
-          const rdz = _playerPos.z - _rp.z;
-          if (Math.sqrt(rdx * rdx + rdz * rdz) < AIDA_INTRO_RADIUS) {
-            _keys['KeyE'] = false; // consume key
-            _insertAidaChip();
-            return;
+          // Guard: only allow insertion if Quest Hall not yet built (questMission.level < 1)
+          const _qmLvl = (typeof saveData !== 'undefined' && saveData && saveData.campBuildings && saveData.campBuildings.questMission && saveData.campBuildings.questMission.level) || 0;
+          if (_qmLvl < 1) {
+            const _rp = _getAidaRobotPos();
+            const rdx = _playerPos.x - _rp.x;
+            const rdz = _playerPos.z - _rp.z;
+            if (Math.sqrt(rdx * rdx + rdz * rdz) < AIDA_INTRO_RADIUS) {
+              _keys['KeyE'] = false; // consume key
+              _insertAidaChip();
+              return;
+            }
           }
         }
         // Check if player is near the Incubator pod — interact with it
@@ -4602,12 +4610,16 @@
       }
     }
     if (_aidaIntroState.chipPickedUp && !_aidaIntroState.chipInserted) {
-      const _rp = _getAidaRobotPos();
-      const rdx = _playerPos.x - _rp.x;
-      const rdz = _playerPos.z - _rp.z;
-      if (Math.sqrt(rdx * rdx + rdz * rdz) < AIDA_INTRO_RADIUS) {
-        _insertAidaChip();
-        return;
+      // Guard: only allow insertion if Quest Hall not yet built
+      const _qmLvl2 = (typeof saveData !== 'undefined' && saveData && saveData.campBuildings && saveData.campBuildings.questMission && saveData.campBuildings.questMission.level) || 0;
+      if (_qmLvl2 < 1) {
+        const _rp = _getAidaRobotPos();
+        const rdx = _playerPos.x - _rp.x;
+        const rdz = _playerPos.z - _rp.z;
+        if (Math.sqrt(rdx * rdx + rdz * rdz) < AIDA_INTRO_RADIUS) {
+          _insertAidaChip();
+          return;
+        }
       }
     }
     // Post-insertion: near robot shows hint to go to Quest Hall (no longer opens Profile)
