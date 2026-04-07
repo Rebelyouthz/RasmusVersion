@@ -5430,11 +5430,395 @@
     } else {
       _touchIndicator = document.getElementById('camp-touch-indicator');
     }
+
+    // ── Player Profile UI (top-left corner) ──
+    _ensureCampProfile();
+
+    // ── WaterBot Terminal (Annunaki terminal, camp-only) ──
+    _ensureWaterBot();
   }
 
   // ──────────────────────────────────────────────────────────
-  // Keyboard listeners
+  // Player Profile UI — top-left corner of camp HUD
   // ──────────────────────────────────────────────────────────
+  function _ensureCampProfile() {
+    if (document.getElementById('camp-profile-ui')) {
+      _updateCampProfile();
+      return;
+    }
+    const sd = (typeof saveData !== 'undefined') ? saveData : null;
+
+    const ui = document.createElement('div');
+    ui.id = 'camp-profile-ui';
+    ui.style.cssText = [
+      'position:fixed', 'top:10px', 'left:10px', 'z-index:200',
+      'background:linear-gradient(135deg,rgba(8,8,20,0.92),rgba(5,5,15,0.95))',
+      'border:1px solid rgba(0,255,255,0.25)', 'border-radius:12px',
+      'padding:8px 14px', 'display:flex', 'align-items:center', 'gap:10px',
+      'cursor:pointer', 'pointer-events:auto',
+      'box-shadow:0 0 16px rgba(0,255,255,0.12),0 2px 8px rgba(0,0,0,0.6)',
+      'min-width:160px',
+    ].join(';');
+
+    // Avatar circle
+    const avatar = document.createElement('div');
+    avatar.id = 'camp-profile-avatar';
+    avatar.style.cssText = [
+      'width:44px', 'height:44px', 'border-radius:50%', 'flex-shrink:0',
+      'background:radial-gradient(circle at 35% 30%, #0a3a4a 0%, #020a10 100%)',
+      'border:2px solid #00ffff', 'display:flex', 'align-items:center', 'justify-content:center',
+      'font-size:22px',
+    ].join(';');
+    avatar.textContent = '💧';
+
+    // Info column
+    const info = document.createElement('div');
+    info.id = 'camp-profile-info';
+    info.style.cssText = 'display:flex;flex-direction:column;gap:2px;flex:1;';
+
+    const nameEl = document.createElement('div');
+    nameEl.id = 'camp-profile-name';
+    nameEl.style.cssText = 'color:#00ffff;font-family:Bangers,cursive;font-size:15px;letter-spacing:1.5px;';
+    nameEl.textContent = 'UNIT-001';
+
+    const levelEl = document.createElement('div');
+    levelEl.id = 'camp-profile-level';
+    levelEl.style.cssText = 'color:#FFD700;font-family:"Courier New",monospace;font-size:10px;';
+    levelEl.textContent = 'LVL 1 · RECRUIT';
+
+    info.appendChild(nameEl);
+    info.appendChild(levelEl);
+
+    // "!" new-stuff badge
+    const badge = document.createElement('div');
+    badge.id = 'camp-profile-badge';
+    badge.style.cssText = [
+      'width:18px', 'height:18px', 'border-radius:50%',
+      'background:radial-gradient(circle, #cc0000, #880000)',
+      'border:1.5px solid #ff4444',
+      'color:#fff', 'font-weight:bold', 'font-size:11px',
+      'display:none', 'align-items:center', 'justify-content:center',
+      'animation:camp-badge-pulse 1s ease-in-out infinite alternate',
+      'flex-shrink:0',
+    ].join(';');
+    badge.textContent = '!';
+
+    ui.appendChild(avatar);
+    ui.appendChild(info);
+    ui.appendChild(badge);
+    document.body.appendChild(ui);
+
+    // Inject badge pulse keyframe if not already present
+    if (!document.getElementById('camp-badge-style')) {
+      const s = document.createElement('style');
+      s.id = 'camp-badge-style';
+      s.textContent = '@keyframes camp-badge-pulse{from{box-shadow:0 0 4px #ff0000}to{box-shadow:0 0 12px #ff5555,0 0 20px #cc0000}}';
+      document.head.appendChild(s);
+    }
+
+    // Hide the harvest-hud resource counters in camp (replaced by WaterBot)
+    const harvestHud = document.getElementById('harvest-hud');
+    if (harvestHud) harvestHud.style.display = 'none';
+
+    ui.addEventListener('click', function(e) {
+      e.stopPropagation();
+      _toggleWaterBot();
+    });
+
+    _updateCampProfile();
+  }
+
+  function _updateCampProfile() {
+    const sd = (typeof saveData !== 'undefined') ? saveData : null;
+    if (!sd) return;
+
+    const nameEl = document.getElementById('camp-profile-name');
+    const levelEl = document.getElementById('camp-profile-level');
+    const badge = document.getElementById('camp-profile-badge');
+
+    if (nameEl) {
+      nameEl.textContent = (sd.playerName || 'UNIT-001').toUpperCase();
+    }
+    if (levelEl) {
+      const lvl = sd.level || 1;
+      const kills = sd.totalKills || 0;
+      let rank = 'RECRUIT';
+      if (kills >= 1000) rank = 'COMMANDER';
+      else if (kills >= 300) rank = 'WARRIOR';
+      else if (kills >= 100) rank = 'FIGHTER';
+      else if (kills >= 30) rank = 'SOLDIER';
+      levelEl.textContent = 'LVL ' + lvl + ' · ' + rank;
+    }
+    if (badge) {
+      const tq = sd.tutorialQuests;
+      const hasNew = tq && tq.readyToClaim && tq.readyToClaim.length > 0;
+      badge.style.display = hasNew ? 'flex' : 'none';
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // WaterBot Terminal — Annunaki-themed camp terminal
+  // ──────────────────────────────────────────────────────────
+  var _waterbotOpen = false;
+
+  // FAQ/lore answers for chat tab
+  var _WATERBOT_FAQ = [
+    { q: 'who are you', a: '> I am WaterBot — an Annunaki intelligence fragment, bound to this terminal. My directives are... complex.' },
+    { q: 'what is the lake', a: '> The lake is a collective consciousness. You were ripped from it. The Alien Ship\'s toxic leak created anomalies like you.' },
+    { q: 'how do i level up', a: '> Survive. Kill. Collect EXP orbs. Every death refines you. Every kill builds towards transcendence.' },
+    { q: 'what is the alien ship', a: '> The Anomaly Source. It orbits the anomaly zone. Approach with extreme caution — its radiation rewrites cellular memory.' },
+    { q: 'what are skill points', a: '> Neural pathway modifiers. Allocate them at the Skill Tree node. Choose deliberately — they alter your combat subroutines permanently.' },
+    { q: 'how do i get gold', a: '> Eliminate hostiles. Complete objectives. Gold is the camp\'s primary construction catalyst.' },
+    { q: 'what is wood', a: '> A structural material. Harvest trees outside the camp perimeter. Used for most construction projects.' },
+    { q: 'what is stone', a: '> A durable material. Mine rock formations in the field. Required for advanced construction.' },
+    { q: 'who is aida', a: '> A.I.D.A is Artificial Intelligence for Dimensional Anomalies. She inserted herself into your neural pathways. She claims to help you. I... have reservations.' },
+    { q: 'how do i get back to the lake', a: '> Unknown. But the landmarks hold answers — the Alien Ship, the Pyramid, the Tesla Tower. Explore them. Survive them.' },
+  ];
+
+  function _ensureWaterBot() {
+    if (document.getElementById('waterbot-terminal')) return;
+
+    const terminal = document.createElement('div');
+    terminal.id = 'waterbot-terminal';
+    terminal.style.cssText = [
+      'position:fixed', 'top:0', 'left:0', 'width:100%', 'height:100%',
+      'z-index:500', 'display:none', 'align-items:center', 'justify-content:center',
+      'background:rgba(0,0,0,0.75)', 'backdrop-filter:blur(3px)',
+      'pointer-events:auto',
+    ].join(';');
+
+    const box = document.createElement('div');
+    box.style.cssText = [
+      'width:min(680px,96vw)', 'height:min(520px,90vh)',
+      'background:linear-gradient(180deg,#060610 0%,#020208 100%)',
+      'border:1px solid rgba(0,255,255,0.35)', 'border-radius:16px',
+      'display:flex', 'flex-direction:column', 'overflow:hidden',
+      'box-shadow:0 0 40px rgba(0,255,255,0.15),0 0 80px rgba(0,0,0,0.8)',
+      'position:relative',
+    ].join(';');
+
+    // Header bar
+    const header = document.createElement('div');
+    header.style.cssText = [
+      'padding:10px 18px', 'background:rgba(0,255,255,0.06)',
+      'border-bottom:1px solid rgba(0,255,255,0.2)',
+      'display:flex', 'align-items:center', 'justify-content:space-between',
+    ].join(';');
+    header.innerHTML = '<span style="color:#00ffff;font-family:Bangers,cursive;font-size:18px;letter-spacing:3px;">◈ WATERBOT — ANNUNAKI TERMINAL</span>'
+      + '<button id="waterbot-close-btn" style="background:none;border:1px solid rgba(0,255,255,0.3);border-radius:6px;color:#00ffff;font-size:14px;padding:4px 10px;cursor:pointer;">✕ CLOSE</button>';
+
+    // Tab row
+    const tabs = document.createElement('div');
+    tabs.style.cssText = 'display:flex;gap:0;border-bottom:1px solid rgba(0,255,255,0.15);';
+    const tabDefs = [
+      { id: 'wb-tab-resources', label: '📦 RESOURCES' },
+      { id: 'wb-tab-stats', label: '⚡ SKILLS' },
+      { id: 'wb-tab-chat', label: '💬 CHAT' },
+    ];
+    tabDefs.forEach(function(td, i) {
+      const tb = document.createElement('button');
+      tb.id = td.id;
+      tb.textContent = td.label;
+      tb.dataset.tabIdx = String(i);
+      tb.style.cssText = [
+        'flex:1', 'background:' + (i === 0 ? 'rgba(0,255,255,0.1)' : 'transparent'),
+        'border:none', 'border-right:1px solid rgba(0,255,255,0.1)',
+        'color:' + (i === 0 ? '#00ffff' : 'rgba(0,255,255,0.5)'),
+        'font-family:Bangers,cursive', 'font-size:13px', 'letter-spacing:1px',
+        'padding:8px 4px', 'cursor:pointer',
+      ].join(';');
+      tb.addEventListener('click', function() { _waterbotShowTab(parseInt(this.dataset.tabIdx)); });
+      tabs.appendChild(tb);
+    });
+
+    // Content area
+    const content = document.createElement('div');
+    content.id = 'waterbot-content';
+    content.style.cssText = 'flex:1;overflow-y:auto;padding:14px 18px;font-family:"Courier New",monospace;font-size:13px;color:#c8e8d0;';
+
+    // Chat input row
+    const chatRow = document.createElement('div');
+    chatRow.id = 'waterbot-chat-row';
+    chatRow.style.cssText = 'display:none;padding:8px 14px;border-top:1px solid rgba(0,255,255,0.15);gap:8px;';
+    chatRow.innerHTML = '<input id="waterbot-chat-input" type="text" placeholder="> Ask WaterBot..." '
+      + 'style="flex:1;background:#020a10;border:1px solid rgba(0,255,255,0.3);border-radius:6px;color:#00ffff;font-family:\'Courier New\',monospace;font-size:12px;padding:6px 10px;outline:none;">'
+      + '<button id="waterbot-chat-send" style="background:rgba(0,255,255,0.12);border:1px solid rgba(0,255,255,0.35);border-radius:6px;color:#00ffff;font-family:Bangers,cursive;font-size:13px;padding:6px 14px;cursor:pointer;">SEND</button>';
+
+    box.appendChild(header);
+    box.appendChild(tabs);
+    box.appendChild(content);
+    box.appendChild(chatRow);
+    terminal.appendChild(box);
+    document.body.appendChild(terminal);
+
+    // Close handlers
+    terminal.addEventListener('click', function(e) { if (e.target === terminal) _closeWaterBot(); });
+    document.getElementById('waterbot-close-btn').addEventListener('click', _closeWaterBot);
+
+    // Chat send
+    const sendBtn = document.getElementById('waterbot-chat-send');
+    const chatInput = document.getElementById('waterbot-chat-input');
+    if (sendBtn && chatInput) {
+      function doSend() {
+        const q = chatInput.value.trim().toLowerCase();
+        chatInput.value = '';
+        if (!q) return;
+        _waterbotChat(q);
+      }
+      sendBtn.addEventListener('click', doSend);
+      chatInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') doSend(); });
+    }
+
+    _waterbotShowTab(0);
+  }
+
+  function _toggleWaterBot() {
+    if (_waterbotOpen) { _closeWaterBot(); } else { _openWaterBot(); }
+  }
+
+  function _openWaterBot() {
+    const t = document.getElementById('waterbot-terminal');
+    if (!t) { _ensureWaterBot(); }
+    const terminal = document.getElementById('waterbot-terminal');
+    if (!terminal) return;
+    _waterbotOpen = true;
+    terminal.style.display = 'flex';
+    _waterbotShowTab(0);
+  }
+
+  function _closeWaterBot() {
+    const terminal = document.getElementById('waterbot-terminal');
+    if (terminal) terminal.style.display = 'none';
+    _waterbotOpen = false;
+  }
+
+  function _waterbotShowTab(idx) {
+    const tabIds = ['wb-tab-resources', 'wb-tab-stats', 'wb-tab-chat'];
+    tabIds.forEach(function(id, i) {
+      const tb = document.getElementById(id);
+      if (!tb) return;
+      if (i === idx) {
+        tb.style.background = 'rgba(0,255,255,0.1)';
+        tb.style.color = '#00ffff';
+      } else {
+        tb.style.background = 'transparent';
+        tb.style.color = 'rgba(0,255,255,0.5)';
+      }
+    });
+    const chatRow = document.getElementById('waterbot-chat-row');
+    if (chatRow) chatRow.style.display = idx === 2 ? 'flex' : 'none';
+
+    const content = document.getElementById('waterbot-content');
+    if (!content) return;
+    content.innerHTML = '';
+
+    const sd = (typeof saveData !== 'undefined') ? saveData : null;
+    const res = (sd && sd.resources) || {};
+    const tq = (sd && sd.tutorialQuests) || {};
+    const ps = (typeof playerStats !== 'undefined') ? playerStats : (sd && sd.playerStats) || {};
+
+    if (idx === 0) {
+      // Resources tab
+      _waterbotSection(content, '▸ MATERIALS', [
+        { label: '🪵 Wood', val: res.wood || 0 },
+        { label: '🪨 Stone', val: res.stone || 0 },
+        { label: '💎 Crystal', val: res.crystal || 0 },
+        { label: '🔩 Metal', val: res.metal || 0 },
+        { label: '🧪 Slime', val: res.slime || 0 },
+      ]);
+      _waterbotSection(content, '▸ CURRENCY', [
+        { label: '💰 Gold', val: sd ? (sd.gold || 0) : 0 },
+        { label: '💠 Gems', val: sd ? (sd.gems || 0) : 0 },
+      ]);
+      _waterbotSection(content, '▸ PROGRESS', [
+        { label: '⚔️ Total Kills', val: sd ? (sd.totalKills || 0) : 0 },
+        { label: '🏃 Total Runs', val: sd ? (sd.totalRuns || 0) : 0 },
+        { label: '🌊 Level', val: sd ? (sd.level || 1) : 1 },
+      ]);
+    } else if (idx === 1) {
+      // Skills/attributes tab
+      _waterbotSection(content, '▸ ATTRIBUTES', [
+        { label: '❤️ Max HP', val: ps.maxHp || 100 },
+        { label: '⚡ Speed', val: ps.speed ? ps.speed.toFixed(1) : '—' },
+        { label: '🎯 Fire Rate', val: ps.fireRate ? ps.fireRate.toFixed(2) + '×' : '—' },
+        { label: '🔫 Mag Size', val: ps.magazineCapacity || 5 },
+        { label: '🛡️ Armor', val: ps.armor || 0 },
+        { label: '🩸 Regen', val: ps.hpRegen ? ps.hpRegen.toFixed(1) + '/s' : '0/s' },
+        { label: '💥 Damage', val: ps.weaponDamage ? ps.weaponDamage.toFixed(1) + '×' : '—' },
+      ]);
+      _waterbotSection(content, '▸ POINTS', [
+        { label: '🌟 Skill Points', val: sd ? (sd.skillPoints || 0) : 0 },
+        { label: '📚 Training Points', val: sd ? (sd.trainingPoints || 0) : 0 },
+        { label: '🏅 Camp XP', val: sd ? (sd.campXP || 0) : 0 },
+      ]);
+    } else if (idx === 2) {
+      // Chat tab — show previous messages
+      const msgs = content._chatHistory || [];
+      content._chatHistory = msgs;
+      if (msgs.length === 0) {
+        const intro = document.createElement('div');
+        intro.style.cssText = 'color:rgba(0,255,255,0.7);margin-bottom:12px;';
+        intro.textContent = '> WATERBOT ONLINE. Ask me about lore, gameplay, or resources.';
+        content.appendChild(intro);
+      } else {
+        msgs.forEach(function(m) {
+          const d = document.createElement('div');
+          d.style.cssText = 'margin-bottom:8px;' + (m.isUser ? 'color:#FFD700;' : 'color:#c8e8d0;');
+          d.textContent = m.text;
+          content.appendChild(d);
+        });
+      }
+    }
+  }
+
+  function _waterbotSection(parent, title, rows) {
+    const s = document.createElement('div');
+    s.style.cssText = 'margin-bottom:14px;';
+    const h = document.createElement('div');
+    h.style.cssText = 'color:#00ffff;font-family:Bangers,cursive;font-size:13px;letter-spacing:2px;margin-bottom:6px;border-bottom:1px solid rgba(0,255,255,0.15);padding-bottom:3px;';
+    h.textContent = title;
+    s.appendChild(h);
+    rows.forEach(function(r) {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;justify-content:space-between;padding:2px 0;';
+      const lbl = document.createElement('span');
+      lbl.style.cssText = 'color:rgba(200,232,208,0.7);';
+      lbl.textContent = r.label;
+      const val = document.createElement('span');
+      val.style.cssText = 'color:#FFD700;font-weight:bold;';
+      val.textContent = r.val;
+      row.appendChild(lbl);
+      row.appendChild(val);
+      s.appendChild(row);
+    });
+    parent.appendChild(s);
+  }
+
+  function _waterbotChat(query) {
+    const content = document.getElementById('waterbot-content');
+    if (!content) return;
+    if (!content._chatHistory) content._chatHistory = [];
+
+    // Add user message
+    content._chatHistory.push({ isUser: true, text: '> ' + query });
+
+    // Find best answer
+    let answer = '> ...query unrecognised. Ask about lore, resources, skills, or gameplay.';
+    for (var i = 0; i < _WATERBOT_FAQ.length; i++) {
+      if (query.indexOf(_WATERBOT_FAQ[i].q) !== -1) {
+        answer = _WATERBOT_FAQ[i].a;
+        break;
+      }
+    }
+    content._chatHistory.push({ isUser: false, text: answer });
+
+    // Re-render chat tab
+    _waterbotShowTab(2);
+
+    // Scroll to bottom
+    content.scrollTop = content.scrollHeight;
+  }
+
   function _onKeyDown(e) {
     if (!_isActive || _menuOpen) return;
     _keys[e.code] = true;
@@ -5712,10 +6096,16 @@
       _nearBuilding = null;
       _updatePromptUI();
 
-      // Show resource HUD in camp mode (always shows wood/stone even at 0)
-      if (window.GameHarvesting) {
-        window.GameHarvesting.showCampHUD(_saveData);
-      }
+      // Resource HUD is replaced by WaterBot terminal — suppress it in camp.
+      // GameHarvesting.showCampHUD was previously called here, but the WaterBot
+      // terminal now surfaces all resource data. Keep HUD hidden in camp mode.
+      const _harvestHudEl = document.getElementById('harvest-hud');
+      if (_harvestHudEl) _harvestHudEl.style.display = 'none';
+
+      // Show camp profile UI and refresh
+      const _profileUI = document.getElementById('camp-profile-ui');
+      if (_profileUI) _profileUI.style.display = 'flex';
+      _updateCampProfile();
 
       // Camera aspect
       const aspect = window.innerWidth / window.innerHeight;
@@ -5827,8 +6217,13 @@
     _campDashing = false;
     _campSliding = false;
     _campActionAnim = null;
-    // Remove camp mode from resource HUD when leaving camp
+    // Remove camp mode from resource HUD when leaving camp (WaterBot now handles it)
     if (window.GameHarvesting) window.GameHarvesting.hideCampHUD();
+
+    // Hide camp-specific UI when leaving
+    const _profileUI = document.getElementById('camp-profile-ui');
+    if (_profileUI) _profileUI.style.display = 'none';
+    _closeWaterBot();
 
     // Reset main-game joystick state so sticks don't stay "active" into the next run.
     // Use window._campJoystick / _campJoystickRight which are the same objects as

@@ -7464,6 +7464,34 @@
   z-index: 9001;
 }
 
+/* Scale slider for calibration mode */
+.ui-cal-scale-wrap {
+  position: absolute;
+  bottom: -30px;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  z-index: 9001;
+  background: rgba(0,0,0,0.75);
+  border-radius: 5px;
+  padding: 2px 5px;
+  white-space: nowrap;
+}
+.ui-cal-scale-label {
+  color: #00ffcc;
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+  min-width: 32px;
+  text-align: center;
+}
+.ui-cal-scale-slider {
+  width: 70px;
+  height: 4px;
+  accent-color: #00ffcc;
+  cursor: pointer;
+}
+
 /* Resize handle (upper-left corner ◤) */
 .ui-cal-resize-handle {
   position: absolute;
