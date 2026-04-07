@@ -3179,9 +3179,13 @@
   //   horizontal power 0.28-0.38 gives ~5.6-12 m travel before ground-friction stops them.
   function _spawnFleshChunks(slot, count, large, color, forceOpts) {
     const pos = slot.mesh.position;
-    // Default to green slime colors if no color provided
-    const defaultColors = [0x33AA22, 0x228811, 0x116600, 0x55CC33];
-    const chunkColors = Array.isArray(color) ? color : (color ? [color] : defaultColors);
+    // Derive default chunk color from the enemy's actual body material
+    const _slotBaseColor = (slot.mesh && slot.mesh.material && slot.mesh.material.color)
+      ? slot.mesh.material.color.getHex()
+      : (slot.body && slot.body.material && slot.body.material.color
+         ? slot.body.material.color.getHex()
+         : 0xCC4422);
+    const chunkColors = Array.isArray(color) ? color : (color ? [color] : [_slotBaseColor]);
 
     for (let i = 0; i < count; i++) {
       const chunk = _acquireFleshChunk();
@@ -4002,6 +4006,32 @@
             for (let _s = 1; _s <= 3; _s++) {
               _placeBloodStain(ex + kbDirX * _s * 1.2, ez + kbDirZ * _s * 1.2, 0.14 + Math.random() * 0.16);
             }
+            e.isSkinned = true;
+            try {
+              if (e.mesh && e.mesh.material) e.mesh.material.color.setHex(0x6B1010);
+            } catch(e2) {}
+            try {
+              const origColor = e._originalColor ? e._originalColor.getHex() : 0x44AA44;
+              const flapCount = 2 + Math.floor(Math.random() * 3);
+              for (let fi = 0; fi < flapCount; fi++) {
+                const flapGeo = new THREE.PlaneGeometry(0.06, 0.06);
+                const flapMat = new THREE.MeshBasicMaterial({
+                  color: origColor, side: THREE.DoubleSide, transparent: true, opacity: 0.85
+                });
+                const flap = new THREE.Mesh(flapGeo, flapMat);
+                flap.position.set(
+                  (Math.random() - 0.5) * 0.3,
+                  (Math.random() - 0.5) * 0.3,
+                  0.08 + Math.random() * 0.07
+                );
+                flap.rotation.set(
+                  (Math.random() - 0.5) * 0.4,
+                  (Math.random() - 0.5) * 0.4,
+                  Math.random() * Math.PI * 2
+                );
+                e.mesh.add(flap);
+              }
+            } catch(e2) {}
           } else {
             // ── ZONE 3: 2-5m — half HP, ~1/3 skin ripped ──
             e.hp = Math.max(1, Math.floor((e.hp || _gunDmg * 2) * 0.5));
@@ -4026,6 +4056,32 @@
             }
             _placeBloodStain(ex, ez);
             _placeBloodStain(ex + kbDirX * 1.5, ez + kbDirZ * 1.5);
+            e.isSkinned = true;
+            try {
+              if (e.mesh && e.mesh.material) e.mesh.material.color.setHex(0x8B2020);
+            } catch(e2) {}
+            try {
+              const origColor = e._originalColor ? e._originalColor.getHex() : 0x44AA44;
+              const flapCount = 2 + Math.floor(Math.random() * 3);
+              for (let fi = 0; fi < flapCount; fi++) {
+                const flapGeo = new THREE.PlaneGeometry(0.06, 0.06);
+                const flapMat = new THREE.MeshBasicMaterial({
+                  color: origColor, side: THREE.DoubleSide, transparent: true, opacity: 0.85
+                });
+                const flap = new THREE.Mesh(flapGeo, flapMat);
+                flap.position.set(
+                  (Math.random() - 0.5) * 0.3,
+                  (Math.random() - 0.5) * 0.3,
+                  0.08 + Math.random() * 0.07
+                );
+                flap.rotation.set(
+                  (Math.random() - 0.5) * 0.4,
+                  (Math.random() - 0.5) * 0.4,
+                  Math.random() * Math.PI * 2
+                );
+                e.mesh.add(flap);
+              }
+            } catch(e2) {}
           }
         }
 
@@ -6555,6 +6611,14 @@
     // Blood on hit
     if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
       BloodV2.rawBurst(hx, hy, hz, 5, { color: 0xc8c7c0 });
+    }
+
+    // Bullet hole decal on skinwalker
+    if (projectile && sw.parts && sw.parts.root) {
+      const len = Math.sqrt((projectile.vx || 0) * (projectile.vx || 0) + (projectile.vz || 0) * (projectile.vz || 0)) || 1;
+      const nhx2 = (projectile.vx || 0) / len;
+      const nhz2 = (projectile.vz || 0) / len;
+      _addEnemyBulletHole(sw, sw.parts.root, nhx2, nhz2, 0.4, 0.5 + Math.random() * 0.6);
     }
 
     _triggerShake(SHAKE_LIGHT_INTENSITY * 0.8);

@@ -2085,6 +2085,11 @@
           // Only update color if not frozen (freeze manages its own colour)
           if (!this.isFrozen) {
             this.mesh.material.color.copy(this._originalColor).lerp(Enemy._bloodColor, bloodLerp);
+            if (this.isSkinned) {
+              try {
+                if (this.mesh && this.mesh.material) this.mesh.material.color.setHex(0x8B2020);
+              } catch(e) {}
+            }
           }
           // Also apply emissive for wet blood sheen
           if (!this.isFrozen && this.mesh.material.emissive !== undefined) {
