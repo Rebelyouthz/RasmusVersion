@@ -342,7 +342,6 @@
     const aspect = window.innerWidth / window.innerHeight;
     _campCamera = new THREE.PerspectiveCamera(42, aspect, 0.1, 200);
     _updateCamera(0);
-    _isActive = true;
     } catch (err) {
       console.error('[CampWorld] _buildScene() error:', err);
       throw err; // re-throw so warmUp/enter can reset _campScene for a clean retry
