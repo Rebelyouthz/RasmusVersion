@@ -6421,7 +6421,7 @@
       _killSkinwalker(sw);
     };
     _activeSkinwalkers.push(sw);
-    console.log('[SeqWave] Skinwalker spawned at', rx.toFixed(1), rz.toFixed(1));
+    // console.log('[SeqWave] Skinwalker spawned at', rx.toFixed(1), rz.toFixed(1)); // REMOVED: hot-path performance
   }
 
   /** Update all active skinwalkers each frame. */

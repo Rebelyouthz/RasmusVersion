@@ -534,7 +534,7 @@
         if (typeof applyGraphicsQuality === 'function') {
           applyGraphicsQuality(newQuality);
         }
-        console.log(`[FPS Booster] FPS=${fps.toFixed(0)} → adjusted to "${newQuality}" (level ${idx}/${levels.length - 1})`);
+        // console.log(`[FPS Booster] FPS=${fps.toFixed(0)} → adjusted to "${newQuality}" (level ${idx}/${levels.length - 1})`); // REMOVED: hot-path performance
 
         // Update status indicator if visible
         const statusEl = document.getElementById('fps-booster-status');
@@ -1002,9 +1002,9 @@
         }
         
         // Log if spawning took unusually long
-        if (spawnEndTime - spawnStartTime > 10) {
-          console.warn(`Spawn wave took ${(spawnEndTime - spawnStartTime).toFixed(2)}ms, enemies: ${aliveEnemies}`);
-        }
+        // if (spawnEndTime - spawnStartTime > 10) {
+        //   console.warn(`Spawn wave took ${(spawnEndTime - spawnStartTime).toFixed(2)}ms, enemies: ${aliveEnemies}`); // REMOVED: hot-path performance
+        // }
       } else if (!engine2SandboxActive && !window._annunakiWavesStopped && aliveEnemies === 0 && timeSinceLastWave >= minWaveDelay) {
         // Quick spawn if all enemies cleared and minimum delay passed
         lastWaveEndTime = frameCount;
@@ -1018,9 +1018,9 @@
         }
         
         // Log if spawning took unusually long
-        if (spawnEndTime - spawnStartTime > 10) {
-          console.warn(`Quick spawn took ${(spawnEndTime - spawnStartTime).toFixed(2)}ms`);
-        }
+        // if (spawnEndTime - spawnStartTime > 10) {
+        //   console.warn(`Quick spawn took ${(spawnEndTime - spawnStartTime).toFixed(2)}ms`); // REMOVED: hot-path performance
+        // }
       }
       
       // Track enemy count changes for logging
@@ -3570,7 +3570,7 @@
         // Scene children growth guard — warn and cull stale invisible meshes if count exceeds threshold
         const MAX_SCENE_CHILDREN = 1200;
         if (scene.children.length > MAX_SCENE_CHILDREN) {
-          console.warn(`[Perf] scene.children=${scene.children.length} exceeds ${MAX_SCENE_CHILDREN}. Culling invisible non-tracked meshes.`);
+          // console.warn(`[Perf] scene.children=${scene.children.length} exceeds ${MAX_SCENE_CHILDREN}. Culling invisible non-tracked meshes.`); // REMOVED: hot-path performance
           const toRemove = [];
           for (let i = scene.children.length - 1; i >= 0; i--) {
             const obj = scene.children[i];
@@ -3593,7 +3593,7 @@
               obj.material.dispose();
             }
           });
-          if (toRemove.length) console.warn(`[Perf] Culled ${toRemove.length} stale transparent meshes.`);
+          // if (toRemove.length) console.warn(`[Perf] Culled ${toRemove.length} stale transparent meshes.`); // REMOVED: hot-path performance
         }
 
         // Limit max items on ground (memory optimization)
