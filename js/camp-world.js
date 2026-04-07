@@ -5542,7 +5542,17 @@
   // Mobile error overlay helper
   // ──────────────────────────────────────────────────────────
   function _showMobileError(err, context) {
-    const div = document.createElement('div');
+    if (!document.body) return;
+
+    // Reuse an existing overlay if present so repeated failures don't stack divs
+    const OVERLAY_ID = 'camp-mobile-error-overlay';
+    let div = document.getElementById(OVERLAY_ID);
+    if (div) {
+      while (div.firstChild) { div.removeChild(div.firstChild); }
+    } else {
+      div = document.createElement('div');
+      div.id = OVERLAY_ID;
+    }
     div.style.cssText = 'position:fixed;top:10%;left:5%;width:90%;background:rgba(200,0,0,0.9);color:white;z-index:999999;padding:20px;border:3px solid yellow;font-family:monospace;border-radius:10px;overflow:auto;max-height:80vh;';
 
     const heading = document.createElement('h3');
@@ -5575,8 +5585,9 @@
     div.appendChild(document.createElement('br'));
     div.appendChild(closeBtn);
 
-    if (!document.body) return;
-    document.body.appendChild(div);
+    if (!div.parentNode) {
+      document.body.appendChild(div);
+    }
   }
 
   // ──────────────────────────────────────────────────────────
