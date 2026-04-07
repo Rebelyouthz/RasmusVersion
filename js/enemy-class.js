@@ -3214,6 +3214,34 @@
             this._spinDeathDirection = hitDir ? { x: hitDir.vx || 0, y: 0, z: hitDir.vz || 0 } : null;
           }
         }
+
+        // Weapon-specific trauma effects
+        if (window.TraumaSystem) {
+          var _eColor = (this.enemyType && window.BloodV2 && window.BloodV2.ENEMY_BLOOD && window.BloodV2.ENEMY_BLOOD[this.enemyType]) ? window.BloodV2.ENEMY_BLOOD[this.enemyType].base : 0xcc1100;
+          if (damageType === 'shotgun' || damageType === 'doubleBarrel' || damageType === 'pumpShotgun' || damageType === 'autoShotgun') {
+            if (hitPoint) {
+              var _blastDir = { x: 0, z: 0 };
+              if (this.mesh) {
+                var _px = hitPoint.x - this.mesh.position.x;
+                var _pz = hitPoint.z - this.mesh.position.z;
+                var _pl = Math.sqrt(_px*_px + _pz*_pz) + 0.001;
+                _blastDir.x = _px/_pl; _blastDir.z = _pz/_pl;
+              }
+              window.TraumaSystem.shotgunBlast(hitPoint, _blastDir, _eColor);
+            }
+          } else if (damageType === 'sword' || damageType === 'samuraiSword' || damageType === 'teslaSaber') {
+            if (hitPoint) {
+              var _sax = this._slashDirection ? this._slashDirection.x : 1;
+              var _saz = this._slashDirection ? this._slashDirection.z : 0;
+              window.TraumaSystem.swordCleave(hitPoint, _sax, _saz, _eColor);
+            }
+          } else if (damageType === 'meteor' || damageType === 'rocket' || damageType === 'grenade') {
+            if (this.mesh) {
+              var _gpos = this.mesh.position;
+              window.TraumaSystem.explosiveGib({ x: _gpos.x, y: _gpos.y, z: _gpos.z }, _eColor);
+            }
+          }
+        }
         // ─────────────────────────────────────────────────────────────────────────────
 
         if (this.hp <= 0) {
@@ -3467,6 +3495,19 @@
         } else {
           // Standard death — Geyser Rollover: rolls onto back with 3-second heartbeat bleed-out
           this.dieGeyserRollover(enemyColor);
+        }
+
+        // TraumaSystem death gore
+        if (window.TraumaSystem) {
+          var _deathColor = (this.enemyType && window.BloodV2 && window.BloodV2.ENEMY_BLOOD && window.BloodV2.ENEMY_BLOOD[this.enemyType]) ? window.BloodV2.ENEMY_BLOOD[this.enemyType].base : 0xcc1100;
+          var _deathPos = this.mesh ? this.mesh.position : null;
+          if (_deathPos) {
+            if (damageType === 'shotgun' || damageType === 'doubleBarrel' || damageType === 'pumpShotgun' || damageType === 'autoShotgun') {
+              window.TraumaSystem.shotgunBlast({ x: _deathPos.x, y: _deathPos.y, z: _deathPos.z }, null, _deathColor);
+            } else if (damageType === 'meteor' || damageType === 'rocket' || damageType === 'grenade') {
+              window.TraumaSystem.explosiveGib({ x: _deathPos.x, y: _deathPos.y, z: _deathPos.z }, _deathColor);
+            }
+          }
         }
         
         // Screen flash on kill (dopamine boost) - stronger flash for mini-boss

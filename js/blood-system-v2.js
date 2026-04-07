@@ -79,6 +79,7 @@ alien:         { base: 0x8800ff, dark: 0x440088, organ: 0xcc44ff, mist: 0xaa33ee
 robot:         { base: 0x88aaff, dark: 0x334488, organ: 0xffffff, mist: 0xaaccff },
 crawler:       { base: 0x994422, dark: 0x662200, organ: 0xcc6633, mist: 0xbb7744 },
 leaping_slime: { base: 0x00bfff, dark: 0x0090cc, organ: 0x00ffff, mist: 0x55ddff },
+skinwalker:    { base: 0x220000, dark: 0x0a0000, organ: 0x550011, mist: 0x330000 },
 default:       { base: 0xcc1100, dark: 0x880000, organ: 0xff3300, mist: 0xee2200 },
 };
 
@@ -1192,8 +1193,10 @@ var ey = s.enemy.mesh ? s.enemy.mesh.position.y : 0;
 var ez = s.enemy.mesh ? s.enemy.mesh.position.z : 0;
 var wx = ex + s.lx, wy = ey + s.ly, wz = ez + s.lz;
 
-var spd   = 3.5 + s.pressure * 9.5;
-var count = Math.max(1, Math.ceil(s.pressure * 6));
+s.phase = (s.phase || 0) + 0.45;
+var sineBoost = 1.0 + Math.sin(s.phase) * 0.55;
+var spd   = (3.5 + s.pressure * 9.5) * sineBoost;
+var count = Math.max(1, Math.ceil(s.pressure * 6 * (0.5 + 0.5 * Math.abs(Math.sin(s.phase)))));
 
 for (var i = 0; i < count; i++) {
 var d = _getFreeDrop(_dropData);
@@ -1265,16 +1268,47 @@ nx = -_s1.x; ny = -_s1.y; nz = -_s1.z;
 var count = wp.dropCount;
 var sMin  = wp.dropSpeed[0], sMax = wp.dropSpeed[1];
 
+// Compute tangent/bitangent for V-cone spread
+var _tl;
+var tx, ty, tz, bx, by, bz;
+var absNX = Math.abs(nx), absNY = Math.abs(ny), absNZ = Math.abs(nz);
+if (absNX <= absNY && absNX <= absNZ) {
+_tl = Math.sqrt(ny*ny + nz*nz) || 1;
+tx = 0; ty = -nz/_tl; tz = ny/_tl;
+} else if (absNY <= absNX && absNY <= absNZ) {
+_tl = Math.sqrt(nx*nx + nz*nz) || 1;
+tx = -nz/_tl; ty = 0; tz = nx/_tl;
+} else {
+_tl = Math.sqrt(nx*nx + ny*ny) || 1;
+tx = -ny/_tl; ty = nx/_tl; tz = 0;
+}
+bx = ny*tz - nz*ty;
+by = nz*tx - nx*tz;
+bz = nx*ty - ny*tx;
+var coneHalfAngle = 0.61;
+var sinCone = Math.sin(coneHalfAngle);
+var cosCone = Math.cos(coneHalfAngle);
+var coneCount = Math.floor(count * 0.6);
+var gravBias = -2.0 * sinCone;
+
 for (var i = 0; i < count; i++) {
 var d = _getFreeDrop(_dropData);
 if (!d) break;
 var spd  = sMin + Math.random() * (sMax - sMin);
-var sctr = wp.woundR * 5;
 d.alive  = true;
 d.px = hx; d.py = hy; d.pz = hz;
-d.vx = nx * spd + (Math.random()-0.5) * sctr * 6;
-d.vy = ny * spd + Math.random() * 1.2;
-d.vz = nz * spd + (Math.random()-0.5) * sctr * 6;
+if (i < coneCount) {
+var angle = (i / coneCount) * Math.PI * 2;
+var cosA = Math.cos(angle), sinA = Math.sin(angle);
+d.vx = nx * spd * cosCone + (tx * cosA + bx * sinA) * spd * sinCone;
+d.vy = ny * spd * cosCone + (ty * cosA + by * sinA) * spd * sinCone + gravBias;
+d.vz = nz * spd * cosCone + (tz * cosA + bz * sinA) * spd * sinCone;
+} else {
+var sctr = wp.woundR * 5;
+d.vx = nx * spd + (Math.random()-0.5) * sctr * 8;
+d.vy = ny * spd + Math.random() * 1.2 + gravBias;
+d.vz = nz * spd + (Math.random()-0.5) * sctr * 8;
+}
 d.r         = 0.006 + Math.random()*0.009;
 d.maxLife   = 2.5 + Math.random()*1.5;
 d.life      = d.maxLife;
@@ -1460,6 +1494,30 @@ d.viscosity = 0.55;
 d.bounces   = 0; d.maxBounces = 3;
 d.onGround  = false;
 d.color     = col.base;
+d.frozen    = false; d.charred = false;
+}
+}
+
+function _fxSmear(x1, y1, z1, x2, y2, z2, count, color) {
+var steps = count || 12;
+for (var i = 0; i < steps; i++) {
+var t = i / Math.max(steps - 1, 1);
+var d = _getFreeDrop(_dropData);
+if (!d) break;
+d.alive = true;
+d.px = x1 + (x2 - x1) * t + (Math.random() - 0.5) * 0.04;
+d.py = y1 + (y2 - y1) * t;
+d.pz = z1 + (z2 - z1) * t + (Math.random() - 0.5) * 0.04;
+d.vx = (Math.random() - 0.5) * 0.05;
+d.vy = -1.5;
+d.vz = (Math.random() - 0.5) * 0.05;
+d.r         = 0.012 + Math.random() * 0.010;
+d.maxLife   = 4.0 + Math.random();
+d.life      = d.maxLife;
+d.viscosity = 0.90;
+d.bounces   = 0; d.maxBounces = 0;
+d.onGround  = false;
+d.color     = color || 0xaa0000;
 d.frozen    = false; d.charred = false;
 }
 }
@@ -2123,6 +2181,11 @@ _burstUpward(ox, oy, oz,
   o.life   !== undefined ? o.life   : 2.5,
   o.visc   !== undefined ? o.visc   : 0.60
 );
+},
+
+smearBlood: function(x1, y1, z1, x2, y2, z2, count, color) {
+if (!_ready) return;
+_fxSmear(x1, y1, z1, x2, y2, z2, count || 12, color || 0xaa0000);
 },
 
 };
