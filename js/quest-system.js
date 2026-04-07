@@ -4785,8 +4785,7 @@
       // edge-case where the let-scoped variable is not in scope here (e.g. init() partial failure).
       const _rendererRef = (typeof renderer !== 'undefined' ? renderer : null) || window.gameRenderer;
       const canUse3DCamp = !!(window.CampWorld && _rendererRef);
-      // Use classList.add/remove instead of toggle(name, bool) to avoid accidentally stripping
-      // the class if canUse3DCamp is momentarily false due to a timing race.
+      // Explicit add/remove used here for clarity.
       if (_campScreenEl) {
         if (canUse3DCamp) {
           _campScreenEl.classList.add('camp-3d-mode');
@@ -4796,6 +4795,8 @@
       }
       // When 3D camp is active, also directly hide the buildings section so there is no
       // flash of 2D cards before the CSS rule takes effect.
+      // When in 2D fallback mode, explicitly restore the buildings section so the
+      // 2D camp UI is visible (CampWorld/renderer unavailable).
       if (canUse3DCamp) {
         const _campBuildingsEl = document.getElementById('camp-buildings-section');
         if (_campBuildingsEl) _campBuildingsEl.style.display = 'none';
@@ -4803,6 +4804,10 @@
         // (It may have been hidden by a prior 2D-mode camp visit.)
         const _gameContainerEl = document.getElementById('game-container');
         if (_gameContainerEl) _gameContainerEl.style.display = 'block';
+      } else {
+        // 2D fallback: ensure buildings section is visible so the camp is not blank.
+        const _campBuildingsEl = document.getElementById('camp-buildings-section');
+        if (_campBuildingsEl) _campBuildingsEl.style.display = '';
       }
 
       // First-run tutorial hook: fire after current call stack (by then camp-screen is visible)
