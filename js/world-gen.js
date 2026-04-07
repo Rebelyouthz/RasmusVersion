@@ -3045,13 +3045,13 @@
     const QUALITY_LEVELS = ['ultra-low','very-low','low','medium','high','very-high','ultra'];
 
     const QUALITY_PRESETS = {
-      'ultra-low': { shadows: false, shadowType: 'Basic', shadowSize: 0,    pixelRatio: 0.4,  fogNear: 14, fogFar: 22, particleScale: 0.20 },
-      'very-low':  { shadows: true,  shadowType: 'Basic', shadowSize: 256,  pixelRatio: 0.5,  fogNear: 16, fogFar: 26, particleScale: 0.35 },
-      'low':       { shadows: true,  shadowType: 'Basic', shadowSize: 512,  pixelRatio: 0.6,  fogNear: 18, fogFar: 28, particleScale: 0.50 },
-      'medium':    { shadows: true,  shadowType: 'PCFSoft', shadowSize: 1024, pixelRatio: 0.9,  fogNear: 20, fogFar: 32, particleScale: 0.75 },
-      'high':      { shadows: true,  shadowType: 'PCFSoft', shadowSize: 2048, pixelRatio: 1.0,  fogNear: 22, fogFar: 36, particleScale: 1.00 },
-      'very-high': { shadows: true,  shadowType: 'PCFSoft', shadowSize: 2048, pixelRatio: 1.0,  fogNear: 26, fogFar: 42, particleScale: 1.00 },
-      'ultra':     { shadows: true,  shadowType: 'PCFSoft', shadowSize: 4096, pixelRatio: 1.0,  fogNear: 30, fogFar: 50, particleScale: 1.00 }
+      'ultra-low': { shadows: false, shadowType: 'Basic', shadowSize: 0,    pixelRatio: 0.5,  fogNear: 14, fogFar: 22, particleScale: 0.20 },
+      'very-low':  { shadows: true,  shadowType: 'Basic', shadowSize: 256,  pixelRatio: 0.75, fogNear: 16, fogFar: 26, particleScale: 0.35 },
+      'low':       { shadows: true,  shadowType: 'Basic', shadowSize: 512,  pixelRatio: 1.0,  fogNear: 18, fogFar: 28, particleScale: 0.50 },
+      'medium':    { shadows: true,  shadowType: 'PCFSoft', shadowSize: 1024, pixelRatio: 1.0,  fogNear: 20, fogFar: 32, particleScale: 0.75 },
+      'high':      { shadows: true,  shadowType: 'PCFSoft', shadowSize: 2048, pixelRatio: 1.5,  fogNear: 22, fogFar: 36, particleScale: 1.00 },
+      'very-high': { shadows: true,  shadowType: 'PCFSoft', shadowSize: 2048, pixelRatio: 1.5,  fogNear: 26, fogFar: 42, particleScale: 1.00 },
+      'ultra':     { shadows: true,  shadowType: 'PCFSoft', shadowSize: 4096, pixelRatio: 1.5,  fogNear: 30, fogFar: 50, particleScale: 1.00 }
     };
     window.QUALITY_LEVELS  = QUALITY_LEVELS;
     window.QUALITY_PRESETS = QUALITY_PRESETS;

@@ -5692,20 +5692,20 @@
         renderer.toneMappingExposure = 1.0;
         break;
       case 'low':
-        renderer.setPixelRatio(1.0);
+        renderer.setPixelRatio(_isMobile ? 0.75 : 1.0);
         renderer.shadowMap.enabled = false;
         renderer.toneMapping = THREE.LinearToneMapping;
         renderer.toneMappingExposure = 1.0;
         break;
       case 'medium':
-        renderer.setPixelRatio(1.0);
+        renderer.setPixelRatio(_isMobile ? 1.0 : 1.0);
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.BasicShadowMap;
         renderer.toneMapping = THREE.LinearToneMapping;
         renderer.toneMappingExposure = 1.1;
         break;
       case 'high':
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+        renderer.setPixelRatio(_isMobile ? 1.5 : Math.min(window.devicePixelRatio, 2.0));
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFShadowMap;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -5713,8 +5713,8 @@
         break;
       case 'ultra':
       default:
-        // Cap at 1.5 on mobile even in ultra mode to prevent GPU overload from 4K post-processing
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, _isMobile ? 1.5 : 2));
+        // Strictly cap at 1.5 on mobile to prevent GPU overload on high-DPI devices (iPhone 16 @ 3.0)
+        renderer.setPixelRatio(_isMobile ? 1.5 : Math.min(window.devicePixelRatio, 2.0));
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -5743,7 +5743,7 @@
     try { localStorage.setItem('sandboxGraphicsQuality', quality); } catch (_) {}
     // Update gameSettings global if present
     if (window.gameSettings) window.gameSettings.quality = quality;
-    console.log('[SandboxLoop] Graphics quality applied:', quality);
+    // console.log('[SandboxLoop] Graphics quality applied:', quality); // REMOVED: hot-path performance
   }
 
   /**
