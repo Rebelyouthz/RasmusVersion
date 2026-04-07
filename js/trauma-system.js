@@ -338,7 +338,11 @@
   // ─── Wound Decal System ──────────────────────────────────────────────────────
   // Creates a localized wound decal attached to the enemy mesh
   function addWoundDecal(enemy, hitPoint, weaponType) {
-    if (!enemy || !enemy.mesh || !hitPoint) return null;
+    // Resolve the attachment mesh — support enemies that use parts.root (e.g. skinwalkers)
+    const attachMesh = (enemy && enemy.mesh) ? enemy.mesh
+                     : (enemy && enemy.parts && enemy.parts.root) ? enemy.parts.root
+                     : null;
+    if (!enemy || !attachMesh || !hitPoint) return null;
     if (_woundDecals.length >= MAX_WOUND_DECALS) {
       // Remove oldest decal
       const oldest = _woundDecals.shift();
@@ -371,15 +375,15 @@
     });
     const decal = new THREE.Mesh(geo, mat);
 
-    // Position decal at hit point relative to enemy
-    const localHit = enemy.mesh.worldToLocal(hitPoint.clone());
+    // Position decal at hit point relative to attachment mesh
+    const localHit = attachMesh.worldToLocal(hitPoint.clone());
     decal.position.copy(localHit);
     decal.position.y += 0.01; // Slightly above surface to avoid z-fighting
 
     // Orient decal to face outward from enemy center
-    decal.lookAt(enemy.mesh.position);
+    decal.lookAt(attachMesh.position);
 
-    enemy.mesh.add(decal);
+    attachMesh.add(decal);
 
     const woundData = {
       mesh: decal,

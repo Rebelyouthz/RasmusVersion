@@ -911,6 +911,19 @@ function _getAnatomyColor(enemyType, organ) {
   return 0x880000;
 }
 
+// Helper: derive gore chunk color from the enemy's actual body material
+function getEnemyGoreColor(enemy) {
+  try {
+    if (enemy && enemy.mesh && enemy.mesh.material && enemy.mesh.material.color) {
+      return enemy.mesh.material.color.getHex();
+    }
+    if (enemy && enemy.body && enemy.body.material && enemy.body.material.color) {
+      return enemy.body.material.color.getHex();
+    }
+  } catch(e) {}
+  return 0xCC4422;
+}
+
 // ─────────────────────────────────────────────
 //  GORE SIMULATOR — MAIN PUBLIC API
 // ─────────────────────────────────────────────
@@ -958,7 +971,7 @@ this._drops.push(drop);
 
 // Flesh chunk pool
 const chunkGeo = new THREE.DodecahedronGeometry(0.5, 0);
-const chunkMat = new THREE.MeshLambertMaterial({ color: 0x22aa33, transparent: true });
+const chunkMat = new THREE.MeshLambertMaterial({ color: 0xCC4422, transparent: true });
 for (let i = 0; i < MAX_CHUNKS; i++) {
   const mesh   = new THREE.Mesh(chunkGeo, chunkMat.clone());
   mesh.visible = false;
@@ -1057,9 +1070,7 @@ if (Math.random() < profile.chunkChance) {
   const count = profile.chunkCount
     ? Math.floor(profile.chunkCount.min + Math.random() * (profile.chunkCount.max - profile.chunkCount.min))
     : 2;
-  var hitChunkColor = (enemy && enemy.enemyType) ?
-    { slime: 0x22aa33, crawler: 0x8B4513, leaping_slime: 0x00bfff }[enemy.enemyType] || 0x22aa33
-    : 0x22aa33;
+  var hitChunkColor = getEnemyGoreColor(enemy);
   this._spawnChunks(hitPoint || enemyPos, hitNormal, count, profile, hitChunkColor);
 }
 

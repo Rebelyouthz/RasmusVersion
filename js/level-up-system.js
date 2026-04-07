@@ -1672,6 +1672,8 @@ window.spawnBossChest = function(x, z) {
             // Thud flash
             card.classList.add('card-thud-flash');
             setTimeout(() => card.classList.remove('card-thud-flash'), 380);
+            document.body.classList.add('screen-shake-brief');
+            setTimeout(() => document.body.classList.remove('screen-shake-brief'), 200);
           }
         }, { once: true });
         
@@ -1781,15 +1783,19 @@ window.spawnBossChest = function(x, z) {
           setTimeout(() => {
             // Zoom chosen card up
             card.style.transition = 'transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s';
-            card.style.transform = 'scale(1.18) translateY(-18px)';
+            card.style.transform = 'scale(1.35) translateY(-25px)';
             card.style.zIndex = '200';
 
             // Dim and suck other cards + modal bg into center hole
             allCards.forEach(c => {
               if (c !== card) {
-                c.style.transition = 'transform 0.4s ease-in, opacity 0.4s ease-in';
-                c.style.transform = 'scale(0.2)';
-                c.style.opacity = '0';
+                const rejectedCard = c;
+                const randX = (Math.random() > 0.5 ? 1 : -1) * (50 + Math.random() * 150);
+                const randY = (Math.random() > 0.5 ? 1 : -1) * (50 + Math.random() * 150);
+                const randAngle = (Math.random() - 0.5) * 720;
+                rejectedCard.style.transition = 'transform 0.4s ease-in, opacity 0.4s ease-in';
+                rejectedCard.style.transform = `translate(${randX}vw, ${randY}vh) scale(0) rotate(${randAngle}deg)`;
+                rejectedCard.style.opacity = '0';
               }
             });
             // Suck the modal background out
@@ -1821,6 +1827,31 @@ window.spawnBossChest = function(x, z) {
 
               // Wait 0.2s after shards, then close everything
               setTimeout(() => {
+                // Black hole suck-in effect
+                try {
+                  const bhDiv = document.createElement('div');
+                  bhDiv.style.cssText = 'position:fixed;top:50%;left:50%;width:4px;height:4px;background:radial-gradient(circle,#000 30%,#0a0a2a 60%,transparent);border-radius:50%;transform:translate(-50%,-50%);z-index:99999;transition:all 0.6s cubic-bezier(0.55,0,1,0.45);pointer-events:none;';
+                  document.body.appendChild(bhDiv);
+
+                  setTimeout(() => {
+                    bhDiv.style.width = '200vmax';
+                    bhDiv.style.height = '200vmax';
+                    bhDiv.style.background = 'radial-gradient(circle,#000 20%,#001133 50%,transparent)';
+                    bhDiv.style.opacity = '1';
+                    bhDiv.style.transform = 'translate(-50%,-50%) scale(1) rotate(180deg)';
+                  }, 10);
+
+                  setTimeout(() => {
+                    bhDiv.style.transition = 'all 0.4s ease-in';
+                    bhDiv.style.opacity = '0';
+                    bhDiv.style.transform = 'translate(-50%,-50%) scale(0) rotate(360deg)';
+                  }, 610);
+
+                  setTimeout(() => {
+                    if (bhDiv.parentNode) bhDiv.parentNode.removeChild(bhDiv);
+                  }, 1010);
+                } catch (_bhe) { /* non-critical visual — ignore */ }
+
                 // PERF FIX: Clean up DOM elements and event listeners to prevent memory leaks
                 const upgradeList = document.getElementById('upgrade-list');
                 if (upgradeList) upgradeList.innerHTML = ''; // Remove all cards and their event listeners
@@ -1927,7 +1958,7 @@ window.spawnBossChest = function(x, z) {
             if (card.dataset.selected === '1' && modal.style.display !== 'none') {
               applyUpgradeAndClose();
             }
-          }, 600);
+          }, 400);
           activeHold = { timer: holdTimer, card };
         });
 

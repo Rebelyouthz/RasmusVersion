@@ -294,6 +294,28 @@
     SkinwalkerEnemy.prototype.update = function (dt, playerPos) {
         if (this.dead && this.state !== 'death') return;
 
+        // 3C: Dying ragdoll — runs before any normal update logic
+        if (this._dying && !this.dead) {
+            this._dieTimer = (this._dieTimer || 0) + dt;
+            var _t = this._dieTimer;
+            try {
+                var _p = this.parts;
+                if (!this._dieDir) this._dieDir = (Math.random() > 0.5 ? 1 : -1) * (Math.PI / 2 + Math.random() * 0.4);
+                var tiltT = Math.min(_t / 0.6, 1);
+                if (_p && _p.root) {
+                    _p.root.rotation.z = this._dieDir * tiltT;
+                    var dropT = Math.min(_t / 0.8, 1);
+                    _p.root.position.y = -0.5 * dropT;
+                }
+            } catch(e) {}
+            if (_t >= 0.8) {
+                this.dead = true;
+                this._dying = false;
+                try { if (typeof this.onDeath === 'function') this.onDeath(); } catch(e) {}
+            }
+            return;
+        }
+
         // animTime is advanced inside each animation method at state-specific rates
         this.stateTimer += dt;
 
@@ -317,6 +339,10 @@
         // ---- ATTACK states ----
         if (this.state === 'attack_upright') {
             this._animateAttackUpright();
+            // 3B: Jaw unhinge during attack
+            try {
+                this.parts.jaw.rotation.x = -0.9 * Math.min(this.stateTimer / 0.3, 1.0);
+            } catch(e) {}
             if (this.stateTimer >= 1.1) {
                 this._setState(this._prevState === 'crawl' ? 'crawl' : 'walk');
             }
@@ -324,6 +350,10 @@
         }
         if (this.state === 'attack_crawl') {
             this._animateAttackCrawl(dt, playerPos);
+            // 3B: Jaw unhinge during attack
+            try {
+                this.parts.jaw.rotation.x = -0.9 * Math.min(this.stateTimer / 0.3, 1.0);
+            } catch(e) {}
             if (this.stateTimer >= 0.75) {
                 this._setState('crawl');
             }
@@ -447,12 +477,28 @@
      * @param {number} amount  damage amount
      */
     SkinwalkerEnemy.prototype.takeDamage = function (amount) {
-        if (this.dead) return;
+        if (this.dead || this._dying) return;
         this.hp -= amount;
         if (this.hp <= 0) {
-            this.hp   = 0;
-            this.dead = true;
-            this._setState('death');
+            this.hp = 0;
+            this._dying    = true;
+            this._dieTimer = 0;
+            this._dieDir   = null;
+            // 3C: Spawn death gore via GoreSim public API (avoids internal _spawnChunks helper)
+            try {
+                var pos = this.parts.root.position;
+                if (pos && window.GoreSim && typeof window.GoreSim.onKill === 'function') {
+                    // Build a minimal enemy proxy — onKill only needs mesh.position and
+                    // optional enemyType (for chunk color selection in _killExplosion).
+                    var _killProxy = {
+                        mesh: { position: pos.clone() },
+                        enemyType: 'skinwalker',
+                        id: null,
+                        uuid: null
+                    };
+                    window.GoreSim.onKill(_killProxy, 'shotgun', null);
+                }
+            } catch(e) {}
             return;
         }
         // Interrupt non-critical states
@@ -538,7 +584,6 @@
         p.torso.rotation.z = -bodySway * 0.5; // counter-rotate torso for natural feel
 
         // Head cranes up to stare at player despite body pitched forward
-        p.head.rotation.x = -0.7;
         p.neck.rotation.x = -0.5;
         p.head.rotation.z = 0.22 + Math.sin(t * 0.8) * 0.10;
 
@@ -551,6 +596,12 @@
         while (diff >  PI) diff -= PI * 2;
         while (diff < -PI) diff += PI * 2;
         p.head.rotation.y += diff * Math.min(dt * 3.0, 1.0);
+
+        // 3A: Head pitch twitch/droop + yaw jitter while crawling
+        try {
+            p.head.rotation.x = Math.sin(t * 8) * 0.18 + 0.35;
+            p.head.rotation.y = Math.max(-0.3, Math.min(0.3, p.head.rotation.y + (Math.random() - 0.5) * 0.02));
+        } catch(e) {}
 
         // Arms — diagonal opposite pairs move together (FR+RL, FL+RR)
         // Left arm and right leg share phase; right arm and left leg share opposing phase
@@ -575,6 +626,11 @@
         // Wrists bent back — claws dig in, slight claw-rake oscillation
         p.hand_L.rotation.x = 0.6 + armPhaseL * 0.12;
         p.hand_R.rotation.x = 0.6 + armPhaseR * 0.12;
+
+        // 3B: Jaw lerp back to closed when not in attack state
+        try {
+            p.jaw.rotation.x = THREE.MathUtils.lerp(p.jaw.rotation.x, 0, 0.1);
+        } catch(e) {}
     };
 
     // ---- CRAWL TRANSITION (walk→crawl over 0.4s) ----
@@ -759,6 +815,9 @@
         this.hp         = STATS.maxHP;
         this.dead       = false;
         this._pooled    = false;
+        this._dying     = false;
+        this._dieTimer  = 0;
+        this._dieDir    = null;
         this._deathStartTime = 0;    // reset so stale timestamps don't cause premature timeout
         this._killProcessed  = false; // reset so _killSkinwalker can run again
         this.state      = 'idle';

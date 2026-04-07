@@ -411,6 +411,8 @@
   let _activeLeapingSlimes = [];   // live list of active leaping slime enemies
   let _activeSkinwalkers = [];     // live list of active skinwalker enemies
   let _projPool = [];              // reusable projectile objects
+  let _projPoolGeo = null;         // shared geometry for pool slots (set once in _buildProjectilePool)
+  let _projPoolNextIdx = 0;        // ring-cursor for O(1) free-slot lookup (avoids full-array scan)
   let _activeProjList = [];        // currently flying projectiles
   let _animateErrorShown = false;  // prevent spamming error display every frame
   // EXP gem object pool (pre-allocated ExpGem instances, no new THREE.Mesh during gameplay)
@@ -1176,10 +1178,10 @@
 
   // ─── Projectile pool ─────────────────────────────────────────────────────────
   function _buildProjectilePool() {
-    const geo = new THREE.SphereGeometry(0.065, 5, 5); // smaller, bullet-like
+    _projPoolGeo = new THREE.SphereGeometry(0.065, 5, 5); // smaller, bullet-like
     for (let i = 0; i < POOL_SIZE_PROJECTILES; i++) {
       const mat = new THREE.MeshBasicMaterial({ color: 0xFFFFAA });
-      const m = new THREE.Mesh(geo, mat);
+      const m = new THREE.Mesh(_projPoolGeo, mat);
       m.visible = false;
       scene.add(m);
       _projPool.push({
@@ -1198,9 +1200,42 @@
     }
   }
 
+  // Hard cap: pool never grows beyond this; when full the oldest active projectile is recycled.
+  const _PROJ_POOL_MAX = 120;
   function _fireProjectile(fromX, fromZ, toX, toZ, weaponKey, weaponDmg, explosionRadius) {
-    const p = _projPool.find(function (o) { return !o.active; });
-    if (!p) return;
+    // Ring-index scan: start from where we left off to keep per-shot cost O(1) amortised.
+    let p = null;
+    const len = _projPool.length;
+    for (let _scan = 0; _scan < len; _scan++) {
+      const idx = (_projPoolNextIdx + _scan) % len;
+      if (!_projPool[idx].active) {
+        p = _projPool[idx];
+        _projPoolNextIdx = (idx + 1) % len;
+        break;
+      }
+    }
+    if (!p) {
+      if (len < _PROJ_POOL_MAX) {
+        // Expand pool up to hard cap
+        const geo = _projPoolGeo || new THREE.SphereGeometry(0.065, 5, 5);
+        const mat = new THREE.MeshBasicMaterial({ color: 0xFFFFAA });
+        const m = new THREE.Mesh(geo, mat);
+        m.visible = false;
+        scene.add(m);
+        const slot = { mesh: m, mat: mat, active: false, vx: 0, vz: 0, distSq: 0, ox: 0, oz: 0, weaponKey: 'gun', weaponDmg: 0, explosionRadius: 0 };
+        _projPool.push(slot);
+        p = slot;
+        _projPoolNextIdx = 0; // reset cursor after growth
+      } else {
+        // Pool at hard cap — recycle the oldest active projectile (ring position = _projPoolNextIdx)
+        p = _projPool[_projPoolNextIdx % len];
+        if (p.mesh) p.mesh.visible = false;
+        p.active = false;
+        const _staleIdx = _activeProjList.indexOf(p);
+        if (_staleIdx !== -1) _activeProjList.splice(_staleIdx, 1);
+        _projPoolNextIdx = (_projPoolNextIdx + 1) % len;
+      }
+    }
     const dx = toX - fromX, dz = toZ - fromZ;
     const len = Math.sqrt(dx * dx + dz * dz) || 1;
     p.vx = (dx / len) * PROJECTILE_SPEED;
@@ -1220,6 +1255,7 @@
   function _updateProjectiles(dt) {
     for (let i = _activeProjList.length - 1; i >= 0; i--) {
       const p = _activeProjList[i];
+      if (!p) continue;
       if (!p.active) { _activeProjList.splice(i, 1); continue; }
 
       p.mesh.position.x += p.vx * dt;
@@ -1555,6 +1591,8 @@
   }
 
   function _deactivateSlime(slot) {
+    // Remove any skin flaps before pooling — prevents accumulation across reuses
+    _removeSkinFlaps(slot);
     // Hide all pre-allocated splatter meshes (pooled — no dispose needed)
     slot.splatIndex = 0;
     if (slot.splatPool) {
@@ -1939,6 +1977,8 @@
   }
 
   function _killSlime(slot, hitForce, killVX, killVZ, weaponKey) {
+    // Remove any skin flaps before kill FX so they don't persist on the corpse mesh
+    _removeSkinFlaps(slot);
     const x = slot.mesh.position.x;
     const y = slot.mesh.position.y + 0.4; // center of body
     const z = slot.mesh.position.z;
@@ -2222,6 +2262,8 @@
   }
 
   function _killCrawler(crawler, hitForce, killVX, killVZ, weaponKey) {
+    // Remove any skin flaps before kill FX
+    _removeSkinFlaps(crawler);
     const x = crawler.mesh.position.x;
     const y = 0.4;
     const z = crawler.mesh.position.z;
@@ -2540,6 +2582,8 @@
   /** Kill a leaping slime, spawn loot and effects. */
   function _killLeapingSlime(enemy, hitForce, killVX, killVZ, weaponKey) {
     if (!enemy || enemy.dead) return;
+    // Remove any skin flaps before kill FX
+    _removeSkinFlaps(enemy);
     const x = enemy.mesh.position.x;
     const y = enemy.mesh.position.y + enemy.size;
     const z = enemy.mesh.position.z;
@@ -3160,6 +3204,57 @@
     chunk.mesh.material.opacity = 1;
   }
 
+  // Shared geometry for skin-flap meshes spawned by shockwave skin-rip zones.
+  // Created lazily once on first shockwave, reused for all subsequent skin flaps.
+  let _skinFlapGeo = null;
+
+  // Removes all skin-flap child meshes from enemy.mesh and disposes their materials.
+  // Must be called from every deactivation/kill path to prevent accumulation on pooled enemies.
+  function _removeSkinFlaps(enemy) {
+    if (!enemy || !enemy.mesh) return;
+    try {
+      for (let _rfi = enemy.mesh.children.length - 1; _rfi >= 0; _rfi--) {
+        const _ch = enemy.mesh.children[_rfi];
+        if (_ch && _ch.userData && _ch.userData.isSkinFlap) {
+          enemy.mesh.remove(_ch);
+          if (_ch.material) _ch.material.dispose();
+        }
+      }
+      enemy.isSkinned = false;
+    } catch(_rfe) { /* visual-only — suppress */ }
+  }
+
+  // Spawns 2-4 skin-flap PlaneGeometry meshes as children of enemy.mesh.
+  // origColor is the hex color of the skin flap (typically e._originalColor).
+  // All errors are silently suppressed — this is a visual-only effect.
+  function _spawnSkinFlaps(enemy, origColor) {
+    if (!enemy || !enemy.mesh) return;
+    // Remove any existing flaps first (e.g. double shockwave hit)
+    _removeSkinFlaps(enemy);
+    try {
+      if (!_skinFlapGeo) _skinFlapGeo = new THREE.PlaneGeometry(0.06, 0.06);
+      const flapCount = 2 + Math.floor(Math.random() * 3);
+      for (let fi = 0; fi < flapCount; fi++) {
+        const flapMat = new THREE.MeshBasicMaterial({
+          color: origColor, side: THREE.DoubleSide, transparent: true, opacity: 0.85
+        });
+        const flap = new THREE.Mesh(_skinFlapGeo, flapMat);
+        flap.userData.isSkinFlap = true; // tag for cleanup
+        flap.position.set(
+          (Math.random() - 0.5) * 0.3,
+          (Math.random() - 0.5) * 0.3,
+          0.08 + Math.random() * 0.07
+        );
+        flap.rotation.set(
+          (Math.random() - 0.5) * 0.4,
+          (Math.random() - 0.5) * 0.4,
+          Math.random() * Math.PI * 2
+        );
+        enemy.mesh.add(flap);
+      }
+    } catch(e2) { /* visual-only — suppress to prevent game disruption */ }
+  }
+
   // Spawn flying flesh chunks using pre-allocated pool (no new THREE.Mesh during gameplay)
   // color parameter can be either a single hex color or an array of colors to choose from
   // forceOpts (optional 5th param): { dirX, dirZ, power, spread } — applies a strong
@@ -3168,9 +3263,13 @@
   //   horizontal power 0.28-0.38 gives ~5.6-12 m travel before ground-friction stops them.
   function _spawnFleshChunks(slot, count, large, color, forceOpts) {
     const pos = slot.mesh.position;
-    // Default to green slime colors if no color provided
-    const defaultColors = [0x33AA22, 0x228811, 0x116600, 0x55CC33];
-    const chunkColors = Array.isArray(color) ? color : (color ? [color] : defaultColors);
+    // Derive default chunk color from the enemy's actual body material
+    const _slotBaseColor = (slot.mesh && slot.mesh.material && slot.mesh.material.color)
+      ? slot.mesh.material.color.getHex()
+      : (slot.body && slot.body.material && slot.body.material.color
+         ? slot.body.material.color.getHex()
+         : 0xCC4422);
+    const chunkColors = Array.isArray(color) ? color : (color ? [color] : [_slotBaseColor]);
 
     for (let i = 0; i < count; i++) {
       const chunk = _acquireFleshChunk();
@@ -3821,12 +3920,12 @@
         // Ring 1: Fast energy pulse ring (bright cyan-white, outruns everything)
         // Ring 2-5: Original layered rings (white → orange → crimson → dark)
         const _ringDefs = [
-          [0xFFEECC, 0.95, 0.00, 0.30, 0.80, 0.065],
-          [0xCCFFFF, 0.85, 0.10, 0.25, 0.70, 0.050],
-          [0xFFFFFF, 1.00, 0.05, 0.20, 0.55, 0.042],
-          [0xFF8800, 0.90, 0.08, 0.38, 0.40, 0.026],
-          [0xFF2200, 0.80, 0.07, 0.52, 0.28, 0.016],
-          [0x880033, 0.60, 0.06, 0.75, 0.16, 0.009],
+          [0xFFFFFF, 1.00, 0.00, 0.30, 0.90, 0.075],  // blinding white core
+          [0xCCFFFF, 0.95, 0.05, 0.22, 0.78, 0.060],  // inner cyan pulse
+          [0x88FFFF, 0.90, 0.08, 0.40, 0.58, 0.045],  // mid cyan ring
+          [0x44EEFF, 0.75, 0.10, 0.60, 0.40, 0.028],  // outer cyan
+          [0x00CCFF, 0.55, 0.09, 0.85, 0.25, 0.015],  // far energy fade
+          [0x0088CC, 0.35, 0.08, 1.20, 0.14, 0.008],  // distant deep blue edge
         ];
         // Lazy-init the pool once (pre-allocate ring meshes for all defs (currently 6), reuse every level-up)
         if (!_lvlUpRingsInited) {
@@ -3991,6 +4090,11 @@
             for (let _s = 1; _s <= 3; _s++) {
               _placeBloodStain(ex + kbDirX * _s * 1.2, ez + kbDirZ * _s * 1.2, 0.14 + Math.random() * 0.16);
             }
+            e.isSkinned = true;
+            try {
+              if (e.mesh && e.mesh.material) e.mesh.material.color.setHex(0x6B1010);
+            } catch(e2) { /* visual-only */ }
+            _spawnSkinFlaps(e, e._originalColor ? e._originalColor.getHex() : 0x44AA44);
           } else {
             // ── ZONE 3: 2-5m — half HP, ~1/3 skin ripped ──
             e.hp = Math.max(1, Math.floor((e.hp || _gunDmg * 2) * 0.5));
@@ -4015,6 +4119,11 @@
             }
             _placeBloodStain(ex, ez);
             _placeBloodStain(ex + kbDirX * 1.5, ez + kbDirZ * 1.5);
+            e.isSkinned = true;
+            try {
+              if (e.mesh && e.mesh.material) e.mesh.material.color.setHex(0x8B2020);
+            } catch(e2) { /* visual-only */ }
+            _spawnSkinFlaps(e, e._originalColor ? e._originalColor.getHex() : 0x44AA44);
           }
         }
 
@@ -4108,7 +4217,7 @@
 
     // ── Fiery "LEVEL UP" text animation (Grind Survivors style) ──
     // Spawns a massive burning text above the player before showing the upgrade modal.
-    setTimeout(_spawnFireLevelUpText, 400); // slight delay after small text
+    setTimeout(_spawnFireLevelUpText, 0); // fire immediately with small text
 
     // Delay before upgrade modal appears so player can enjoy the fiery text animation
     window.isPaused = true;
@@ -4169,8 +4278,8 @@
       document.body.appendChild(_smallLvlUpEl);
     }
 
-    // Target size: 50% of fire text's clamp(44px, 9vw, 88px) = clamp(22px, 4.5vw, 44px)
-    var targetSize = Math.min(44, Math.max(22, window.innerWidth * 0.045));
+    // Target size: 50% of fire text's clamp(22px, 4.5vw, 44px) = clamp(11px, 2.25vw, 22px)
+    var targetSize = Math.min(22, Math.max(11, window.innerWidth * 0.0225));
     var startSize = targetSize * 0.2;
     _smallLvlUpEl.textContent = 'LEVEL UP!';
     _smallLvlUpEl.style.display = 'block';
@@ -4214,7 +4323,7 @@
   var _fireLvlEmbers = [];
   var _FIRE_EMBER_COUNT = 36;
   var _fireLvlInited = false;
-  var _fireLvlEmberColors = ['#FF4500','#FFD700','#FF6600','#FFA500'];
+  var _fireLvlEmberColors = ['#CCCCCC','#FFFFFF','#AAAAAA','#E8E8E8'];
   var _fireLvlRafId = 0; // tracks active RAF so back-to-back level-ups cancel the prior animation
 
   function _initFireLevelUpPool() {
@@ -4236,38 +4345,15 @@
       'will-change:transform,opacity',
     ].join(';');
 
-    var eyeEl = document.createElement('div');
-    eyeEl.innerHTML = [
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60" style="width:clamp(60px,12vw,120px);height:auto;filter:drop-shadow(0 0 8px #FFD700) drop-shadow(0 0 18px #FF8C00);margin-bottom:4px;">',
-      '  <defs>',
-      '    <linearGradient id="eyeGrad" x1="0%" y1="0%" x2="100%" y2="0%">',
-      '      <stop offset="0%" style="stop-color:#B8860B"/>',
-      '      <stop offset="50%" style="stop-color:#FFD700"/>',
-      '      <stop offset="100%" style="stop-color:#B8860B"/>',
-      '    </linearGradient>',
-      '  </defs>',
-      '  <path d="M10,30 Q30,4 60,4 Q90,4 110,30 Q90,56 60,56 Q30,56 10,30 Z" fill="url(#eyeGrad)" stroke="#000" stroke-width="2"/>',
-      '  <ellipse cx="60" cy="30" rx="24" ry="18" fill="#F8F0D0"/>',
-      '  <circle cx="60" cy="30" r="13" fill="#1a0800"/>',
-      '  <circle cx="60" cy="30" r="7" fill="#000"/>',
-      '  <circle cx="55" cy="25" r="3" fill="#FFD700" opacity="0.9"/>',
-      '  <line x1="60" y1="48" x2="60" y2="56" stroke="url(#eyeGrad)" stroke-width="2.5"/>',
-      '  <path d="M60,56 Q45,60 38,54 Q34,50 38,46" fill="none" stroke="url(#eyeGrad)" stroke-width="2.5" stroke-linecap="round"/>',
-      '  <path d="M60,56 Q70,58 72,52" fill="none" stroke="url(#eyeGrad)" stroke-width="2" stroke-linecap="round"/>',
-      '</svg>'
-    ].join('');
-    eyeEl.style.cssText = 'display:block;text-align:center;';
-    _fireLvlContainer.appendChild(eyeEl);
-
     _fireLvlTextEl = document.createElement('div');
     _fireLvlTextEl.textContent = 'LEVEL UP';
     _fireLvlTextEl.style.cssText = [
       'font-family:"Cinzel Decorative","Bangers","Impact","Arial Black",sans-serif',
-      'font-size:clamp(44px,9vw,88px)',
+      'font-size:clamp(22px,4.5vw,44px)',
       'font-weight:900',
       'letter-spacing:8px',
-      'color:#FFD700',
-      'text-shadow:0 0 14px #FF4500,0 0 30px #FF6600,0 0 55px #FF8C00,0 0 90px rgba(255,69,0,0.4),3px 3px 0 #000,-3px -3px 0 #000,3px -3px 0 #000,-3px 3px 0 #000',
+      'color:#FFFFFF',
+      'text-shadow:0 0 10px #00FFFF,0 0 20px #00CCFF,0 0 40px #0088FF',
       'white-space:nowrap',
       'line-height:1',
     ].join(';');
@@ -4301,14 +4387,15 @@
     _fireLvlContainer.style.display = 'flex';
     _fireLvlContainer.style.opacity = '0';
     _fireLvlContainer.style.transform = 'translate(-50%,-50%) scale(0) translateY(30px)';
-    _fireLvlTextEl.style.color = '#FFD700';
-    _fireLvlTextEl.style.textShadow = '0 0 14px #FF4500,0 0 30px #FF6600,0 0 55px #FF8C00,0 0 90px rgba(255,69,0,0.4),3px 3px 0 #000,-3px -3px 0 #000,3px -3px 0 #000,-3px 3px 0 #000';
+    _fireLvlTextEl.style.color = '#FFFFFF';
+    _fireLvlTextEl.style.filter = '';
+    _fireLvlTextEl.style.textShadow = '0 0 10px #00FFFF, 0 0 20px #00CCFF, 0 0 40px #0088FF';
 
     // Reset embers with randomized properties
     for (var i = 0; i < _FIRE_EMBER_COUNT; i++) {
       var em = _fireLvlEmbers[i];
       var size = 2 + Math.random() * 6;
-      var isAsh = Math.random() < 0.4;
+      var isAsh = true; // all particles are grey/white ash flecks
       em.el.style.width = size + 'px';
       em.el.style.height = (isAsh ? size * 0.5 : size) + 'px';
       em.el.style.background = isAsh ? '#999' : _fireLvlEmberColors[Math.floor(Math.random() * 4)];
@@ -4381,10 +4468,8 @@
         container.style.opacity = '1';
         var ashBlend = Math.max(0, (p - 0.5) / 0.5);
         if (ashBlend > 0) {
-          var r = Math.round(255 * (1 - ashBlend * 0.5));
-          var g = Math.round(215 * (1 - ashBlend * 0.6));
-          var b = Math.round(0 + ashBlend * 60);
-          el.style.color = 'rgb(' + r + ',' + g + ',' + b + ')';
+          var channelVal = Math.round(255 * (1 - ashBlend * 0.2));
+          el.style.color = 'rgb(' + channelVal + ',' + channelVal + ',' + channelVal + ')';
         }
       } else if (t < 1) {
         var p = (t - 0.72) / 0.28;
@@ -4393,9 +4478,10 @@
         var fadeOut = 1 - Math.pow(p, 1.5);
         container.style.transform = 'translate(-50%,calc(-50% + ' + yRise + 'px)) scale(' + scale + ')';
         container.style.opacity = '' + Math.max(0, fadeOut);
-        var gr = Math.round(160 + 50 * p);
+        el.style.filter = 'blur(' + (4 * p) + 'px)';
+        var gr = Math.round(200 + 55 * (1 - p));
         el.style.color = 'rgb(' + gr + ',' + gr + ',' + gr + ')';
-        el.style.textShadow = '0 0 ' + (8 + 20 * p) + 'px rgba(180,180,180,' + (0.5 * (1 - p)) + ')';
+        el.style.textShadow = '0 0 ' + (10 + 20 * p) + 'px rgba(180,220,255,' + (0.5 * (1 - p)) + ')';
       } else {
         _hideLevelUpFX();
         return;
@@ -6544,6 +6630,14 @@
     // Blood on hit
     if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
       BloodV2.rawBurst(hx, hy, hz, 5, { color: 0xc8c7c0 });
+    }
+
+    // Bullet hole decal on skinwalker
+    if (projectile && sw.parts && sw.parts.root) {
+      const len = Math.sqrt((projectile.vx || 0) * (projectile.vx || 0) + (projectile.vz || 0) * (projectile.vz || 0)) || 1;
+      const nhx2 = (projectile.vx || 0) / len;
+      const nhz2 = (projectile.vz || 0) / len;
+      _addEnemyBulletHole(sw, sw.parts.root, nhx2, nhz2, 0.4, 0.5 + Math.random() * 0.6);
     }
 
     _triggerShake(SHAKE_LIGHT_INTENSITY * 0.8);
