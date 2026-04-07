@@ -390,11 +390,11 @@
         if (newScale < performanceLog.particleThrottleScale) {
           performanceLog.particleThrottleScale = newScale;
           performanceLog.particleThrottleActive = newScale < 1.0;
-          if (newScale < 1.0) console.warn(`FPS watchdog: FPS=${fps.toFixed(1)}, particles at ${(newScale*100).toFixed(0)}%`);
+          // console.warn(`FPS watchdog: FPS=${fps.toFixed(1)}, particles at ${(newScale*100).toFixed(0)}%`); // REMOVED: hot-path performance
         } else if (fps >= 50 && performanceLog.particleThrottleScale < 1.0) {
           performanceLog.particleThrottleScale = 1.0;
           performanceLog.particleThrottleActive = false;
-          console.log(`FPS watchdog: FPS recovered (${fps.toFixed(1)}), restoring full particles`);
+          // console.log(`FPS watchdog: FPS recovered (${fps.toFixed(1)}), restoring full particles`); // REMOVED: hot-path performance
         } else if (fps >= 35 && performanceLog.particleThrottleScale < 0.75) {
           performanceLog.particleThrottleScale = 0.75;
         } else if (fps >= 25 && performanceLog.particleThrottleScale < 0.50) {
@@ -412,7 +412,7 @@
                 const next = Math.max(_PR_MIN, Math.round((cur - _PR_STEP_DOWN) * 100) / 100);
                 window._currentPixelRatio = next;
                 renderer.setPixelRatio(next);
-                console.warn(`[PixelRatio] FPS=${fps.toFixed(0)}<${_PR_LOW_FPS_THRESHOLD}: reduced to ${next.toFixed(2)}`);
+                // console.warn(`[PixelRatio] FPS=${fps.toFixed(0)}<${_PR_LOW_FPS_THRESHOLD}: reduced to ${next.toFixed(2)}`); // REMOVED: hot-path performance
               }
               performanceLog._pixelRatioLowFPSStart = _prNow; // reset to throttle future changes
             }
@@ -426,7 +426,7 @@
                 const next = Math.min(maxPR, Math.round((cur + _PR_STEP_UP) * 100) / 100);
                 window._currentPixelRatio = next;
                 renderer.setPixelRatio(next);
-                console.log(`[PixelRatio] FPS=${fps.toFixed(0)}>${_PR_HIGH_FPS_THRESHOLD}: increased to ${next.toFixed(2)}`);
+                // console.log(`[PixelRatio] FPS=${fps.toFixed(0)}>${_PR_HIGH_FPS_THRESHOLD}: increased to ${next.toFixed(2)}`); // REMOVED: hot-path performance
               }
               performanceLog._pixelRatioHighFPSStart = _prNow; // reset to throttle future changes
             }
@@ -3783,24 +3783,22 @@
       // FRESH: Update FPS watchdog with current frame time
       updateFPSWatchdog(totalFrameTime);
       
-      // Log slow frames
+      // Log slow frames (disabled for performance - only track count)
       if (totalFrameTime > FRAME_TIME_BUDGET) {
         performanceLog.slowFrames++;
-        if (totalFrameTime > FRAME_TIME_BUDGET * 1.5) {
-          console.warn(`Slow frame detected: ${totalFrameTime.toFixed(2)}ms (render: ${(renderEndTime - renderStartTime).toFixed(2)}ms, enemies: ${aliveEnemies}, particles: ${particles.length}, projectiles: ${projectiles.length})`);
-        }
+        // Removed console.warn for slow frames - hot-path performance killer on mobile
       }
       
       // Track cumulative frame time for accurate average
       performanceLog.cumulativeFrameTime += totalFrameTime;
       
-      // Periodic performance summary (every 5 seconds)
+      // Periodic performance summary (every 5 seconds) - disabled for production perf
       const currentTime = performance.now();
       if (currentTime - performanceLog.lastLogTime > 5000) {
         const avgFrameTime = performanceLog.cumulativeFrameTime / performanceLog.frameCount;
         const slowFramePercent = (performanceLog.slowFrames / performanceLog.frameCount * 100).toFixed(1);
         const runSec = Math.floor((Date.now() - gameStartTime) / 1000);
-        console.log(`[Loop] t=${runSec}s L${playerStats.lvl} — Avg frame: ${avgFrameTime.toFixed(2)}ms, Slow: ${slowFramePercent}%, Enemies: ${aliveEnemies}, Renders: ${performanceLog.renderCount}, cinematic: ${cinematicActive}, paused: ${isPaused}`);
+        // console.log(`[Loop] t=${runSec}s L${playerStats.lvl} — Avg frame: ${avgFrameTime.toFixed(2)}ms, Slow: ${slowFramePercent}%, Enemies: ${aliveEnemies}, Renders: ${performanceLog.renderCount}, cinematic: ${cinematicActive}, paused: ${isPaused}`); // REMOVED: hot-path performance
         
         // Reset counters for next period
         performanceLog.lastLogTime = currentTime;

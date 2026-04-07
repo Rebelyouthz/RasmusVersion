@@ -3108,7 +3108,7 @@
       }
 
       renderer.shadowMap.needsUpdate = true;
-      console.log(`[Graphics Quality] Applied "${quality}" — shadows:${preset.shadows}, shadowSize:${preset.shadowSize}, pixelRatio:${preset.pixelRatio}, fog:${preset.fogNear}/${preset.fogFar}`);
+      // console.log(`[Graphics Quality] Applied "${quality}" — shadows:${preset.shadows}, shadowSize:${preset.shadowSize}, pixelRatio:${preset.pixelRatio}, fog:${preset.fogNear}/${preset.fogFar}`); // REMOVED: hot-path performance
     }
 
     // Expose globally so other script files (game-screens.js, game-loop.js) can safely call it
