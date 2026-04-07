@@ -5544,10 +5544,38 @@
   function _showMobileError(err, context) {
     const div = document.createElement('div');
     div.style.cssText = 'position:fixed;top:10%;left:5%;width:90%;background:rgba(200,0,0,0.9);color:white;z-index:999999;padding:20px;border:3px solid yellow;font-family:monospace;border-radius:10px;overflow:auto;max-height:80vh;';
-    div.innerHTML = `<h3>🚨 CRASH IN ${context} 🚨</h3>
-                     <b>Message:</b> ${err.message}<br><br>
-                     <b>Stack:</b><br><pre style="white-space:pre-wrap;font-size:10px;">${err.stack}</pre>
-                     <br><br><button onclick="this.parentNode.remove()" style="padding:10px;background:black;color:white;border:1px solid white;">Close (Screenshot this first!)</button>`;
+
+    const heading = document.createElement('h3');
+    heading.textContent = '🚨 CRASH IN ' + context + ' 🚨';
+
+    const msgLabel = document.createElement('b');
+    msgLabel.textContent = 'Message:';
+    const msgText = document.createTextNode(' ' + (err && err.message ? err.message : String(err)));
+
+    const stackLabel = document.createElement('b');
+    stackLabel.textContent = 'Stack:';
+    const pre = document.createElement('pre');
+    pre.style.cssText = 'white-space:pre-wrap;font-size:10px;';
+    pre.textContent = err && err.stack ? err.stack : '';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.style.cssText = 'padding:10px;background:black;color:white;border:1px solid white;';
+    closeBtn.textContent = 'Close (Screenshot this first!)';
+    closeBtn.addEventListener('click', function () { div.parentNode && div.parentNode.removeChild(div); });
+
+    div.appendChild(heading);
+    div.appendChild(msgLabel);
+    div.appendChild(msgText);
+    div.appendChild(document.createElement('br'));
+    div.appendChild(document.createElement('br'));
+    div.appendChild(stackLabel);
+    div.appendChild(document.createElement('br'));
+    div.appendChild(pre);
+    div.appendChild(document.createElement('br'));
+    div.appendChild(document.createElement('br'));
+    div.appendChild(closeBtn);
+
+    if (!document.body) return;
     document.body.appendChild(div);
   }
 
