@@ -138,7 +138,9 @@
           setTimeout(function() { loadingScreen.style.display = 'none'; }, 500);
         }
 
-        // Helper: call updateCampScreen, then wait 2 rAFs so CampWorld renders before revealing
+        // Helper: call updateCampScreen, then wait 2 rAFs so CampWorld renders before revealing.
+        // A setTimeout fallback guarantees the fade even when rAF is throttled (background tabs,
+        // slow start-up, power-saving mode, etc.).
         function bootCamp() {
           try {
             window.updateCampScreen();
@@ -147,12 +149,19 @@
             console.error('[Loading] updateCampScreen error:', e);
             console.log('[Loading] Continuing with camp display despite error - CampWorld may self-initialize');
           }
-          // Wait two animation frames: the first lets CampWorld.enter() dispatch its
-          // render call; the second ensures the GPU has actually drawn a frame before
-          // we remove the loading screen overlay.
+          // Two nested rAFs let CampWorld.enter() issue its first render call and give
+          // the GPU a chance to draw before we reveal the scene.
+          var fadeDone = false;
+          function safeFade() {
+            if (fadeDone) return;
+            fadeDone = true;
+            fadeLoadingScreen();
+          }
           requestAnimationFrame(function() {
-            requestAnimationFrame(fadeLoadingScreen);
+            requestAnimationFrame(safeFade);
           });
+          // Fallback: if rAF is paused (background tab, throttled browser), fade after 2s.
+          setTimeout(safeFade, 2000);
         }
 
         // Initialize camp - attempt even if init wasn't perfect
