@@ -5539,6 +5539,58 @@
   }
 
   // ──────────────────────────────────────────────────────────
+  // Mobile error overlay helper
+  // ──────────────────────────────────────────────────────────
+  function _showMobileError(err, context) {
+    if (!document.body) return;
+
+    // Reuse an existing overlay if present so repeated failures don't stack divs
+    const OVERLAY_ID = 'camp-mobile-error-overlay';
+    let div = document.getElementById(OVERLAY_ID);
+    if (div) {
+      while (div.firstChild) { div.removeChild(div.firstChild); }
+    } else {
+      div = document.createElement('div');
+      div.id = OVERLAY_ID;
+    }
+    div.style.cssText = 'position:fixed;top:10%;left:5%;width:90%;background:rgba(200,0,0,0.9);color:white;z-index:999999;padding:20px;border:3px solid yellow;font-family:monospace;border-radius:10px;overflow:auto;max-height:80vh;';
+
+    const heading = document.createElement('h3');
+    heading.textContent = '🚨 CRASH IN ' + context + ' 🚨';
+
+    const msgLabel = document.createElement('b');
+    msgLabel.textContent = 'Message:';
+    const msgText = document.createTextNode(' ' + (err && err.message ? err.message : String(err)));
+
+    const stackLabel = document.createElement('b');
+    stackLabel.textContent = 'Stack:';
+    const pre = document.createElement('pre');
+    pre.style.cssText = 'white-space:pre-wrap;font-size:10px;';
+    pre.textContent = err && err.stack ? err.stack : '';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.style.cssText = 'padding:10px;background:black;color:white;border:1px solid white;';
+    closeBtn.textContent = 'Close (Screenshot this first!)';
+    closeBtn.addEventListener('click', function () { div.parentNode && div.parentNode.removeChild(div); });
+
+    div.appendChild(heading);
+    div.appendChild(msgLabel);
+    div.appendChild(msgText);
+    div.appendChild(document.createElement('br'));
+    div.appendChild(document.createElement('br'));
+    div.appendChild(stackLabel);
+    div.appendChild(document.createElement('br'));
+    div.appendChild(pre);
+    div.appendChild(document.createElement('br'));
+    div.appendChild(document.createElement('br'));
+    div.appendChild(closeBtn);
+
+    if (!div.parentNode) {
+      document.body.appendChild(div);
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────
   // Public API
   // ──────────────────────────────────────────────────────────
 
@@ -5560,7 +5612,8 @@
       _buildScene();
       console.log('[CampWorld] Scene pre-warmed successfully');
     } catch (e) {
-      console.warn('[CampWorld] Pre-warm failed:', e);
+      console.error('[CampWorld]', '_buildScene() in warmUp', 'failed:', e);
+      _showMobileError(e, '_buildScene() in warmUp');
       _campScene = null;
     }
     _isBuilding = false;
@@ -5601,7 +5654,8 @@
       try {
         _buildScene();
       } catch (e) {
-        console.error('[CampWorld] _buildScene() failed — will retry on next enter():', e);
+        console.error('[CampWorld]', '_buildScene() in enter', 'failed:', e);
+        _showMobileError(e, '_buildScene() in enter');
         _campScene = null; // ensure a full rebuild is attempted next time
         _isBuilding = false;
         return;
