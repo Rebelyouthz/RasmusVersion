@@ -667,7 +667,8 @@
         { id: 'challenges', label: '⚔️ Challenges',  color: '#8855ff' },
         { id: 'achievements', label: '🏆 Achievements', color: '#aa44ff' }
       ];
-      let _activeTab = 'story';
+      let _activeTab = window._questHallDefaultTab || 'story';
+      window._questHallDefaultTab = null; // consume once
 
       function _renderTabContent() {
         tabBody.innerHTML = '';
@@ -948,6 +949,10 @@
       if (!saveData.accountXP) saveData.accountXP = 0;
       if (!saveData.accountLevel) saveData.accountLevel = 1;
       saveData.accountXP += amount;
+      // Accumulate run XP for end-of-run screen
+      if (window.currentRunStats) {
+        window.currentRunStats.xpAccumulated = (window.currentRunStats.xpAccumulated || 0) + amount;
+      }
       // Check for level-up
       let leveledUp = false;
       while (saveData.accountXP >= getAccountLevelXPRequired(saveData.accountLevel)) {
@@ -4815,6 +4820,19 @@
       // Reset Aida nudge flag so it shows once per visit
       _aidaProgressionNudgeShownThisVisit = false;
 
+      // If the player returned via "CONTINUE QUESTLINE" from the end screen, trigger AIDA
+      if (window._pendingAIDADialogueOnCamp) {
+        window._pendingAIDADialogueOnCamp = false;
+        setTimeout(function () {
+          const DS = window.DialogueSystem;
+          if (DS && DS.DIALOGUES && DS.DIALOGUES.aidaQuestHallHint && typeof DS.show === 'function') {
+            DS.show(DS.DIALOGUES.aidaQuestHallHint);
+          } else if (typeof showQuestHall === 'function') {
+            showQuestHall();
+          }
+        }, 2500);
+      }
+
       // Hide combat HUD (Rage Bar + Special Attacks) — not visible in camp
       if (window.GameRageCombat) window.GameRageCombat.setCombatHUDVisible(false);
 
@@ -5317,20 +5335,16 @@
                 buildingCard.onclick = () => showQuestHall();
                 buildingCard.style.cursor = 'pointer';
               } else if (buildingId === 'achievementBuilding') {
-                // Open Achievement screen when Achievement Hall clicked
+                // Open Quest Hall → Achievements tab (Phase 4: centralize in Quest Hall)
                 buildingCard.onclick = () => {
                   if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest12_visitAchievements') {
                     progressTutorialQuest('quest12_visitAchievements', true);
                     saveSaveData();
                   }
-                  // Show the achievements screen
-                  document.getElementById('camp-screen').style.display = 'none';
-                  const achScreen = document.getElementById('achievements-screen');
-                  if (achScreen) {
-                    achScreen.style.display = 'flex';
-                    // Refresh achievements content
-                    const achContent = document.getElementById('achievements-content');
-                    if (achContent) renderAchievementsContent(achContent);
+                  // Route to Quest Hall with Achievements tab pre-selected
+                  if (typeof showQuestHall === 'function') {
+                    window._questHallDefaultTab = 'achievements';
+                    showQuestHall();
                   }
                 };
                 buildingCard.style.cursor = 'pointer';

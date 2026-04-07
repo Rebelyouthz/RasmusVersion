@@ -529,6 +529,10 @@
           comboState.shownMilestones = []; // Reset shown milestones when combo breaks
         }
         comboState.lastKillTime = currentTime;
+        // Track max combo for end-of-run screen
+        if (comboState.count > (window._runMaxCombo || 0)) {
+          window._runMaxCombo = comboState.count;
+        }
         
         // Show combo if 5+ kills (updated to start at 5)
         if (comboState.count >= 5) {

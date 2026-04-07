@@ -176,9 +176,9 @@ function checkDailyLogin(saveData) {
     if (reward.wood)  saveData.resources.wood  = (saveData.resources.wood  || 0) + reward.wood;
     if (reward.stone) saveData.resources.stone = (saveData.resources.stone || 0) + reward.stone;
   }
-  // Always grant account XP for daily claim
+  // Always grant account XP for daily claim (5 XP per spec)
   if (window.GameAccount && typeof window.GameAccount.addXP === 'function') {
-    window.GameAccount.addXP(30, 'Daily Reward', saveData);
+    window.GameAccount.addXP(5, 'Daily Reward', saveData);
   }
 
   return {
