@@ -948,6 +948,8 @@
       if (!saveData.accountXP) saveData.accountXP = 0;
       if (!saveData.accountLevel) saveData.accountLevel = 1;
       saveData.accountXP += amount;
+      // Accumulate run XP for end-of-run screen
+      if (window.currentRunStats) window.currentRunStats.xpAccumulated += amount;
       // Check for level-up
       let leveledUp = false;
       while (saveData.accountXP >= getAccountLevelXPRequired(saveData.accountLevel)) {

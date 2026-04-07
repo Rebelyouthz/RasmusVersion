@@ -1511,6 +1511,9 @@
       // Award skill points (with safety check)
       const skillPoints = achievement.skillPoints || 0;
       saveData.skillPoints += skillPoints;
+
+      // Award Account XP for claiming an achievement
+      if (typeof addAccountXP === 'function') addAccountXP(20);
       
       // Play sound
       playSound('coin');

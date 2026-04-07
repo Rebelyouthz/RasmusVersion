@@ -3277,12 +3277,21 @@
         if (typeof window.registerCombatKill === 'function') window.registerCombatKill();
         // Record kill milestone progress
         if (window.GameMilestones) window.GameMilestones.recordKill();
-        // Grant Account XP for kill (2-5 XP based on enemy tier)
-        const xpAmount = this.isBoss ? 15 : Math.min(5, Math.max(2, this.tier || 1));
+        // Grant Account XP for kill — strict economy: Normal=1, Elite/MiniBoss=5, Boss=10
+        const _isEliteKill = this.isMiniBoss || this.isFlyingBoss;
+        const _isBossKill  = this.isBoss && !this.isMiniBoss && !this.isFlyingBoss;
+        const xpAmount = _isBossKill ? 10 : (_isEliteKill ? 5 : 1);
         if (typeof addAccountXP === 'function') {
           addAccountXP(xpAmount);
         } else if (window.GameAccount && typeof window.GameAccount.addXP === 'function' && window.saveData) {
           window.GameAccount.addXP(xpAmount, 'Enemy Kill', window.saveData);
+        }
+        // Track per-run kill type for end screen
+        if (window.currentRunStats) {
+          if (_isBossKill)       window.currentRunStats.bossKills++;
+          else if (_isEliteKill) window.currentRunStats.eliteKills++;
+          else                   window.currentRunStats.normalKills++;
+          window.currentRunStats.xpFromKills += xpAmount;
         }
         // Discover Codex entry on first kill of each enemy type
         if (window.CodexSystem) {

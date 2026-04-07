@@ -97,9 +97,8 @@
         // Notify player when they reach camp
         window._prismReliquaryNewlyUnlocked = true;
       }
-      // Add account XP for kills this run (1 XP per kill) + run completion bonus (25 XP)
-      if (playerStats.kills > 0) addAccountXP(playerStats.kills);
-      addAccountXP(25); // Run completion bonus
+      // Run completion bonus XP (kills XP was already granted per-kill via addAccountXP)
+      addAccountXP(25);
       
       // Tutorial Quest: Check for first death
       if (!saveData.tutorialQuests) {
@@ -233,42 +232,64 @@
 
       saveSaveData();
 
-      // Display game over screen
-      document.getElementById('gameover-screen').style.display = 'flex';
-      // Hide the YOU DIED banner when the gameover screen appears
-      const youDiedBanner = document.getElementById('you-died-banner');
-      if (youDiedBanner) youDiedBanner.style.display = 'none';
-      // On first run, only show "Go to Camp" button; restore all buttons on subsequent runs
-      const isFirstRun = saveData.totalRuns === 1;
-      document.getElementById('restart-btn').style.display = isFirstRun ? 'none' : '';
-      document.getElementById('quit-to-menu-btn').style.display = isFirstRun ? 'none' : '';
-      document.getElementById('goto-camp-btn').style.display = '';
-      document.getElementById('final-score').innerText = `${survivalTime}s`;
-      document.getElementById('final-kills').innerText = `${playerStats.kills}`;
-      document.getElementById('final-level').innerText = `${playerStats.lvl}`;
-      document.getElementById('gold-earned').innerText = `${goldEarned}`;
-      document.getElementById('total-gold').innerText = `${saveData.gold}`;
-      
-      // Display loot summary
-      const lootItemsDiv = document.getElementById('loot-items');
-      if (window.runLootGained && window.runLootGained.length > 0) {
-        lootItemsDiv.innerHTML = window.runLootGained.map(item => {
-          const rarityColors = {
-            Common: '#AAA',
-            Uncommon: '#1EFF00',
-            Rare: '#0070DD',
-            Epic: '#A335EE',
-            Legendary: '#FF8000',
-            Mythic: '#E6CC80'
-          };
-          const color = rarityColors[item.rarity] || '#FFF';
-          return `<p style="margin: 5px 0; color: ${color};">• ${item.name} (${item.rarity})</p>`;
-        }).join('');
+      // Build run-end stats for the new dopamine screen
+      const _runStats = window.currentRunStats || {};
+      const _activeQuest = (typeof getCurrentQuest === 'function') ? getCurrentQuest() : null;
+      const _questCompleted = _activeQuest && saveData.tutorialQuests &&
+        (saveData.tutorialQuests.readyToClaim.includes(_activeQuest.id) ||
+         saveData.tutorialQuests.completedQuests.includes(_activeQuest.id));
+
+      // Store gold earned for loot display
+      window._resGoldEarned = goldEarned;
+      // Store stats on window so RunEndScreen helpers can access them
+      window._resCurrentStats = {
+        kills:        playerStats.kills,
+        eliteKills:   _runStats.eliteKills  || playerStats.miniBossesDefeated || 0,
+        bossKills:    _runStats.bossKills   || 0,
+        timeSurvived: survivalTime,
+        maxCombo:     window._runMaxCombo   || 0,
+        xpAccumulated: _runStats.xpAccumulated || 0,
+        questCompleted: !!_questCompleted,
+        questActive:   !!_activeQuest,
+        questName:     _activeQuest ? (_activeQuest.title || _activeQuest.id || '') : ''
+      };
+
+      // Use new dopamine end screen if available, fall back to legacy
+      if (window.RunEndScreen) {
+        // Hide the YOU DIED banner
+        const youDiedBanner = document.getElementById('you-died-banner');
+        if (youDiedBanner) youDiedBanner.style.display = 'none';
+        window.RunEndScreen.show(window._resCurrentStats);
+        updateGoldDisplays();
       } else {
-        lootItemsDiv.innerHTML = '<p style="margin: 5px 0;">No items gained this run</p>';
+        // ── Legacy fallback gameover screen ──────────────────────────────────
+        document.getElementById('gameover-screen').style.display = 'flex';
+        const youDiedBanner = document.getElementById('you-died-banner');
+        if (youDiedBanner) youDiedBanner.style.display = 'none';
+        const isFirstRun = saveData.totalRuns === 1;
+        document.getElementById('restart-btn').style.display = isFirstRun ? 'none' : '';
+        document.getElementById('quit-to-menu-btn').style.display = isFirstRun ? 'none' : '';
+        document.getElementById('goto-camp-btn').style.display = '';
+        document.getElementById('final-score').innerText = `${survivalTime}s`;
+        document.getElementById('final-kills').innerText = `${playerStats.kills}`;
+        document.getElementById('final-level').innerText = `${playerStats.lvl}`;
+        document.getElementById('gold-earned').innerText = `${goldEarned}`;
+        document.getElementById('total-gold').innerText = `${saveData.gold}`;
+        const lootItemsDiv = document.getElementById('loot-items');
+        if (window.runLootGained && window.runLootGained.length > 0) {
+          lootItemsDiv.innerHTML = window.runLootGained.map(item => {
+            const rarityColors = {
+              Common: '#AAA', Uncommon: '#1EFF00', Rare: '#0070DD',
+              Epic: '#A335EE', Legendary: '#FF8000', Mythic: '#E6CC80'
+            };
+            const color = rarityColors[item.rarity] || '#FFF';
+            return `<p style="margin: 5px 0; color: ${color};">• ${item.name} (${item.rarity})</p>`;
+          }).join('');
+        } else {
+          lootItemsDiv.innerHTML = '<p style="margin: 5px 0;">No items gained this run</p>';
+        }
+        updateGoldDisplays();
       }
-      
-      updateGoldDisplays();
       
       // Show deferred mission notification after death (quest completed during run)
       if (saveData.tutorialQuests && saveData.tutorialQuests.pendingMissionNotification === 'quest1_kill3') {
@@ -457,6 +478,14 @@
       miniBossesSpawned.clear(); // Reset mini-boss tracking
       gameStartTime = Date.now();
       runStartGold = saveData.gold;
+      // Initialize per-run stats for end-of-run screen
+      window.currentRunStats = {
+        normalKills: 0, eliteKills: 0, bossKills: 0,
+        xpFromKills: 0, xpAccumulated: 0,
+        startAccountLevel: (window.saveData && window.saveData.accountLevel) || 1,
+        startAccountXP:    (window.saveData && window.saveData.accountXP)    || 0
+      };
+      window._runMaxCombo = 0;
       _alienScoutSpawned  = false; // Reset alien spawn flags for new run
       _annunakiOrbSpawned = false;
 
