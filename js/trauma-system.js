@@ -24,6 +24,7 @@
   // Named constants for arterial pump helper
   const ARTERIAL_PUMP_WEAPON_TYPE = 'pistol';  // Weapon profile to use for fake arterial hit via BloodV2
   const ARTERIAL_PUMP_Y_OFFSET    = 0.1;       // Vertical offset above wound origin for pump spawn point
+  const ARTERIAL_PUMP_ID_PREFIX   = 'ts_pump_'; // Namespace prefix — prevents collision with real enemy IDs
 
   // ─── Internal State ─────────────────────────────────────────────────────────
   let _scene = null;
@@ -687,7 +688,7 @@
       var fakeEnemy = {
         alive: true,
         enemyType: 'default',
-        id: 'ts_pump_' + (++_arterialPumpIdCounter),  // 'ts_pump_' namespace avoids collision with real enemy IDs
+        id: ARTERIAL_PUMP_ID_PREFIX + (++_arterialPumpIdCounter),
         hp: 1, maxHp: 1,
         mesh: { position: { x: position.x, y: position.y, z: position.z }, scale: { y: 1 } }
       };

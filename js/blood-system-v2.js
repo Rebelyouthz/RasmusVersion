@@ -71,11 +71,17 @@ BLOOD_SPRAY_GRAVITY_MULTIPLIER: -2.0, // downward arc bias for exit spray drops
 // Arterial pumping constants
 ARTERIAL_PHASE_INCREMENT: 0.45, // phase step per pump tick for sine-wave pulsation
 // Blood mist cloud constants
-MIST_CLOUD_GRAVITY_FACTOR: 0.04, // fraction of GRAVITY applied to cloud puffs (nearly weightless)
-MIST_CLOUD_DRAG_BOOST:     2.5,  // extra drag multiplier so clouds decelerate into a floating hover
-MIST_CLOUD_EXPAND_SCALE:   0.55, // cloud base-radius is multiplied by this to get per-frame expand rate
-MIST_CLOUD_MAX_COUNT:      10,   // cap cloud puffs per hit for non-explosive weapons
-MIST_CLOUD_MAX_COUNT_EXP:  16,   // cap for explosive weapons
+MIST_CLOUD_GRAVITY_FACTOR:    0.04,  // fraction of GRAVITY applied to cloud puffs (nearly weightless)
+MIST_CLOUD_DRAG_BOOST:        2.5,   // extra drag multiplier so clouds decelerate into a floating hover
+MIST_CLOUD_EXPAND_SCALE:      0.55,  // cloud base-radius is multiplied by this to get per-frame expand rate
+MIST_CLOUD_MAX_COUNT:         10,    // cap cloud puffs per hit for non-explosive weapons
+MIST_CLOUD_MAX_COUNT_EXP:     16,    // cap for explosive weapons
+MIST_CLOUD_VERTICAL_SCALE:    0.35,  // fraction of outward speed converted to upward drift
+MIST_CLOUD_UPWARD_BIAS:       0.08,  // constant upward velocity added to every puff (slow rise)
+MIST_CLOUD_RADIUS_MIN_FACTOR: 0.45,  // puff start radius is at least baseR * this value
+MIST_CLOUD_RADIUS_RANGE:      0.55,  // random range added on top of RADIUS_MIN_FACTOR
+MIST_CLOUD_EXPAND_MIN_FACTOR: 0.5,   // minimum expand-rate multiplier (keeps puffs from being static)
+MIST_CLOUD_EXPAND_RANGE:      1.0,   // random range added on top of EXPAND_MIN_FACTOR
 };
 
 // ══════════════════════════════════════════
@@ -1244,7 +1250,8 @@ var ey = s.enemy.mesh ? s.enemy.mesh.position.y : 0;
 var ez = s.enemy.mesh ? s.enemy.mesh.position.z : 0;
 var wx = ex + s.lx, wy = ey + s.ly, wz = ez + s.lz;
 
-s.phase = ((s.phase || 0) + CFG.ARTERIAL_PHASE_INCREMENT) % (Math.PI * 2);
+s.phase += CFG.ARTERIAL_PHASE_INCREMENT;
+if (s.phase >= Math.PI * 2) s.phase -= Math.PI * 2;  // keep in [0,2π] without modulo division
 var sineBoost = 1.0 + Math.sin(s.phase) * 0.55;
 var spd   = (3.5 + s.pressure * 9.5) * sineBoost;
 var count = Math.max(1, Math.ceil(s.pressure * 6 * (0.5 + 0.5 * Math.abs(Math.sin(s.phase)))));
@@ -1356,12 +1363,13 @@ d.vx = nx * spd * cosCone + (tx * cosA + bx * sinA) * spd * sinCone;
 d.vy = ny * spd * cosCone + (ty * cosA + by * sinA) * spd * sinCone + gravBias;
 d.vz = nz * spd * cosCone + (tz * cosA + bz * sinA) * spd * sinCone;
 } else {
-// Wider scatter (8× vs 6×) for mist-edge drops outside the cone
+// Wider scatter for mist-edge drops outside the cone
 var sctr = wp.woundR * 5;
-var SCATTER_MULT = 8, VERTICAL_BOOST = 1.2; // wider edge scatter + slight upward jitter
-d.vx = nx * spd + (Math.random()-0.5) * sctr * SCATTER_MULT;
-d.vy = ny * spd + Math.random() * VERTICAL_BOOST + gravBias;
-d.vz = nz * spd + (Math.random()-0.5) * sctr * SCATTER_MULT;
+var scatterMult  = 8;    // wider than the 6× default — emphasises the mist edge
+var verticalBoost = 1.2; // slight upward jitter on edge drops
+d.vx = nx * spd + (Math.random()-0.5) * sctr * scatterMult;
+d.vy = ny * spd + Math.random() * verticalBoost + gravBias;
+d.vz = nz * spd + (Math.random()-0.5) * sctr * scatterMult;
 }
 d.r         = 0.006 + Math.random()*0.009;
 d.maxLife   = 2.5 + Math.random()*1.5;
@@ -1602,12 +1610,12 @@ var a   = Math.random() * Math.PI * 2;
 var e   = (Math.random()-0.5) * Math.PI;
 var spd = 0.25 + Math.random() * 0.75;
 d.vx = Math.cos(a) * Math.cos(e) * spd;
-d.vy = Math.abs(Math.sin(e)) * spd * 0.35 + 0.08;  // slight upward
+d.vy = Math.abs(Math.sin(e)) * spd * CFG.MIST_CLOUD_VERTICAL_SCALE + CFG.MIST_CLOUD_UPWARD_BIAS;
 d.vz = Math.sin(a) * Math.cos(e) * spd;
 // Starting radius: vary each puff so the cloud looks uneven/organic
-d.r          = baseR * (0.45 + Math.random() * 0.55);
+d.r          = baseR * (CFG.MIST_CLOUD_RADIUS_MIN_FACTOR + Math.random() * CFG.MIST_CLOUD_RADIUS_RANGE);
 // Each puff expands at a different rate — gives the cloud a billowing feel
-d.expandRate = baseR * CFG.MIST_CLOUD_EXPAND_SCALE * (0.5 + Math.random() * 1.0);
+d.expandRate = baseR * CFG.MIST_CLOUD_EXPAND_SCALE * (CFG.MIST_CLOUD_EXPAND_MIN_FACTOR + Math.random() * CFG.MIST_CLOUD_EXPAND_RANGE);
 d.maxLife    = 1.4 + Math.random() * 2.2;
 d.life       = d.maxLife;
 d.viscosity  = 0.88;   // high drag — puffs stop drifting quickly
