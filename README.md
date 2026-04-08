@@ -1,4 +1,4 @@
-# 💧 Waterdrop Survivor
+# Survivor bullethell rpg game with simulators
 
 **Version 0.5.2 alpha — playable — ENGINE 2.0**
 
