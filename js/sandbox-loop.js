@@ -583,6 +583,10 @@
   // ─── Helpers ─────────────────────────────────────────────────────────────────
   function _lerp(a, b, t) { return a + (b - a) * t; }
   function _clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+  /** Normalise an angle delta to the shortest arc in [-π, π]. */
+  function _shortestArc(delta) {
+    return ((delta + Math.PI) % (Math.PI * 2) + (Math.PI * 2)) % (Math.PI * 2) - Math.PI;
+  }
 
   // ─── Eye of Horus Notification Shrine ────────────────────────────────────────
   // Permanent widget fixed at top-center. Crown is always visible; curtain
@@ -5342,10 +5346,7 @@
     // Smoothly rotate toward the firing angle using shortest-arc interpolation so the
     // player never spins the long way when rotation.y crosses the -π/π boundary.
     const targetYaw = Math.atan2(tx - px, tz - pz);
-    const currentYaw = player.mesh.rotation.y;
-    let yawDelta = targetYaw - currentYaw;
-    yawDelta = ((yawDelta + Math.PI) % (Math.PI * 2) + (Math.PI * 2)) % (Math.PI * 2) - Math.PI;
-    player.mesh.rotation.y = currentYaw + yawDelta * 0.35;
+    player.mesh.rotation.y += _shortestArc(targetYaw - player.mesh.rotation.y) * 0.35;
 
     // Update gun model position/rotation (if attached)
     _updateGunModel(tx, tz);
@@ -6442,19 +6443,15 @@
     // ── Continuous 360° smooth aim rotation ────────────────────────────────────
     // Update player facing direction every frame so the model follows the right
     // joystick (or mouse) even when not actively firing.
-    // Shortest-arc interpolation avoids spinning the long way when crossing the
-    // -π/π boundary during continuous 360° rotation.
+    // _shortestArc() normalises the delta to [-π, π] so we always take the short
+    // path and never spin the wrong way at the -π/π boundary.
     const px2 = player.mesh.position.x, pz2 = player.mesh.position.z;
     if (_aimJoy.active && (_aimJoy.dx !== 0 || _aimJoy.dz !== 0)) {
       const aimAngle = Math.atan2(_aimJoy.dx, _aimJoy.dz);
-      let _aimDelta = aimAngle - player.mesh.rotation.y;
-      _aimDelta = ((_aimDelta + Math.PI) % (Math.PI * 2) + (Math.PI * 2)) % (Math.PI * 2) - Math.PI;
-      player.mesh.rotation.y += _aimDelta * 0.25;
+      player.mesh.rotation.y += _shortestArc(aimAngle - player.mesh.rotation.y) * 0.25;
     } else if (_mouse && (_mouse.worldX !== 0 || _mouse.worldZ !== 0)) {
       const mAngle = Math.atan2(_mouse.worldX - px2, _mouse.worldZ - pz2);
-      let _mDelta = mAngle - player.mesh.rotation.y;
-      _mDelta = ((_mDelta + Math.PI) % (Math.PI * 2) + (Math.PI * 2)) % (Math.PI * 2) - Math.PI;
-      player.mesh.rotation.y += _mDelta * 0.25;
+      player.mesh.rotation.y += _shortestArc(mAngle - player.mesh.rotation.y) * 0.25;
     }
 
     // Camera follow — reuse _camTarget to avoid per-frame Vector3 allocation
