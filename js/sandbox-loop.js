@@ -5339,8 +5339,9 @@
       window._acquireFlash(scene, DEFAULT_FLASH_COLOR, DEFAULT_FLASH_INTENSITY, DEFAULT_FLASH_RADIUS, _tmpV3, DEFAULT_FLASH_DURATION_MS);
     }
 
-    // Rotate player mesh toward the aim target — use lerp to keep fluid animation smooth
-    player.mesh.rotation.y = _lerp(player.mesh.rotation.y, Math.atan2(tx - px, tz - pz), 0.35);
+    // Align the player mesh to the actual firing angle immediately.
+    // Continuous smoothing should be handled by the per-frame aim update, not per shot.
+    player.mesh.rotation.y = Math.atan2(tx - px, tz - pz);
 
     // Update gun model position/rotation (if attached)
     _updateGunModel(tx, tz);

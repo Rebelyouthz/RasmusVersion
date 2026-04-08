@@ -192,7 +192,7 @@
         stats.weaponDamage = (stats.weaponDamage || 0) + 0.03 * wsLvl;
       }
 
-      // Shrine: Artifact Shrine — artifact slots + critDamage + voidLifesteal + hpRegen per level
+      // Shrine: Artifact Shrine — artifact slots + critDamage + voidLifesteal + HP regen per second per level
       if (bldgs.shrine && bldgs.shrine.level > 0) {
         var shLvl = bldgs.shrine.level;
         // +10% crit damage per level
