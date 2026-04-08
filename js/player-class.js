@@ -853,7 +853,8 @@
           }
           this.slideAmount = Math.max(0, this.slideAmount - dt * 3);
           
-          // Apply velocity with inertia
+          // Apply velocity with inertia — skipped in sandbox; SandboxLoop._movePlayer() owns position/collision
+          if (!window._engine2SandboxMode) {
           this.mesh.position.x += this.velocity.x;
           this.mesh.position.z += this.velocity.z;
           
@@ -933,6 +934,7 @@
               }
             }
           }
+          } // end !window._engine2SandboxMode (velocity application + collision)
 
           // Enhanced water droplet trail when moving - MORE PARTICLES
           if (this.velocity.length() > 0.01) {
@@ -978,10 +980,15 @@
             this.bankLean += (0 - this.bankLean) * settleDt;
           }
           
-          this.mesh.rotation.x = this.forwardLean;
-          this.mesh.rotation.z = this.bankLean;
+          // rotation.x/z — skipped in sandbox; SandboxLoop._movePlayer() owns lean visuals
+          if (!window._engine2SandboxMode) {
+            this.mesh.rotation.x = this.forwardLean;
+            this.mesh.rotation.z = this.bankLean;
+          }
           
-          // Rotation/Aiming with RIGHT stick (independent of movement)
+          // Rotation/Aiming with RIGHT stick (independent of movement) — skipped in sandbox;
+          // SandboxLoop._movePlayer() owns facing via _aimJoy / mouse.
+          if (!window._engine2SandboxMode) {
           if (joystickRight.active) {
             // Manual aim: Turn to face the direction of right stick
             let angle = Math.atan2(joystickRight.x, joystickRight.y);
@@ -1065,6 +1072,7 @@
               this.mesh.rotation.y += angleDiff * Math.min(rotationSpeed * dt, 1);
             }
           }
+          } // end !window._engine2SandboxMode (rotation.y aim writes)
         }
         
         const speedMag = this.velocity.length();

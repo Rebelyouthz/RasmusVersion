@@ -7902,7 +7902,11 @@
 
       // Hide loading screen
       const ls = document.getElementById('loading-screen');
-      if (ls) { ls.style.opacity = '0'; setTimeout(function () { ls.style.display = 'none'; }, 400); }
+      if (ls) {
+        ls.style.opacity = '0';
+        ls.style.pointerEvents = 'none';
+        setTimeout(function () { ls.style.display = 'none'; }, 400);
+      }
       console.log('[🎮 SandboxLoop] ✓ Loading screen hidden');
 
       // Show the ui-layer (HUD)
@@ -8078,6 +8082,7 @@
     } catch (e) {
       _showError('Boot error: ' + (e && e.message ? e.message : String(e)));
       console.error('[SandboxLoop] _boot error:', e);
+      window.gameModuleReady = true;
     }
   }
 
