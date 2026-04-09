@@ -212,103 +212,12 @@ function showYouDiedBanner(duration) {
   }, duration);
 }
 
-// ── ProfileUI: top-left profile display ──────────────────────────────────────
-const ProfileUI = {
-  _el: null,
-  _bar: null,
-  _pctText: null,
-  _lvlText: null,
-  _rankText: null,
-
-  /** Rank thresholds and frame colors */
-  _RANKS: [
-    { name: 'Droplet',   minLvl: 1,  frame: '#4488cc' },
-    { name: 'Stream',    minLvl: 5,  frame: '#55aadd' },
-    { name: 'River',     minLvl: 10, frame: '#88ccff' },
-    { name: 'Torrent',   minLvl: 20, frame: '#ffaa22' },
-    { name: 'Tsunami',   minLvl: 35, frame: '#ff4444' },
-    { name: 'Ocean',     minLvl: 50, frame: '#cc66ff' },
-  ],
-
-  create() {
-    if (this._el) return; // already created
-    const el = document.createElement('div');
-    el.id = 'profile-ui';
-    el.style.cssText = 'position:fixed;top:10px;left:10px;z-index:9999;display:flex;align-items:center;gap:8px;pointer-events:none;font-family:sans-serif;';
-
-    // Waterdrop avatar with customizable frame
-    const avatar = document.createElement('div');
-    avatar.id = 'profile-avatar';
-    avatar.style.cssText = 'width:48px;height:48px;border-radius:50%;border:3px solid #4488cc;background:radial-gradient(circle at 35% 35%,#66ccff,#2266aa);display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 0 8px rgba(68,136,204,0.6);';
-    avatar.textContent = '💧';
-    el.appendChild(avatar);
-
-    // Info column
-    const info = document.createElement('div');
-    info.style.cssText = 'display:flex;flex-direction:column;gap:2px;';
-
-    // Level + Rank row
-    const topRow = document.createElement('div');
-    topRow.style.cssText = 'display:flex;align-items:baseline;gap:6px;';
-    const lvl = document.createElement('span');
-    lvl.id = 'profile-level';
-    lvl.style.cssText = 'color:#ffcc00;font-weight:bold;font-size:14px;text-shadow:0 0 4px rgba(255,204,0,0.5);';
-    lvl.textContent = 'Lv 1';
-    const rank = document.createElement('span');
-    rank.id = 'profile-rank';
-    rank.style.cssText = 'color:#88ccff;font-size:11px;';
-    rank.textContent = 'Droplet';
-    topRow.appendChild(lvl);
-    topRow.appendChild(rank);
-    info.appendChild(topRow);
-
-    // XP progress bar
-    const barWrap = document.createElement('div');
-    barWrap.style.cssText = 'width:120px;height:8px;background:rgba(0,0,0,0.5);border-radius:4px;overflow:hidden;position:relative;';
-    const bar = document.createElement('div');
-    bar.id = 'profile-xp-bar';
-    bar.style.cssText = 'height:100%;width:0%;background:linear-gradient(90deg,#ffaa00,#ffcc44);border-radius:4px;transition:width 0.3s ease;';
-    barWrap.appendChild(bar);
-    const pct = document.createElement('span');
-    pct.id = 'profile-xp-pct';
-    pct.style.cssText = 'position:absolute;right:2px;top:-1px;font-size:7px;color:#fff;text-shadow:0 0 2px #000;';
-    pct.textContent = '0%';
-    barWrap.appendChild(pct);
-    info.appendChild(barWrap);
-    el.appendChild(info);
-
-    document.body.appendChild(el);
-    this._el = el;
-    this._bar = bar;
-    this._pctText = pct;
-    this._lvlText = lvl;
-    this._rankText = rank;
-    this._avatarEl = avatar;
-  },
-
-  /** Update profile with current account stats */
-  update(level, xpCurrent, xpNeeded) {
-    if (!this._el) this.create();
-    const pct = xpNeeded > 0 ? Math.min(100, Math.round((xpCurrent / xpNeeded) * 100)) : 0;
-    this._bar.style.width = pct + '%';
-    this._pctText.textContent = pct + '%';
-    this._lvlText.textContent = 'Lv ' + level;
-
-    // Determine rank
-    let rank = this._RANKS[0];
-    for (let i = this._RANKS.length - 1; i >= 0; i--) {
-      if (level >= this._RANKS[i].minLvl) { rank = this._RANKS[i]; break; }
-    }
-    this._rankText.textContent = rank.name;
-    this._avatarEl.style.borderColor = rank.frame;
-  },
-
-  hide() { if (this._el) this._el.style.display = 'none'; },
-  show() { if (this._el) this._el.style.display = 'flex'; },
-};
-window.ProfileUI = ProfileUI;
-
 // ── SettingsMenu: full in-game settings ──────────────────────────────────────
+// Integrates with the existing window.gameSettings object and persists under
+// the same localStorage key ('waterDropSurvivorSettings') used by save-system.js
+// and settings-ui.js so all settings stay in sync.
+const _SETTINGS_KEY = 'waterDropSurvivorSettings';
+
 const SettingsMenu = {
   _el: null,
   _settings: null,
@@ -330,27 +239,102 @@ const SettingsMenu = {
 
   _load() {
     try {
-      const s = localStorage.getItem('gameSettings');
-      this._settings = s ? Object.assign({}, this._defaults, JSON.parse(s)) : Object.assign({}, this._defaults);
+      const s = localStorage.getItem(_SETTINGS_KEY);
+      const parsed = s ? JSON.parse(s) : {};
+      this._settings = Object.assign({}, this._defaults, parsed);
     } catch (e) { this._settings = Object.assign({}, this._defaults); }
   },
 
   _save() {
-    try { localStorage.setItem('gameSettings', JSON.stringify(this._settings)); } catch (e) { /* non-fatal */ }
+    try {
+      // Merge into existing settings blob so we don't clobber keys from other systems
+      let existing = {};
+      try { const raw = localStorage.getItem(_SETTINGS_KEY); if (raw) existing = JSON.parse(raw); } catch (_) {}
+      const merged = Object.assign(existing, this._settings);
+      localStorage.setItem(_SETTINGS_KEY, JSON.stringify(merged));
+    } catch (e) { /* non-fatal */ }
+  },
+
+  /** Sync SettingsMenu values into the runtime window.gameSettings object */
+  _syncToGameSettings() {
+    if (!window.gameSettings) return;
+    const s = this._settings;
+    window.gameSettings.quality = s.graphicsPreset;
+    window.gameSettings.soundEnabled = s.masterVolume > 0;
+    window.gameSettings.musicEnabled = s.musicVolume > 0;
   },
 
   _apply() {
     const s = this._settings;
-    // Apply fog density to active scenes
+
+    // ── Fog density / draw distance ──
     if (window.scene && window.scene.fog) {
       if (window.scene.fog.density !== undefined) window.scene.fog.density = s.fogDensity;
       if (window.scene.fog.far !== undefined) window.scene.fog.far = s.drawDistance;
     }
-    // Apply resolution scale via pixel ratio
+
+    // ── Resolution scale — clamp final pixel ratio to 1.5 to preserve mobile perf ──
     if (window.renderer) {
-      const base = Math.min(window.devicePixelRatio || 1, 1.5);
-      window.renderer.setPixelRatio(base * s.resolution);
+      var maxPixelRatio = 1.5;
+      var base = Math.min(window.devicePixelRatio || 1, maxPixelRatio);
+      var pixelRatio = Math.min(base * s.resolution, maxPixelRatio);
+      window.renderer.setPixelRatio(pixelRatio);
     }
+
+    // ── Shadows ──
+    if (window.renderer) {
+      if (s.shadows === 'off') {
+        window.renderer.shadowMap.enabled = false;
+      } else {
+        window.renderer.shadowMap.enabled = true;
+        // Adjust shadow map quality
+        var shadowSizes = { low: 512, medium: 1024, high: 2048 };
+        var shadowSize = shadowSizes[s.shadows] || 1024;
+        if (window.scene) {
+          window.scene.traverse(function (obj) {
+            if (obj.isLight && obj.shadow && obj.shadow.mapSize) {
+              obj.shadow.mapSize.setScalar(shadowSize);
+              if (obj.shadow.map) { obj.shadow.map.dispose(); obj.shadow.map = null; }
+            }
+          });
+        }
+      }
+    }
+
+    // ── Post-processing (bloom, vignette, motion blur) ──
+    // These integrate with the existing post-processing passes if available
+    if (window.bloomPass) {
+      window.bloomPass.strength = s.bloom;
+      window.bloomPass.enabled = s.bloom > 0;
+    }
+    if (window.vignettePass) {
+      window.vignettePass.uniforms.darkness.value = s.vignette * 2.0;
+      window.vignettePass.enabled = s.vignette > 0;
+    }
+    if (window.motionBlurPass) {
+      window.motionBlurPass.enabled = s.motionBlur > 0;
+      if (window.motionBlurPass.uniforms && window.motionBlurPass.uniforms.intensity) {
+        window.motionBlurPass.uniforms.intensity.value = s.motionBlur;
+      }
+    }
+
+    // ── Anti-aliasing (toggle FXAA pass if available) ──
+    if (window.fxaaPass) {
+      window.fxaaPass.enabled = !!s.antiAliasing;
+    }
+
+    // ── Volume ──
+    if (window.Howler) {
+      window.Howler.volume(s.masterVolume);
+    }
+    // Sync sfx/music volume into global audio state
+    if (window.AudioSystem) {
+      if (typeof window.AudioSystem.setSFXVolume === 'function') window.AudioSystem.setSFXVolume(s.sfxVolume);
+      if (typeof window.AudioSystem.setMusicVolume === 'function') window.AudioSystem.setMusicVolume(s.musicVolume);
+    }
+
+    // Keep window.gameSettings in sync
+    this._syncToGameSettings();
     this._save();
   },
 

@@ -1018,7 +1018,17 @@
     _campScene.add(logPool);
 
     // ─ Extra scattered trees (inner ring, between buildings) ─
+    // Shared geometry and materials to minimize draw-call / material state changes
     const extraTreeColors = [0x1a4010, 0x143810, 0x0e2808, 0x2a5818];
+    const _sharedTrunkGeo = new THREE.CylinderGeometry(0.15, 0.22, 1.8, 6);
+    const _sharedTrunkMat = new THREE.MeshPhongMaterial({ color: 0x3d2208, emissive: 0x1e1104, emissiveIntensity: 0.1, shininess: 10 });
+    const _sharedCanopyGeos = [
+      new THREE.ConeGeometry(1.2, 1.6, 7),
+      new THREE.ConeGeometry(0.9, 1.3, 7),
+    ];
+    const _sharedCanopyMats = extraTreeColors.map(function (col) {
+      return new THREE.MeshPhongMaterial({ color: col, emissive: col, emissiveIntensity: 0.12, shininess: 25 });
+    });
     const EXTRA_TREES = [
       { x: 18, z: -18, s: 0.8 },
       { x: -16, z: -22, s: 1.0 },
@@ -1033,23 +1043,17 @@
       const t = EXTRA_TREES[i];
       const grp = new THREE.Group();
       grp.position.set(t.x, 0, t.z);
-      // Trunk
-      const trunk = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.15 * t.s, 0.22 * t.s, 1.8 * t.s, 6),
-        new THREE.MeshPhongMaterial({ color: 0x3d2208, emissive: 0x1e1104, emissiveIntensity: 0.1, shininess: 10 })
-      );
+      // Trunk — shared geometry + material, scaled per instance
+      const trunk = new THREE.Mesh(_sharedTrunkGeo, _sharedTrunkMat);
+      trunk.scale.setScalar(t.s);
       trunk.position.y = 0.9 * t.s;
       trunk.castShadow = true;
       grp.add(trunk);
-      // Canopy
-      const col = extraTreeColors[i % extraTreeColors.length];
+      // Canopy — shared geometries + materials, scaled per instance
+      const canopyMat = _sharedCanopyMats[i % _sharedCanopyMats.length];
       for (let c = 0; c < 2; c++) {
-        const cr = (1.2 - c * 0.3) * t.s;
-        const ch = (1.6 - c * 0.3) * t.s;
-        const canopy = new THREE.Mesh(
-          new THREE.ConeGeometry(cr, ch, 7),
-          new THREE.MeshPhongMaterial({ color: col, emissive: col, emissiveIntensity: 0.12, shininess: 25 })
-        );
+        const canopy = new THREE.Mesh(_sharedCanopyGeos[c], canopyMat);
+        canopy.scale.setScalar(t.s);
         canopy.position.y = (1.8 + c * 1.0) * t.s;
         canopy.castShadow = true;
         grp.add(canopy);
