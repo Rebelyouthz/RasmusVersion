@@ -117,7 +117,12 @@
     { x: 25, z: -18, type: 2, s: 1.05 },
     { x: -22, z: -20, type: 0, s: 0.9 },
     { x: 15, z: -25, type: 1, s: 1.0 },
-    // ── Near lake: old willows removed — replaced by LakeVegetation bonsai trees ──
+    // ── Near lake (willows, scenic) — skipped at build time when LakeVegetation is active ──
+    { x: 22, z: -25, type: 2, s: 1.3, _lake: true },
+    { x: 38, z: -22, type: 2, s: 1.2, _lake: true },
+    { x: 25, z: -38, type: 2, s: 1.15, _lake: true },
+    { x: 35, z: -40, type: 2, s: 1.25, _lake: true },
+    { x: 40, z: -35, type: 0, s: 0.9, _lake: true },
     // ── Near Stonehenge ──
     { x: 28, z: 28, type: 0, s: 0.9 },
     { x: 42, z: 28, type: 1, s: 1.0 },
@@ -337,6 +342,10 @@
   function _buildTrees() {
     for (var i = 0; i < TREE_DATA.length; i++) {
       var td = TREE_DATA[i];
+
+      // Skip near-lake trees when LakeVegetation provides bonsai replacements
+      if (window.LakeVegetation && td._lake) continue;
+
       var group = new THREE.Group();
       group.position.set(td.x, 0, td.z);
 
@@ -714,10 +723,12 @@
   // ═══════════════════════════════════════════════════════════════════════════
 
   function _buildLoreLake() {
-    // Reeds around the lake shore
-    _buildReeds();
-    // Water lilies on the surface
-    _buildWaterLilies();
+    // When LakeVegetation is loaded it provides its own (richer) reeds & lilies,
+    // so skip the legacy versions to avoid duplicate draw calls.
+    if (!window.LakeVegetation) {
+      _buildReeds();
+      _buildWaterLilies();
+    }
 
     // Cozy warm light near the lake
     var lakeLight = new THREE.PointLight(0x6699BB, 1.2, 20);
@@ -1036,7 +1047,7 @@
             }
           });
         }
-        return { type: 'wood', amount: 2 + Math.floor(_seeded(i * 151 + _dayTime * 100) * 3) };
+        return { type: 'wood', amount: 2 + Math.floor(_seeded(tr.ox * 151 + tr.oz * 97 + _dayTime * 100) * 3) };
       }
     }
 

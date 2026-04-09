@@ -23,28 +23,28 @@
   var LAKE_Z      = -30;
   var LAKE_RADIUS = 8;
 
-  // Bonsai tree ring — placed just outside the shore ring (r ≈ 10-14)
+  // Bonsai tree ring — placed just outside the shore ring
   var BONSAI_COUNT       = 8;
-  var BONSAI_RING_MIN    = 10;
-  var BONSAI_RING_MAX    = 14;
+  var BONSAI_RING_MIN    = LAKE_RADIUS + 2;   // 10
+  var BONSAI_RING_MAX    = LAKE_RADIUS + 6;   // 14
   var BONSAI_TRUNK_H     = 1.0;
   var BONSAI_CANOPY_R    = 0.9;
   var BONSAI_HP          = 4;
 
   // Lily pads (näckrosor) — on the lake surface
   var LILY_COUNT         = 14;
-  var LILY_INNER_R       = 1.5;  // minimum distance from lake center
-  var LILY_OUTER_R       = 6.5;  // maximum distance from lake center
+  var LILY_INNER_R       = 1.5;
+  var LILY_OUTER_R       = LAKE_RADIUS - 1.5; // 6.5
 
   // Reeds (vass) — on the shore edge
   var REED_COUNT         = 22;
-  var REED_RING_MIN      = 7.0;
-  var REED_RING_MAX      = 9.5;
+  var REED_RING_MIN      = LAKE_RADIUS - 1;   // 7
+  var REED_RING_MAX      = LAKE_RADIUS + 1.5; // 9.5
 
   // Grass tufts — scattered around shore
   var GRASS_COUNT        = 30;
-  var GRASS_RING_MIN     = 8.5;
-  var GRASS_RING_MAX     = 15;
+  var GRASS_RING_MIN     = LAKE_RADIUS + 0.5;  // 8.5
+  var GRASS_RING_MAX     = LAKE_RADIUS + 7;    // 15
 
   // Sway physics (spring-damper for bonsai)
   var SWAY_SPRING = 14.0;
@@ -218,21 +218,21 @@
 
       var reedGroup = new THREE.Group();
 
-      // 3 stalks per cluster
+      // 3 stalks per cluster (positions in unscaled group space)
       for (var s = 0; s < 3; s++) {
         var stalk = new THREE.Mesh(_reedGeo, _reedMat);
         stalk.position.set(
           (s - 1) * 0.12,
-          0.8 * rScale,
+          0.8,
           (s % 2) * 0.08
         );
         stalk.rotation.z = (s - 1) * 0.08;
         reedGroup.add(stalk);
       }
 
-      // Cattail top
+      // Cattail top (unscaled; group.scale handles sizing)
       var top = new THREE.Mesh(_reedTopGeo, _reedTopMat);
-      top.position.y = 1.5 * rScale;
+      top.position.y = 1.5;
       reedGroup.add(top);
 
       reedGroup.position.set(rx, 0, rz);
@@ -258,7 +258,7 @@
         var blade = new THREE.Mesh(_grassGeo, _grassMat);
         blade.position.set(
           (b - 1) * 0.1,
-          0.27 * gScale,
+          0.27,
           (b % 2) * 0.06
         );
         blade.rotation.z = (b - 1) * 0.15;
