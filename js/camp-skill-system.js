@@ -3218,6 +3218,36 @@
           overlay.remove();
           window._buildOverlayActive = false;
           if (window.CampWorld && window.CampWorld.isActive) window.CampWorld.resumeInput();
+
+          // ── Forge built: trigger AIDA Harvester Backpack blueprint dialogue ──
+          if (buildingId === 'forge') {
+            var _forgeHarvestKey = '_aidaForgeHarvesterShown';
+            if (!saveData[_forgeHarvestKey]) {
+              saveData[_forgeHarvestKey] = true;
+              if (typeof saveSaveData === 'function') saveSaveData();
+              setTimeout(function () {
+                var DS = window.DialogueSystem;
+                if (DS && DS.DIALOGUES && DS.DIALOGUES.aidaForgeHarvester) {
+                  DS.show(DS.DIALOGUES.aidaForgeHarvester, {
+                    onComplete: function () {
+                      // Show DopamineReward for Harvester Backpack blueprint unlock
+                      if (window.DopamineReward) {
+                        window.DopamineReward.show({
+                          title: '🎒 BLUEPRINT UNLOCKED',
+                          items: [
+                            { icon: '🎒', label: 'Harvester Backpack Blueprint', rarity: 'epic' },
+                            { icon: '🪓', label: 'Wood Axe Arm Blueprint', rarity: 'rare' },
+                            { icon: '⛏️', label: 'Stone Pickaxe Arm Blueprint', rarity: 'rare' }
+                          ],
+                          message: "Craft these at the Forge to enable robotic auto-harvesting!"
+                        });
+                      }
+                    }
+                  });
+                }
+              }, 1200);
+            }
+          }
         }, 1800);
       }
 

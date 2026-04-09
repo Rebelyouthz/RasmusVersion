@@ -109,7 +109,7 @@
       },
       // Camp System - Quest-Driven Building Unlock System
       campBuildings: {
-        questMission: { level: 1, maxLevel: 1, unlocked: true },
+        questMission: { level: 0, maxLevel: 1, unlocked: true },
         inventory: { level: 0, maxLevel: 1, unlocked: false },
         campHub: { level: 0, maxLevel: 1, unlocked: false },
         loreMaster: { level: 0, maxLevel: 1, unlocked: false },

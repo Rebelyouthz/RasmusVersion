@@ -1917,10 +1917,9 @@
         playerStats.hp -= reduced;
 
         // ── IMMORTALITY BUG FIX: Check if player died ──
+        // Use window.gameOver to avoid the local boolean `gameOver` shadow in takeDamage
         if (playerStats.hp <= 0) {
-          if (typeof gameOver === 'function') {
-            gameOver();
-          } else if (typeof window.gameOver === 'function') {
+          if (typeof window.gameOver === 'function') {
             window.gameOver();
           }
           return;
@@ -2157,8 +2156,11 @@
             }
           };
           setTimeout(fadePool, 500);
-          
-          gameOver();
+
+          // Use window.gameOver to avoid calling the local boolean shadow
+          if (typeof window.gameOver === 'function') {
+            window.gameOver();
+          }
         }
       }
     }

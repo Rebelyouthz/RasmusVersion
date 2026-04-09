@@ -82,6 +82,13 @@ window.DialogueSystem = (function () {
       { text: '> The Forge crafts base-tier equipment only. Gold is the required catalyst.', emotion: 'happy' },
       { text: '> Resource acquisition is your primary sub-objective. Begin immediately.', emotion: 'task' }
     ],
+    // 7b. Forge built → unlocks Harvester Backpack blueprint
+    aidaForgeHarvester: [
+      { text: '> Fabrication Node confirmed. Scanning schematics... MATCH FOUND.', emotion: 'thinking', cinematic: true },
+      { text: '> I have located blueprints for a Hands-Free Harvesting Apparatus. My creators called it the Harvester Backpack.', emotion: 'task', cinematic: true },
+      { text: '> Craft it at the Forge — 2 Leather and 2 Metal. Attach the Wood Axe Arm and Stone Pickaxe Arm to complete it.', emotion: 'goal', isGoal: true, cinematic: true },
+      { text: '> Stand near a tree or rock for 1.5 seconds. I will handle the rest. Efficiency is non-negotiable.', emotion: 'happy', cinematic: true }
+    ],
     // 8. Generic quest complete
     questComplete: [
       { text: '> Objective complete. Data logged. Your efficiency is... noted.', emotion: 'happy' },
