@@ -178,6 +178,18 @@
   if (typeof playSound === 'undefined') {
     window.playSound = function () {};
   }
+  // ── RunEndScreen navigation stubs ─────────────────────────────────────────────
+  // run-end-screen.js calls showCamp() for "Go to Camp" and resetGame() for "New Run".
+  // Neither exists in sandbox, so we wire them here.
+  if (typeof showCamp === 'undefined') {
+    window.showCamp = function () { window.location.href = 'index.html'; };
+  }
+  if (typeof showCampScreen === 'undefined') {
+    window.showCampScreen = function () { window.location.href = 'index.html'; };
+  }
+  if (typeof resetGame === 'undefined') {
+    window.resetGame = function () { location.reload(); };
+  }
   // ── Player Status Effect API ──────────────────────────────────────────────────
   // window.setPlayerStatusEffect(type, duration) — call from any damage system.
   // type: 'fire' | 'poison' | 'ice' | 'shock'
@@ -260,21 +272,19 @@
     window.gameOver = function () {
       // Evaluate run quests before showing death screen (CHANGE 3) — pass endOfRun=true
       if (typeof _checkSandboxRunQuestProgress === 'function') _checkSandboxRunQuestProgress(true);
-      // Track survival time and run bonus XP
+      if (typeof _checkSandboxAchievements === 'function') _checkSandboxAchievements();
+
+      // Track survival time
       var _elapsedSec = _sandboxRunStartTime ? (Date.now() - _sandboxRunStartTime) / 1000 : 0;
       if (saveData && saveData.stats) saveData.stats.longestSurvivalTime = Math.max(saveData.stats.longestSurvivalTime || 0, _elapsedSec);
       var _runKills = playerStats ? (playerStats.kills || 0) : 0;
-      var _runBonus = Math.min(50, Math.floor(_runKills * (1 + _elapsedSec / 60)));
-      if (window.GameAccount && typeof window.GameAccount.addXP === 'function') window.GameAccount.addXP(_runBonus, 'Run End Bonus', saveData);
-      if (typeof _checkSandboxAchievements === 'function') _checkSandboxAchievements();
 
-      // Show YOU DIED banner with stats FIRST so player can read them
-      if (typeof showYouDiedBanner === 'function') {
-        showYouDiedBanner(GAME_OVER_RELOAD_DELAY_MS);
-      } else {
-        const b = document.getElementById('you-died-banner');
-        if (b) b.style.display = 'block';
-      }
+      // Award kill XP + survival bonus via addAccountXP so it lands in saveData.accountXP
+      // and currentRunStats.xpAccumulated (both read by RunEndScreen).
+      // GameAccount.addXP is not available in sandbox (idle-account.js not loaded).
+      var _killXP = _runKills * 2;
+      var _survivalBonus = Math.min(50, Math.floor(_runKills * (1 + _elapsedSec / 60)));
+      if (typeof addAccountXP === 'function') addAccountXP(_killXP + _survivalBonus);
 
       // Reset blood/gore systems after a short delay so the death scene stays visible briefly
       setTimeout(function () {
@@ -296,8 +306,33 @@
         }
       }, 800); // brief delay so blood/gore stays visible for dramatic effect
 
-      // Reload page after the full delay
-      setTimeout(function () { location.reload(); }, GAME_OVER_RELOAD_DELAY_MS);
+      // Show cinematic RunEndScreen if available; otherwise fall back to you-died-banner + reload
+      if (window.RunEndScreen) {
+        // Hide the YOU DIED banner — RunEndScreen has its own header
+        var _ydb = document.getElementById('you-died-banner');
+        if (_ydb) _ydb.style.display = 'none';
+        var _runStats = window.currentRunStats || {};
+        // Set globals that RunEndScreen's loot and quest/button sections read directly
+        window._resGoldEarned = Math.max(0, ((window.saveData && window.saveData.gold) || 0) - _sbStartGold);
+        var _endStats = {
+          kills:         _runKills,
+          eliteKills:    _runStats.eliteKills || 0,
+          timeSurvived:  Math.floor(_elapsedSec),
+          maxCombo:      _sbMaxCombo || 0,
+          xpAccumulated: _runStats.xpAccumulated || 0
+        };
+        window._resCurrentStats = _endStats;
+        window.RunEndScreen.show(_endStats);
+      } else {
+        // Fallback: show YOU DIED banner then reload
+        if (typeof showYouDiedBanner === 'function') {
+          showYouDiedBanner(GAME_OVER_RELOAD_DELAY_MS);
+        } else {
+          var b = document.getElementById('you-died-banner');
+          if (b) b.style.display = 'block';
+        }
+        setTimeout(function () { location.reload(); }, GAME_OVER_RELOAD_DELAY_MS);
+      }
     };
   }
 
@@ -503,6 +538,8 @@
   // ─── Kill Combo System ───────────────────────────────────────────────────────
   let _killCombo      = 0;    // current combo count
   let _killComboTimer = 0;    // countdown before combo resets (seconds)
+  let _sbMaxCombo     = 0;    // peak combo this run (for RunEndScreen)
+  let _sbStartGold    = 0;    // saveData.gold at run start (for _resGoldEarned)
 
   // ─── Level-Up Shockwave Rings (pooled: pre-allocated once, reused) ──────────
   let _lvlUpRings = [];       // active expanding ring meshes (references into _lvlUpRingPool)
@@ -956,6 +993,7 @@
   function _incrementKillCombo() {
     _killCombo++;
     _killComboTimer = 2.5;
+    if (_killCombo > _sbMaxCombo) _sbMaxCombo = _killCombo;
     _updateKillComboDisplay();
   }
 
@@ -8161,6 +8199,15 @@
       window._sandboxXpMagnetRunStacks = 0;
       _sandboxRunStartTime = Date.now();
       window.gameStartTime = _sandboxRunStartTime; // expose for ui.js showYouDiedBanner
+      // Initialize per-run stats for RunEndScreen (xpAccumulated populated by addAccountXP)
+      window.currentRunStats = {
+        normalKills: 0, eliteKills: 0, bossKills: 0,
+        xpFromKills: 0, xpAccumulated: 0,
+        startAccountLevel: (window.saveData && window.saveData.accountLevel) || 1,
+        startAccountXP:    (window.saveData && window.saveData.accountXP)    || 0
+      };
+      _sbMaxCombo = 0;
+      _sbStartGold = (window.saveData && window.saveData.gold) || 0;
       if (saveData.tutorialQuests) saveData.tutorialQuests.killsThisRun = 0;
       // Track total runs — keep stats.* and top-level counter in sync
       if (saveData) {
