@@ -275,9 +275,9 @@ const SettingsMenu = {
 
     // ── Resolution scale — clamp final pixel ratio to 1.5 to preserve mobile perf ──
     if (window.renderer) {
-      var maxPixelRatio = 1.5;
-      var base = Math.min(window.devicePixelRatio || 1, maxPixelRatio);
-      var pixelRatio = Math.min(base * s.resolution, maxPixelRatio);
+      const maxPixelRatio = 1.5;
+      const base = Math.min(window.devicePixelRatio || 1, maxPixelRatio);
+      const pixelRatio = Math.min(base * s.resolution, maxPixelRatio);
       window.renderer.setPixelRatio(pixelRatio);
     }
 
@@ -288,8 +288,8 @@ const SettingsMenu = {
       } else {
         window.renderer.shadowMap.enabled = true;
         // Adjust shadow map quality
-        var shadowSizes = { low: 512, medium: 1024, high: 2048 };
-        var shadowSize = shadowSizes[s.shadows] || 1024;
+        const shadowSizes = { low: 512, medium: 1024, high: 2048 };
+        const shadowSize = shadowSizes[s.shadows] || 1024;
         if (window.scene) {
           window.scene.traverse(function (obj) {
             if (obj.isLight && obj.shadow && obj.shadow.mapSize) {
