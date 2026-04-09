@@ -84,6 +84,7 @@
   var _grassTufts   = [];  // { mesh, phase }
 
   var _gatherCooldown = 0;
+  var _windTime       = 0;  // accumulated time for wind animation
 
   // ═══════════════════════════════════════════════════════════════════════════
   // POOL INIT — create all shared geometry/material once
@@ -282,6 +283,7 @@
 
   function updateLakeVegetation(delta) {
     var dt = delta;
+    _windTime += dt;
 
     // ── Bonsai sway (spring-damper) ──
     for (var i = 0; i < _bonsaiTrees.length; i++) {
@@ -294,8 +296,8 @@
       bt.group.rotation.x = bt.swayZ * 0.12;
       bt.group.rotation.z = -bt.swayX * 0.12;
 
-      // Gentle ambient wind
-      var windPhase = dt * 0.5 + i * 1.3;
+      // Gentle ambient wind (accumulated time for smooth animation)
+      var windPhase = _windTime * 0.5 + i * 1.3;
       bt.group.rotation.x += Math.sin(windPhase) * 0.008;
     }
 
