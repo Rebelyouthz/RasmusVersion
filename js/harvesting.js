@@ -1208,6 +1208,7 @@
   function _triggerRoboticHarvest(node) {
     _injectRoboticCSS();
     const isStone = node.type === 'rock';
+    const armDef  = isStone ? TOOL_DEFS.stonePickaxeArm : TOOL_DEFS.woodAxeArm;
 
     // Remove any leftover arm
     let oldArm = document.getElementById('_ra-arm');
@@ -1219,10 +1220,10 @@
     arm.textContent = isStone ? '⚙️🔨' : '🦾🪓';
     document.body.appendChild(arm);
 
-    // Chop 3 times with wobble + particle burst
+    // Chop per chopCount defined in tool def (defaults to 3)
     const sp = _worldToScreen(node.mesh.position.x, (node.mesh.position.y || 0) + 1.5, node.mesh.position.z);
     let chopsDone = 0;
-    const chopsTotal = 3;
+    const chopsTotal = (armDef && armDef.chopCount) || 3;
     function _doChop() {
       if (!arm.parentNode) return;
       arm.classList.remove('chopping');

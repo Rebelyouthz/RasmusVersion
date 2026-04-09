@@ -4530,13 +4530,14 @@
               if (result.skillPoints)     _parts.push('⭐ +' + result.skillPoints + ' Skill Pts');
               if (result.attributePoints) _parts.push('💪 +' + result.attributePoints + ' Attr Pts');
               saveSaveData();
+              // Remove emoji prefix (e.g. '💰 +50 Gold' → '+50 Gold') for the stat-change string
               showStatChange('🎁 Day ' + result.day + ': ' + (_parts.map(p => p.replace(/^[^ ]+ /, '')).join(' · ') || 'Claimed!'));
 
               // Casino-style dopamine reward modal
               if (window.DopamineReward && _parts.length > 0) {
-                const _dailyRarityByDay2 = ['common','uncommon','rare','epic','legendary','mythic','mythic'];
-                const _dayIdx2 = Math.max(1, Math.min(_dailyRarityByDay2.length, result.day || todayDayNum));
-                const _rarityLabel = { common:'Common', uncommon:'Uncommon', rare:'Rare', epic:'Epic', legendary:'LEGENDARY', mythic:'✦ MYTHIC ✦' }[_dailyRarityByDay2[_dayIdx2 - 1]] || '';
+                const _dailyRarityTiers = ['common','uncommon','rare','epic','legendary','mythic','mythic'];
+                const _tierIndex = Math.max(1, Math.min(_dailyRarityTiers.length, result.day || todayDayNum));
+                const _rarityLabel = { common:'Common', uncommon:'Uncommon', rare:'Rare', epic:'Epic', legendary:'LEGENDARY', mythic:'✦ MYTHIC ✦' }[_dailyRarityTiers[_tierIndex - 1]] || '';
                 window.DopamineReward.show({
                   eyebrow: '🎁 DAY ' + (result.day || todayDayNum) + ' DAILY LOGIN — ' + _rarityLabel,
                   title: 'REWARD CLAIMED',

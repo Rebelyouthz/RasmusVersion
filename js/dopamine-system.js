@@ -994,7 +994,7 @@
 
       // Play a click-chime if GameAudio is available
       if (typeof playSound === 'function') {
-        try { playSound('levelup'); } catch(e) {}
+        try { playSound('levelup'); } catch(e) { /* audio unavailable */ }
       }
     }
 
