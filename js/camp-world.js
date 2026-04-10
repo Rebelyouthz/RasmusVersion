@@ -79,6 +79,7 @@
   let _uiCamera         = null;
   let _profileAvatar    = null;
   let _avatarTexture    = null;
+  let _avatarMaterial   = null;
   let _avatarFrame      = 0;
   let _avatarFrameTimer = 0;
   const _AVATAR_FPS     = 14; // ~14 fps for natural breathing cadence
@@ -402,8 +403,9 @@
       -10, 10           // near, far
     );
 
-    // Dispose any previous texture to avoid GPU leak on scene rebuild
-    if (_avatarTexture) { _avatarTexture.dispose(); _avatarTexture = null; }
+    // Dispose any previous GPU resources to avoid leaks on scene rebuild
+    if (_avatarMaterial) { _avatarMaterial.dispose(); _avatarMaterial = null; }
+    if (_avatarTexture)  { _avatarTexture.dispose();  _avatarTexture  = null; }
 
     _avatarTexture = new THREE.TextureLoader().load('assets/ui/idle-breathing-ui.png');
     _avatarTexture.magFilter = THREE.NearestFilter; // crisp pixel-art upscale
@@ -411,14 +413,14 @@
     _avatarTexture.repeat.set(1 / 8, 1 / 4);       // 8 cols × 4 rows
     _avatarTexture.offset.set(0, 1 - 1 / 4);       // frame 0 = top-left
 
-    const avatarMat = new THREE.SpriteMaterial({
+    _avatarMaterial = new THREE.SpriteMaterial({
       map:         _avatarTexture,
       transparent: true,
       depthTest:   false,
       depthWrite:  false,
     });
 
-    _profileAvatar = new THREE.Sprite(avatarMat);
+    _profileAvatar = new THREE.Sprite(_avatarMaterial);
     _profileAvatar.scale.set(128, 128, 1);
     // top-left corner: 85 px from left edge and 85 px from top edge
     _profileAvatar.position.set(-W / 2 + 85, H / 2 - 85, 0);
@@ -433,9 +435,12 @@
   function _updateProfileAvatar(dt) {
     if (!_avatarTexture) return;
     _avatarFrameTimer += dt;
-    if (_avatarFrameTimer < 1 / _AVATAR_FPS) return;
-    _avatarFrameTimer -= 1 / _AVATAR_FPS;
-    _avatarFrame = (_avatarFrame + 1) % 32;
+    const frameDuration = 1 / _AVATAR_FPS;
+    // Consume all accumulated frame time to prevent drift
+    while (_avatarFrameTimer >= frameDuration) {
+      _avatarFrameTimer -= frameDuration;
+      _avatarFrame = (_avatarFrame + 1) % 32;
+    }
     const col = _avatarFrame % 8;
     const row = Math.floor(_avatarFrame / 8);
     _avatarTexture.offset.set(col / 8, 1 - (row + 1) / 4);
