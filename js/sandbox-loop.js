@@ -6328,10 +6328,22 @@
       _undergroundShaft.material.dispose();
       _undergroundShaft = null;
     }
-    for (let _ci = _spiralDoorParts.length - 1; _ci >= 0; _ci--) {
+    // Dispose each segment's geometry and material.
+    // Segments within the same ring share a geometry and material instance, so track
+    // unique references via Sets to avoid double-dispose calls.
+    const _disposedGeo  = new Set();
+    const _disposedMat  = new Set();
+    for (let _ci = 0; _ci < _spiralDoorParts.length; _ci++) {
       const _cp = _spiralDoorParts[_ci];
       scene.remove(_cp.mesh);
-      // geometry/material are shared per ring, dispose only from last segment of each ring
+      if (_cp.mesh.geometry && !_disposedGeo.has(_cp.mesh.geometry)) {
+        _cp.mesh.geometry.dispose();
+        _disposedGeo.add(_cp.mesh.geometry);
+      }
+      if (_cp.mesh.material && !_disposedMat.has(_cp.mesh.material)) {
+        _cp.mesh.material.dispose();
+        _disposedMat.add(_cp.mesh.material);
+      }
     }
     _spiralDoorParts.length = 0;
     if (_elevatorPlatform) {
