@@ -363,6 +363,12 @@
       loadSettingsIntoUI();
     };
 
+    // ─── Expose SettingsUI API so external callers (e.g. profile modal) can show/hide ───
+    window.SettingsUI = {
+      show: openSettings,
+      hide: closeSettings
+    };
+
     // Initial load
     loadSettingsIntoUI();
   }
