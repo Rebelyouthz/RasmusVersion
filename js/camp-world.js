@@ -5189,7 +5189,6 @@
   }
   function _showPlayerBubble(text, durationMs) {
     _ensurePlayerBubble();
-    _playerBubbleEl.childNodes[0].textContent = '';
     // Set text before the tail
     var span = _playerBubbleEl.querySelector('span');
     if (!span) {

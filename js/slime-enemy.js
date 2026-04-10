@@ -893,13 +893,15 @@ self.mesh.rotation.z = orig.z;
 SlimeEnemy.prototype._multiImpactReaction = function(pos, count, scale) {
 if (!this.mesh) return;
 var self = this;
-var stepDur = 0.020; // 20ms per step
+var stepDur = 0.020;
+// Use sinusoidal wobble instead of accumulating random offsets
 this._addTween(count * stepDur + 0.08, function(t) {
 var totalDur = count * stepDur + 0.08;
 var elapsed = t * totalDur;
 if (elapsed < count * stepDur && self.mesh) {
-self.mesh.rotation.z += (Math.random()-0.5) * 0.03 * scale;
-self.mesh.rotation.x += (Math.random()-0.5) * 0.02 * scale;
+var phase = elapsed / stepDur;
+self.mesh.rotation.z = Math.sin(phase * 2.1) * 0.12 * scale * (1.0 - t);
+self.mesh.rotation.x = Math.cos(phase * 1.7) * 0.08 * scale * (1.0 - t);
 }
 }, function() { if (self.mesh) { self.mesh.rotation.z = 0; self.mesh.rotation.x = 0; } });
 };
@@ -923,12 +925,13 @@ self.mesh.scale.setScalar(self.scale);
 SlimeEnemy.prototype._heartBlastReaction = function(pos) {
 if (!this.mesh) return;
 var self  = this;
+var baseY = this.mesh.position.y;
 this._addTween(0.32, function(t) {
 if (!self.mesh) return;
 var count = Math.floor(t * 8);
 self.mesh.rotation.z = Math.sin(count * 1.5) * 0.22;
-self.mesh.position.y += Math.sin(count) * 0.003;
-}, function() { if (self.mesh) self.mesh.rotation.z = 0; });
+self.mesh.position.y = baseY + Math.sin(count) * 0.03 * (1.0 - t);
+}, function() { if (self.mesh) { self.mesh.rotation.z = 0; self.mesh.position.y = baseY; } });
 this._startPumpWound('heart');
 };
 
@@ -1008,9 +1011,11 @@ this.pushZ += bz * force * 0.3;
 this.squishTimer  = 0.8;
 this.squishAmount = 0.9;
 var self = this;
+var startY = this.mesh.rotation.y;
 this._addTween(0.27, function(t) {
 if (!self.mesh) return;
-self.mesh.rotation.y += 0.18 * (1.0 - t) * 0.06;
+// Set rotation.y absolutely (not accumulating) — spinning from start angle
+self.mesh.rotation.y = startY + t * Math.PI * 2 * (1.0 - t * 0.5);
 self.mesh.rotation.z = Math.sin(t * Math.PI * 4) * 0.5 * (1.0-t);
 });
 };
@@ -1048,8 +1053,10 @@ SlimeEnemy.prototype._knifeHeartReaction = function(pos) {
 this._startPumpWound('heart');
 if (!this.mesh) return;
 var self = this;
+// Seizing oscillation: ~15 Hz tremor that decays over 0.8s
+var seizeFreqHz = 15;
 this._addTween(0.8, function(t) {
-if (self.mesh) self.mesh.rotation.z = Math.sin(t * 0.8 * 50 * 0.015 * 1000 * t) * 0.12 * (1.0 - t);
+if (self.mesh) self.mesh.rotation.z = Math.sin(t * seizeFreqHz * Math.PI * 2) * 0.12 * (1.0 - t);
 }, function() { if (self.mesh) self.mesh.rotation.z = 0; });
 };
 
@@ -1101,13 +1108,14 @@ setTimeout(function() { if (self.mesh && self.alive) self.mesh.material.color.se
 SlimeEnemy.prototype._lightningHitReaction = function(pos, wlvl) {
 if (!this.mesh) return;
 var self  = this;
+var baseY = this.mesh.position.y;
 this.mesh.material.color.setHex(0xffffcc);
 this._addTween(0.3, function(t) {
 if (!self.mesh) return;
 var count = Math.floor(t * 10);
 self.mesh.rotation.z = (count%2===0?1:-1) * 0.25;
-self.mesh.position.y += (count%2===0 ? 0.005 : -0.005);
-}, function() { if (self.mesh && self.alive) self.mesh.material.color.setHex(SLIME_COLORS.hurt); });
+self.mesh.position.y = baseY + Math.sin(count * Math.PI) * 0.05 * (1.0 - t);
+}, function() { if (self.mesh) { self.mesh.position.y = baseY; } if (self.mesh && self.alive) self.mesh.material.color.setHex(SLIME_COLORS.hurt); });
 };
 
 // Desperate wobble — near-death general (PERF FIX: uses frame tween instead of setInterval)
