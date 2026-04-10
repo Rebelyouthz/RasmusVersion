@@ -1068,12 +1068,24 @@
       if (window._eventHorizonHoles && window._eventHorizonHoles.length > 0) {
         const PULL_RADIUS = 5.0;
         const PULL_FORCE  = 0.18;
+        // Apply suck-in CSS effect to canvas when black hole is active
+        const _canvas = typeof renderer !== 'undefined' && renderer.domElement ? renderer.domElement : null;
+        const _anyActive = window._eventHorizonHoles.length > 0;
+        if (_canvas && _anyActive && !_canvas._bhSuckActive) {
+          _canvas._bhSuckActive = true;
+          _canvas.style.transition = 'filter 0.3s ease';
+          _canvas.style.filter = 'saturate(1.4) brightness(0.85) contrast(1.1)';
+        } else if (_canvas && !_anyActive && _canvas._bhSuckActive) {
+          _canvas._bhSuckActive = false;
+          _canvas.style.filter = '';
+        }
         for (let hi = window._eventHorizonHoles.length - 1; hi >= 0; hi--) {
           const hole = window._eventHorizonHoles[hi];
           hole.timer -= dt;
-          // Animate hole mesh pulsing
+          // Animate hole mesh — grow as it pulls in matter (reverse of enlarging)
           if (hole.mesh) {
-            const sc = 0.6 + 0.2 * Math.sin(hole.timer * 12);
+            const lifeRatio = 1.0 - (hole.timer / 1.5); // 0→1 over 1.5s
+            const sc = 0.3 + lifeRatio * 0.9; // grows from 0.3 to 1.2 as it collapses
             hole.mesh.scale.set(sc, sc, sc);
           }
           // Pull enemies toward the hole
@@ -1099,6 +1111,11 @@
               }
             }
             window._eventHorizonHoles.splice(hi, 1);
+            // Remove suck-in effect when no more holes
+            if (window._eventHorizonHoles.length === 0 && _canvas) {
+              _canvas._bhSuckActive = false;
+              _canvas.style.filter = '';
+            }
           }
         }
       }

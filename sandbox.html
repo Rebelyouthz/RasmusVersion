@@ -410,9 +410,13 @@
       width: 100px;
       height: 100px;
       border-radius: 50%;
-      background: radial-gradient(circle at 40% 35%, #3a2a1a 0%, #1a0f08 60%, #0a0804 100%);
+      background: radial-gradient(circle at 35% 30%, #4a3520 0%, #2a1a0a 50%, #0a0804 100%);
       border: 2px solid #8B6914;
-      box-shadow: 0 0 16px rgba(180,130,20,0.4), inset 0 0 12px rgba(0,0,0,0.6);
+      box-shadow:
+        0 0 16px rgba(180,130,20,0.4),
+        inset 0 0 12px rgba(0,0,0,0.7),
+        inset 2px 2px 8px rgba(100,80,30,0.3),
+        inset -2px -2px 8px rgba(0,0,0,0.6);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -443,9 +447,22 @@
       transition: background 0.2s, box-shadow 0.2s, border-color 0.2s;
     }
     .revolver-chamber.loaded {
-      background: radial-gradient(circle at 35% 30%, #ffe88a, #c87c0a 70%);
-      border-color: #FFD700;
-      box-shadow: 0 0 6px rgba(255,200,0,0.65), inset 0 0 3px rgba(255,240,100,0.5);
+      background: radial-gradient(circle at 40% 30%, #d4845a 0%, #b5522a 45%, #8b3a1a 100%);
+      border-color: #cd7f32;
+      box-shadow: 0 0 5px rgba(180,100,40,0.7), inset 0 0 3px rgba(210,150,80,0.4);
+      position: relative;
+    }
+    .revolver-chamber.loaded::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 10px;
+      height: 3px;
+      background: linear-gradient(90deg, #888 0%, #ccc 40%, #aaa 60%, #777 100%);
+      border-radius: 2px;
+      box-shadow: 0 0 2px rgba(200,200,220,0.6);
     }
     .revolver-chamber.empty {
       background: radial-gradient(circle at 40% 35%, #2a2a2a, #111 70%);
@@ -952,8 +969,8 @@
   <!-- 11. Blood & physics: instanced blood drops, ground stains, wounds -->
   <script src="js/blood-system-v2.js"></script>
 
-  <!-- 11-v21. Blood Simulator V2.1 – terrain-aware, fantasy-realism, 120 FPS -->
-  <script src="js/blood-simulator-v21.js"></script>
+  <!-- 11-v21. Blood Simulator V2.1 — disabled (functionality merged into blood-system-v2.js) -->
+  <!-- <script src="js/blood-simulator-v21.js"></script> -->
 
   <!-- 11a. Gore simulator: advanced gore chunks, splatter, mesh deformation -->
   <script src="js/gore-simulator.js"></script>
@@ -1134,13 +1151,30 @@
   <div id="revolver-ui" style="pointer-events:none;">
     <div id="revolver-cylinder">
       <svg id="revolver-horus" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-        <!-- Eye of Horus: simplified stylised engraving -->
-        <ellipse cx="30" cy="28" rx="14" ry="8" stroke="#b8860b" stroke-width="1.5" fill="none" opacity="0.85"/>
-        <circle cx="30" cy="28" r="4" fill="#b8860b" opacity="0.7"/>
-        <line x1="30" y1="36" x2="28" y2="42" stroke="#b8860b" stroke-width="1.2" opacity="0.7"/>
-        <line x1="30" y1="36" x2="32" y2="42" stroke="#b8860b" stroke-width="1.2" opacity="0.7"/>
-        <line x1="28" y1="42" x2="24" y2="46" stroke="#b8860b" stroke-width="1.2" opacity="0.7"/>
-        <line x1="16" y1="28" x2="44" y2="28" stroke="#b8860b" stroke-width="1" opacity="0.5"/>
+        <!-- Eye of Horus matching settings button style -->
+        <defs>
+          <radialGradient id="rev-glow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="rgb(212,175,55)" stop-opacity="0.35"/>
+            <stop offset="100%" stop-color="rgb(180,120,0)" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <!-- Glow halo -->
+        <circle cx="30" cy="30" r="16" fill="url(#rev-glow)" opacity="0.5"/>
+        <!-- Outer almond eye outline -->
+        <path d="M8,30 C15,17 45,17 52,30 C45,43 15,43 8,30 Z"
+              fill="rgba(255,245,220,0.07)" stroke="rgba(212,175,55,0.88)" stroke-width="1.8"/>
+        <!-- Iris -->
+        <circle cx="30" cy="30" r="8" fill="rgba(18,10,2,0.95)" stroke="rgba(212,175,55,0.7)" stroke-width="1.4"/>
+        <!-- Pupil -->
+        <circle cx="30" cy="30" r="3.5" fill="rgba(212,175,55,0.92)"/>
+        <!-- Sparkle -->
+        <circle cx="30" cy="30" r="1.1" fill="white" opacity="0.88"/>
+        <!-- Upper lash line -->
+        <path d="M8,30 Q30,14 52,30" fill="none" stroke="rgba(212,175,55,0.5)" stroke-width="0.9"/>
+        <!-- Horus cheek mark -->
+        <path d="M30,38 L22,49" fill="none" stroke="rgba(212,175,55,0.78)" stroke-width="1.7" stroke-linecap="round"/>
+        <path d="M30,38 L26,47 L23,50" fill="none" stroke="rgba(180,140,30,0.45)" stroke-width="0.9" stroke-linecap="round"/>
+        <circle cx="18" cy="50" r="1.1" fill="rgba(212,175,55,0.58)"/>
       </svg>
       <div id="revolver-chambers"></div>
     </div>

@@ -666,11 +666,11 @@
     var crown = document.createElement('div');
     crown.id = 'horus-crown';
     crown.style.cssText = [
-      'width:52px',
-      'height:52px',
+      'width:39px',
+      'height:39px',
       'background:linear-gradient(135deg,rgba(12,8,2,0.97),rgba(28,20,4,0.97))',
       'border:2px solid rgba(212,175,55,0.65)',
-      'border-radius:14px',
+      'border-radius:10px',
       'box-shadow:0 4px 16px rgba(0,0,0,0.85),0 0 10px rgba(212,175,55,0.12)',
       'display:flex',
       'align-items:center',
@@ -679,128 +679,64 @@
       'z-index:1',
     ].join(';');
 
-    // Eye of Horus SVG
+    // Roller-blind style eye icon (sits as one piece, horizontal slats)
     var svgNS = 'http://www.w3.org/2000/svg';
     var svg = document.createElementNS(svgNS, 'svg');
-    svg.setAttribute('width', '38');
-    svg.setAttribute('height', '38');
+    svg.setAttribute('width', '28');
+    svg.setAttribute('height', '28');
     svg.setAttribute('viewBox', '0 0 52 52');
 
     var defs = document.createElementNS(svgNS, 'defs');
-    // Radial gradient for glow
-    var radGrad = document.createElementNS(svgNS, 'radialGradient');
-    radGrad.setAttribute('id', 'horus-glow');
-    radGrad.setAttribute('cx', '50%');
-    radGrad.setAttribute('cy', '50%');
-    radGrad.setAttribute('r', '50%');
-    var stop1 = document.createElementNS(svgNS, 'stop');
-    stop1.setAttribute('offset', '0%');
-    stop1.setAttribute('stop-color', 'rgb(255,215,0)');
-    stop1.setAttribute('stop-opacity', '0.4');
-    var stop2 = document.createElementNS(svgNS, 'stop');
-    stop2.setAttribute('offset', '100%');
-    stop2.setAttribute('stop-color', 'rgb(212,130,0)');
-    stop2.setAttribute('stop-opacity', '0');
-    radGrad.appendChild(stop1);
-    radGrad.appendChild(stop2);
-    // Filter for blur
-    var filter = document.createElementNS(svgNS, 'filter');
-    filter.setAttribute('id', 'eye-filter');
-    var blur = document.createElementNS(svgNS, 'feGaussianBlur');
-    blur.setAttribute('stdDeviation', '1.2');
-    filter.appendChild(blur);
-    defs.appendChild(radGrad);
-    defs.appendChild(filter);
+    var clipPath = document.createElementNS(svgNS, 'clipPath');
+    clipPath.setAttribute('id', 'horus-eye-clip');
+    var clipAlmond = document.createElementNS(svgNS, 'path');
+    clipAlmond.setAttribute('d', 'M6,26 C14,12 38,12 46,26 C38,40 14,40 6,26 Z');
+    clipPath.appendChild(clipAlmond);
+    defs.appendChild(clipPath);
     svg.appendChild(defs);
 
-    // 10. Subtle glow circle — appended right after defs so it paints behind all eye shapes
-    var glowCircle = document.createElementNS(svgNS, 'circle');
-    glowCircle.setAttribute('cx', '26');
-    glowCircle.setAttribute('cy', '26');
-    glowCircle.setAttribute('r', '18');
-    glowCircle.setAttribute('fill', 'url(#horus-glow)');
-    glowCircle.setAttribute('opacity', '0.4');
-    svg.appendChild(glowCircle);
+    // Outer almond outline
+    var eyeOutline = document.createElementNS(svgNS, 'path');
+    eyeOutline.setAttribute('d', 'M6,26 C14,12 38,12 46,26 C38,40 14,40 6,26 Z');
+    eyeOutline.setAttribute('fill', 'rgba(30,18,4,0.95)');
+    eyeOutline.setAttribute('stroke', 'rgba(212,175,55,0.9)');
+    eyeOutline.setAttribute('stroke-width', '2');
+    svg.appendChild(eyeOutline);
 
-    // 1. Gold outer almond eye shape (glow outline)
-    var outerAlmond = document.createElementNS(svgNS, 'path');
-    outerAlmond.setAttribute('d', 'M8,26 C14,14 38,14 44,26 C38,38 14,38 8,26 Z');
-    outerAlmond.setAttribute('fill', 'none');
-    outerAlmond.setAttribute('stroke', 'url(#horus-glow)');
-    outerAlmond.setAttribute('stroke-width', '1.5');
-    outerAlmond.setAttribute('opacity', '0.35');
-    svg.appendChild(outerAlmond);
+    // Roller blind slats clipped to eye almond shape
+    var slatsGroup = document.createElementNS(svgNS, 'g');
+    slatsGroup.setAttribute('clip-path', 'url(#horus-eye-clip)');
+    var slatColors = ['rgba(212,175,55,0.75)', 'rgba(180,140,30,0.5)', 'rgba(212,175,55,0.75)', 'rgba(180,140,30,0.5)', 'rgba(212,175,55,0.75)'];
+    for (var si = 0; si < 5; si++) {
+      var slat = document.createElementNS(svgNS, 'rect');
+      slat.setAttribute('x', '0');
+      slat.setAttribute('y', String(13 + si * 5.5));
+      slat.setAttribute('width', '52');
+      slat.setAttribute('height', '3.5');
+      slat.setAttribute('fill', slatColors[si]);
+      slat.setAttribute('rx', '1');
+      slatsGroup.appendChild(slat);
+    }
+    svg.appendChild(slatsGroup);
 
-    // 2. Main eye white (filled almond)
-    var eyeWhite = document.createElementNS(svgNS, 'path');
-    eyeWhite.setAttribute('d', 'M8,26 C14,14 38,14 44,26 C38,38 14,38 8,26 Z');
-    eyeWhite.setAttribute('fill', 'rgba(255,245,220,0.08)');
-    eyeWhite.setAttribute('stroke', 'rgba(212,175,55,0.9)');
-    eyeWhite.setAttribute('stroke-width', '1.8');
-    svg.appendChild(eyeWhite);
-
-    // 3. Iris
+    // Central iris circle
     var iris = document.createElementNS(svgNS, 'circle');
     iris.setAttribute('cx', '26');
     iris.setAttribute('cy', '26');
-    iris.setAttribute('r', '7.5');
+    iris.setAttribute('r', '6');
     iris.setAttribute('fill', 'rgba(20,12,2,0.95)');
-    iris.setAttribute('stroke', 'rgba(212,175,55,0.7)');
+    iris.setAttribute('stroke', 'rgba(212,175,55,0.8)');
     iris.setAttribute('stroke-width', '1.5');
     svg.appendChild(iris);
 
-    // 4. Pupil (animated via CSS class)
+    // Pupil
     var pupil = document.createElementNS(svgNS, 'circle');
     pupil.setAttribute('cx', '26');
     pupil.setAttribute('cy', '26');
-    pupil.setAttribute('r', '3.5');
+    pupil.setAttribute('r', '2.5');
     pupil.setAttribute('fill', 'rgba(212,175,55,0.95)');
-    pupil.setAttribute('filter', 'url(#eye-filter)');
     pupil.setAttribute('class', 'horus-pupil');
     svg.appendChild(pupil);
-
-    // 5. Inner gold sparkle
-    var sparkle = document.createElementNS(svgNS, 'circle');
-    sparkle.setAttribute('cx', '26');
-    sparkle.setAttribute('cy', '26');
-    sparkle.setAttribute('r', '1.2');
-    sparkle.setAttribute('fill', 'white');
-    sparkle.setAttribute('opacity', '0.9');
-    svg.appendChild(sparkle);
-
-    // 6. Upper lash line
-    var lashLine = document.createElementNS(svgNS, 'path');
-    lashLine.setAttribute('d', 'M8,26 Q26,10 44,26');
-    lashLine.setAttribute('fill', 'none');
-    lashLine.setAttribute('stroke', 'rgba(212,175,55,0.6)');
-    lashLine.setAttribute('stroke-width', '1');
-    svg.appendChild(lashLine);
-
-    // 7. Lower classic Horus cheek mark
-    var cheekMark = document.createElementNS(svgNS, 'path');
-    cheekMark.setAttribute('d', 'M26,33 L18,44 C17,45 16,46 16,46');
-    cheekMark.setAttribute('fill', 'none');
-    cheekMark.setAttribute('stroke', 'rgba(212,175,55,0.8)');
-    cheekMark.setAttribute('stroke-width', '1.8');
-    cheekMark.setAttribute('stroke-linecap', 'round');
-    svg.appendChild(cheekMark);
-
-    // 8. Second cheek flourish
-    var cheekFlourish = document.createElementNS(svgNS, 'path');
-    cheekFlourish.setAttribute('d', 'M26,33 L22,42 L20,45');
-    cheekFlourish.setAttribute('fill', 'none');
-    cheekFlourish.setAttribute('stroke', 'rgba(180,140,30,0.5)');
-    cheekFlourish.setAttribute('stroke-width', '1');
-    cheekFlourish.setAttribute('stroke-linecap', 'round');
-    svg.appendChild(cheekFlourish);
-
-    // 9. Decorative dot
-    var dot = document.createElementNS(svgNS, 'circle');
-    dot.setAttribute('cx', '14');
-    dot.setAttribute('cy', '45');
-    dot.setAttribute('r', '1.2');
-    dot.setAttribute('fill', 'rgba(212,175,55,0.6)');
-    svg.appendChild(dot);
 
     crown.appendChild(svg);
     shrine.appendChild(crown);
@@ -1192,8 +1128,8 @@
       st.id = 'hud-session-timer';
       st.style.cssText = [
         'position:fixed',
-        'top:34px',
-        'right:16px',
+        'top:12px',
+        'left:16px',
         'color:rgba(255,215,55,0.9)',
         'font-family:Bangers,cursive',
         'font-size:14px',
@@ -5801,8 +5737,10 @@
     const sun = new THREE.DirectionalLight(0xFFF5E0, 1.1); // warm daylight tone
     sun.position.set(20, 40, 20);
     sun.castShadow = true;
-    sun.shadow.mapSize.width  = 2048;
-    sun.shadow.mapSize.height = 2048;
+    // Cap shadow map at 1024 on mobile to prevent GPU overload at high wave counts
+    const _shadowMapSize = _isMobile ? 1024 : 2048;
+    sun.shadow.mapSize.width  = _shadowMapSize;
+    sun.shadow.mapSize.height = _shadowMapSize;
     sun.shadow.camera.near    = 1;
     sun.shadow.camera.far     = 200;
     sun.shadow.camera.left    = -80;

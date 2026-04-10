@@ -456,9 +456,17 @@ window.spawnBossChest = function(x, z) {
       // Reset header for two-press system
       const h2 = modal.querySelector('h2');
       if (h2) {
-        h2.innerText = isBonusRound ? 'BONUS LVL UP!' : 'LEVEL UP!';
-        h2.style.color = isBonusRound ? '#FFD700' : '';
-        h2.style.fontSize = '24px';
+        h2.innerText = isBonusRound ? 'BONUS LEVEL UP!' : 'LEVEL UP!';
+        h2.style.color = isBonusRound ? '#FFD700' : '#FFFFFF';
+        h2.style.fontSize = isBonusRound ? '28px' : '36px';
+        h2.style.fontFamily = 'Bangers, Impact, sans-serif';
+        h2.style.fontWeight = 'bold';
+        h2.style.letterSpacing = '6px';
+        h2.style.textAlign = 'center';
+        h2.style.textShadow = isBonusRound
+          ? '0 0 20px #FFD700, 0 0 40px #FF8800, 2px 2px 0 #000'
+          : '0 0 20px #FF4400, 0 0 40px #FF8800, 2px 2px 0 #000';
+        h2.style.textTransform = 'uppercase';
         h2.style.animation = 'levelUpFly 1s ease-out forwards';
       }
       let choices = [];
@@ -1987,58 +1995,67 @@ window.spawnBossChest = function(x, z) {
         return;
       }
 
-      modal.style.display = 'flex';
-      modal.style.opacity = '0';
-      const existingAnimation = modal.style.animation || (window.getComputedStyle ? window.getComputedStyle(modal).animation : '') || '';
-      const wallFadeInAnim = 'wallFadeIn 0.32s cubic-bezier(0.22,1,0.36,1) forwards';
-      modal.style.animation = existingAnimation
-        ? existingAnimation + ', ' + wallFadeInAnim
-        : wallFadeInAnim;
-      // Trigger entrance animation on cards
-      modal.classList.remove('lvl-entering');
-      void modal.offsetHeight;
-      modal.classList.add('lvl-entering');
-      setTimeout(function() { modal.classList.remove('lvl-entering'); }, 700);
+      // ── Helper: actually show the modal (called after explosion FX completes) ──
+      function _doShowModal() {
+        modal.style.display = 'flex';
+        modal.style.opacity = '0';
+        const existingAnimation = modal.style.animation || (window.getComputedStyle ? window.getComputedStyle(modal).animation : '') || '';
+        const wallFadeInAnim = 'wallFadeIn 0.32s cubic-bezier(0.22,1,0.36,1) forwards';
+        modal.style.animation = existingAnimation
+          ? existingAnimation + ', ' + wallFadeInAnim
+          : wallFadeInAnim;
+        // Trigger entrance animation on cards
+        modal.classList.remove('lvl-entering');
+        void modal.offsetHeight;
+        modal.classList.add('lvl-entering');
+        setTimeout(function() { modal.classList.remove('lvl-entering'); }, 700);
 
-      // ── After all cards have entered, flip them face-up one by one ──
-      const _numCards = choices.length;
-      // Time for last card to land: 0.3s wall + (n-1)*0.22s stagger + 0.65s anim
-      const _allEnteredMs = Math.round((0.3 + (_numCards - 1) * 0.22 + 0.65) * 1000) + 60;
-      const _allCards = list.querySelectorAll('.upgrade-card');
-      setTimeout(function() {
-        for (let _fi = 0; _fi < _allCards.length; _fi++) {
-          (function(_idx, _c) {
-            setTimeout(function() {
-              const _ci = _c.querySelector('.card-inner');
-              if (_ci) {
-                _ci.style.transition = 'transform 0.52s cubic-bezier(0.34, 1.45, 0.64, 1)';
-                _c.classList.add('card-flipped');
-              }
-              // Enable interaction only after flip
-              setTimeout(function() { _c.style.pointerEvents = 'auto'; }, 540);
-            }, _idx * 160);
-          })(_fi, _allCards[_fi]);
+        // ── After all cards have entered, flip them face-up one by one ──
+        const _numCards = choices.length;
+        // Time for last card to land: 0.3s wall + (n-1)*0.22s stagger + 0.65s anim
+        const _allEnteredMs = Math.round((0.3 + (_numCards - 1) * 0.22 + 0.65) * 1000) + 60;
+        const _allCards = list.querySelectorAll('.upgrade-card');
+        setTimeout(function() {
+          for (let _fi = 0; _fi < _allCards.length; _fi++) {
+            (function(_idx, _c) {
+              setTimeout(function() {
+                const _ci = _c.querySelector('.card-inner');
+                if (_ci) {
+                  _ci.style.transition = 'transform 0.52s cubic-bezier(0.34, 1.45, 0.64, 1)';
+                  _c.classList.add('card-flipped');
+                }
+                // Enable interaction only after flip
+                setTimeout(function() { _c.style.pointerEvents = 'auto'; }, 540);
+              }, _idx * 160);
+            })(_fi, _allCards[_fi]);
+          }
+        }, _allEnteredMs);
+
+        // Animate upgrade cards as collector cards
+        if (window.DopamineSystem && window.DopamineSystem.CollectorCards) {
+          const cards = list.querySelectorAll('.upgrade-option, .upgrade-card');
+          window.DopamineSystem.CollectorCards.animateEntrance(cards);
         }
-      }, _allEnteredMs);
 
-      // --- Dopamine level-up FX: time dilation, camera zoom, chromatic aberration ---
+        // Show skip button after 5 seconds as safety valve if player can't select an upgrade
+        const skipBtn = document.getElementById('levelup-skip-btn');
+        if (skipBtn) {
+          skipBtn.style.display = 'none';
+          clearTimeout(window.levelupSkipTimeoutId);
+          window.levelupSkipTimeoutId = setTimeout(() => {
+            if (modal.style.display === 'flex') skipBtn.style.display = 'inline-block';
+          }, 5000);
+        }
+      }
+
+      // --- Dopamine level-up FX: explosion FIRST, then show modal ---
       if (window.DopamineSystem && window.DopamineSystem.LevelUpFX) {
-        window.DopamineSystem.LevelUpFX.play();
-      }
-      // Animate upgrade cards as collector cards
-      if (window.DopamineSystem && window.DopamineSystem.CollectorCards) {
-        const cards = list.querySelectorAll('.upgrade-option, .upgrade-card');
-        window.DopamineSystem.CollectorCards.animateEntrance(cards);
-      }
-      
-      // Show skip button after 5 seconds as safety valve if player can't select an upgrade
-      const skipBtn = document.getElementById('levelup-skip-btn');
-      if (skipBtn) {
-        skipBtn.style.display = 'none';
-        clearTimeout(window.levelupSkipTimeoutId);
-        window.levelupSkipTimeoutId = setTimeout(() => {
-          if (modal.style.display === 'flex') skipBtn.style.display = 'inline-block';
-        }, 5000);
+        window.DopamineSystem.LevelUpFX.play(function() {
+          _doShowModal();
+        });
+      } else {
+        // No FX system — show immediately
+        _doShowModal();
       }
     }
 

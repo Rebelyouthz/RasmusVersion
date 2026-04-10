@@ -52,16 +52,18 @@
 //  Change these if you need more / less
 //  PERFORMANCE FIX 1D: Reduced from 500/250 to 120 max total
 // ══════════════════════════════════════════
+var _bsMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+  || ('ontouchstart' in window && navigator.maxTouchPoints > 1);
 var CFG = {
-DROP_COUNT:       80,    // blood drop instances (reduced from 500 to cap at 120 total)
-MIST_COUNT:       64,    // fine mist instances  (increased from 40 to 64 to accommodate mist-cloud puffs)
-CHUNK_COUNT:      40,    // flesh/slime chunks   (pooled Mesh)
-DECAL_COUNT:      200,   // ground blood decals  (pooled Mesh)
+DROP_COUNT:       _bsMobile ? 48 : 80,    // blood drop instances (reduced for mobile)
+MIST_COUNT:       _bsMobile ? 32 : 64,    // fine mist instances
+CHUNK_COUNT:      _bsMobile ? 20 : 40,    // flesh/slime chunks   (pooled Mesh)
+DECAL_COUNT:      _bsMobile ? 80 : 200,   // ground blood decals  (pooled Mesh)
 WOUND_PER_ENEMY:  8,     // max wounds on one enemy body
-STREAM_COUNT:     16,    // arterial pump streams
+STREAM_COUNT:     _bsMobile ? 8 : 16,     // arterial pump streams
 GRAVITY:         -16.0,
-GROUND_Y:         0.06,
-DECAL_FADE:       300.0,  // seconds before ground decal fades
+GROUND_Y:         0.0,
+DECAL_FADE:       _bsMobile ? 120.0 : 300.0,  // shorter decal life on mobile for perf
 DRIP_RATE:        0.15,  // seconds between wound drips (base)
 PUMP_RATE:        0.05,  // seconds between arterial pumps
 BOUNCE_DECAL_PROB: 0.10, // probability of spawning a decal on first bounce

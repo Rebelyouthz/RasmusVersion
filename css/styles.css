@@ -3543,9 +3543,10 @@
 
     /* Level-up heading fly-in */
     @keyframes levelUpFly {
-      0%   { opacity: 0; transform: translateY(-30px) scale(0.7); letter-spacing: 8px; }
-      50%  { opacity: 1; transform: translateY(4px) scale(1.08); letter-spacing: 3px; }
-      100% { opacity: 1; transform: translateY(0) scale(1); letter-spacing: 2px; }
+      0%   { opacity: 0; transform: translateY(-50px) scale(0.5); letter-spacing: 12px; }
+      50%  { opacity: 1; transform: translateY(6px) scale(1.12); letter-spacing: 4px; }
+      80%  { opacity: 1; transform: translateY(-2px) scale(1.05); letter-spacing: 5px; }
+      100% { opacity: 1; transform: translateY(0) scale(1); letter-spacing: 6px; }
     }
 
     /* Damage Numbers */

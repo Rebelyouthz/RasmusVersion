@@ -1731,6 +1731,7 @@
     });
 
     robotGrp.position.set(AIDA_ROBOT_POS.x, 0, AIDA_ROBOT_POS.z);
+    robotGrp.scale.set(0.65, 0.65, 0.65); // Scaled down to fit scene better
     robotGrp._isAidaRobot = true;
     _aidaRobotMesh = robotGrp;
     _robotMesh = robotGrp;
@@ -1944,9 +1945,8 @@
     }
 
     // ─ Robot proximity prompt ─
-    // Guard: skip "Insert Chip" prompt once Quest Hall is built (level ≥ 1) — chip is already inserted / quest complete.
-    const _qmLevel = (typeof saveData !== 'undefined' && saveData && saveData.campBuildings && saveData.campBuildings.questMission && saveData.campBuildings.questMission.level) || 0;
-    if (_aidaIntroState.chipPickedUp && !_aidaIntroState.chipInserted && _qmLevel < 1) {
+    // Allow chip insertion regardless of Quest Hall build state
+    if (_aidaIntroState.chipPickedUp && !_aidaIntroState.chipInserted) {
       const _rp = _getAidaRobotPos();
       const rdx = _playerPos.x - _rp.x;
       const rdz = _playerPos.z - _rp.z;
@@ -4723,17 +4723,14 @@
           }
         }
         if (_aidaIntroState.chipPickedUp && !_aidaIntroState.chipInserted) {
-          // Guard: only allow insertion if Quest Hall not yet built (questMission.level < 1)
-          const _qmLvl = (typeof saveData !== 'undefined' && saveData && saveData.campBuildings && saveData.campBuildings.questMission && saveData.campBuildings.questMission.level) || 0;
-          if (_qmLvl < 1) {
-            const _rp = _getAidaRobotPos();
-            const rdx = _playerPos.x - _rp.x;
-            const rdz = _playerPos.z - _rp.z;
-            if (Math.sqrt(rdx * rdx + rdz * rdz) < AIDA_INTRO_RADIUS) {
-              _keys['KeyE'] = false; // consume key
-              _insertAidaChip();
-              return;
-            }
+          // Allow insertion regardless of Quest Hall build state
+          const _rp = _getAidaRobotPos();
+          const rdx = _playerPos.x - _rp.x;
+          const rdz = _playerPos.z - _rp.z;
+          if (Math.sqrt(rdx * rdx + rdz * rdz) < AIDA_INTRO_RADIUS) {
+            _keys['KeyE'] = false; // consume key
+            _insertAidaChip();
+            return;
           }
         }
         // Check if player is near the Incubator pod — interact with it
@@ -5156,16 +5153,13 @@
       }
     }
     if (_aidaIntroState.chipPickedUp && !_aidaIntroState.chipInserted) {
-      // Guard: only allow insertion if Quest Hall not yet built
-      const _qmLvl2 = (typeof saveData !== 'undefined' && saveData && saveData.campBuildings && saveData.campBuildings.questMission && saveData.campBuildings.questMission.level) || 0;
-      if (_qmLvl2 < 1) {
-        const _rp = _getAidaRobotPos();
-        const rdx = _playerPos.x - _rp.x;
-        const rdz = _playerPos.z - _rp.z;
-        if (Math.sqrt(rdx * rdx + rdz * rdz) < AIDA_INTRO_RADIUS) {
-          _insertAidaChip();
-          return;
-        }
+      // Allow insertion regardless of Quest Hall build state
+      const _rp = _getAidaRobotPos();
+      const rdx = _playerPos.x - _rp.x;
+      const rdz = _playerPos.z - _rp.z;
+      if (Math.sqrt(rdx * rdx + rdz * rdz) < AIDA_INTRO_RADIUS) {
+        _insertAidaChip();
+        return;
       }
     }
     // Post-insertion: near robot shows hint to go to Quest Hall (no longer opens Profile)
@@ -7617,7 +7611,8 @@
     }
     _updateCamera(dt);
     _updateSigns();
-    _updateProfileAvatar(dt);
+    // Sprite sheet idle-breathing avatar removed per design update
+    // _updateProfileAvatar(dt);
   }
 
   /**
@@ -7627,15 +7622,9 @@
   function render() {
     if (!_isActive || !_campScene || !_campCamera || !_renderer) return;
     _renderer.render(_campScene, _campCamera);
-    // Render UI overlay (profile avatar) on top without clearing
+    // Render UI overlay on top without clearing — avatar rendering disabled
     if (_uiScene && _uiCamera) {
-      const prevAutoClear = _renderer.autoClear;
-      _renderer.autoClear = false;
-      try {
-        _renderer.render(_uiScene, _uiCamera);
-      } finally {
-        _renderer.autoClear = prevAutoClear;
-      }
+      // Profile avatar sprite sheet removed; _uiScene kept for future UI elements
     }
   }
 
