@@ -6318,29 +6318,69 @@
   const SPIRAL_RING_COUNT = 3;    // concentric rings
   const SPIRAL_SEG_COUNT  = 8;    // segments per ring
   const SPIRAL_RING_RADII = [1.0, 1.8, 2.6]; // inner to outer — clamped within hole radius 3
-  const SPIRAL_COLORS     = [0x555555, 0x444444, 0x333333]; // heavy metal grey tones
   const SPAWN_SHAFT_DEPTH = -8;   // deep underground start
 
   function _buildSpiralDoor() {
-    // ── Underground shaft: black cylinder visible through the spawn hole ──
+    // Clean up any meshes from a previous run to avoid stale GPU objects in the scene
+    if (_undergroundShaft) {
+      scene.remove(_undergroundShaft);
+      _undergroundShaft.geometry.dispose();
+      _undergroundShaft.material.dispose();
+      _undergroundShaft = null;
+    }
+    // Dispose each segment's geometry and material.
+    // Segments within the same ring share a geometry and material instance, so track
+    // unique references via Sets to avoid double-dispose calls.
+    const _disposedGeo  = new Set();
+    const _disposedMat  = new Set();
+    for (let _ci = 0; _ci < _spiralDoorParts.length; _ci++) {
+      const _cp = _spiralDoorParts[_ci];
+      scene.remove(_cp.mesh);
+      if (_cp.mesh.geometry && !_disposedGeo.has(_cp.mesh.geometry)) {
+        _cp.mesh.geometry.dispose();
+        _disposedGeo.add(_cp.mesh.geometry);
+      }
+      if (_cp.mesh.material && !_disposedMat.has(_cp.mesh.material)) {
+        _cp.mesh.material.dispose();
+        _disposedMat.add(_cp.mesh.material);
+      }
+    }
+    _spiralDoorParts.length = 0;
+    if (_elevatorPlatform) {
+      scene.remove(_elevatorPlatform);
+      _elevatorPlatform.geometry.dispose();
+      _elevatorPlatform.material.dispose();
+      _elevatorPlatform = null;
+    }
+    if (_spawnLight) {
+      scene.remove(_spawnLight);
+      _spawnLight = null;
+    }
+
+    // ── Underground shaft: Black cylinder — hidden until spawn animation starts ──
     const shaftGeo = new THREE.CylinderGeometry(2.8, 2.8, Math.abs(SPAWN_SHAFT_DEPTH) * 2, 24);
     const shaftMat = new THREE.MeshBasicMaterial({ color: 0x050505, side: THREE.DoubleSide });
     _undergroundShaft = new THREE.Mesh(shaftGeo, shaftMat);
     _undergroundShaft.position.set(0, SPAWN_SHAFT_DEPTH, 0);
+    _undergroundShaft.visible = false; // hidden until spawn animation shows it
     scene.add(_undergroundShaft);
 
-    // Segment geometry: heavy metal door panels
-    const segH = 0.12; // thicker door panels for heavy metal feel
+    // Segment geometry: Black-Gold heavy metal door panels
+    const segH = 0.12;
+    // Black/Gold colour scheme: outermost ring is gold-tinted, inner are near-black
+    const SPIRAL_COLORS_BG = [0x1A1400, 0x221A00, 0xB8860B]; // innermost black, then dark gold, outermost gold
     for (let r = 0; r < SPIRAL_RING_COUNT; r++) {
       const ringR = SPIRAL_RING_RADII[r];
       const arcLen = (2 * Math.PI * ringR) / SPIRAL_SEG_COUNT * 0.88;
       const segGeo = new THREE.BoxGeometry(arcLen, segH, 0.3);
       const segMat = new THREE.MeshStandardMaterial({
-        color: SPIRAL_COLORS[r],
+        color: SPIRAL_COLORS_BG[r],
         roughness: 0.3,
         metalness: 0.9,
-        emissive: 0x111111,
-        emissiveIntensity: 0.1,
+        emissive: r === SPIRAL_RING_COUNT - 1 ? 0x554400 : 0x0A0800,
+        emissiveIntensity: r === SPIRAL_RING_COUNT - 1 ? 0.4 : 0.05,
+        transparent: false,
+        opacity: 1,
       });
       for (let s = 0; s < SPIRAL_SEG_COUNT; s++) {
         const mesh = new THREE.Mesh(segGeo, segMat);
@@ -6357,11 +6397,11 @@
       }
     }
 
-    // Elevator platform — heavy disc below the player
+    // Elevator platform — Black-Gold disc below the player
     const platGeo = new THREE.CylinderGeometry(2.2, 2.4, 0.2, 24);
     const platMat = new THREE.MeshStandardMaterial({
-      color: 0x3A3A3A, roughness: 0.3, metalness: 0.85,
-      emissive: 0x111122, emissiveIntensity: 0.3,
+      color: 0x1A1400, roughness: 0.3, metalness: 0.9,
+      emissive: 0x443300, emissiveIntensity: 0.4,
     });
     _elevatorPlatform = new THREE.Mesh(platGeo, platMat);
     _elevatorPlatform.position.set(0, SPAWN_SHAFT_DEPTH, 0);
@@ -6369,8 +6409,8 @@
     _elevatorPlatform.visible = false;
     scene.add(_elevatorPlatform);
 
-    // Spawn light (point light from below, warm amber)
-    _spawnLight = new THREE.PointLight(0xFFAA44, 0, 15);
+    // Spawn light (point light from below, gold tone)
+    _spawnLight = new THREE.PointLight(0xFFD700, 0, 15);
     _spawnLight.position.set(0, SPAWN_SHAFT_DEPTH + 1, 0);
     scene.add(_spawnLight);
   }
@@ -6402,7 +6442,13 @@
 
   function _hideSpiralDoor() {
     for (let i = 0; i < _spiralDoorParts.length; i++) {
-      _spiralDoorParts[i].mesh.visible = false;
+      const _part = _spiralDoorParts[i];
+      _part.mesh.visible = false;
+      // Reset material state so colors/opacity are clean for the next run
+      if (_part.mesh.material) {
+        _part.mesh.material.transparent = false;
+        _part.mesh.material.opacity = 1;
+      }
     }
     if (_elevatorPlatform) _elevatorPlatform.visible = false;
     if (_spawnLight) { _spawnLight.intensity = 0; }

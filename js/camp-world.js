@@ -227,7 +227,9 @@
   const AIDA_ROBOT_POS  = { x: 3, z: -1 };   // beside campfire (south-east)
   const AIDA_CHIP_POS   = { x: 4, z: -2.5 }; // chip nearby, slightly further from fire
   const AIDA_QUEST_HALL_POS = { x: 0, z: 11.5 }; // in front of Quest Hall (z:13) once built
-  const AIDA_INTRO_RADIUS = 5.0;  // Generous radius so the interaction is easy to trigger
+  const AIDA_INTRO_RADIUS      = 5.0;   // Generous radius so the interaction is easy to trigger
+  const AIDA_CHIP_MAGNET_RANGE = 2.0;   // Distance at which chip starts flying toward player
+  const AIDA_CHIP_AUTO_PICKUP  = 0.4;   // Auto-pickup distance — sucks chip into hand
 
   /**
    * _getAidaRobotPos()
@@ -1826,24 +1828,49 @@
       }
     }
 
-    // ─ Chip float + glow animation ─
-    if (_aidaChipMesh && _aidaChipMesh.visible) {
-      _aidaChipMesh.position.y = 0.06 + Math.sin(_campTime * 2.8) * 0.08;
-      _aidaChipMesh.rotation.y += dt * 1.2;
-      _aidaChipMesh.traverse(function (child) {
-        if (child._aidaChipBody && child.material) {
-          child.material.emissiveIntensity = 0.9 + Math.abs(Math.sin(_campTime * 3.0)) * 0.8;
-        }
-      });
+    // ─ Chip float + glow animation + magnet ─
+    if (!_aidaIntroState.chipPickedUp && _aidaChipMesh && _aidaChipMesh.visible) {
+      const cdx = _playerPos.x - _aidaChipMesh.position.x;
+      const cdz = _playerPos.z - _aidaChipMesh.position.z;
+      const chipDist = Math.sqrt(cdx * cdx + cdz * cdz);
+
+      // ── Magnet: pull chip toward player when within range ──
+      if (chipDist < AIDA_CHIP_MAGNET_RANGE && chipDist > 0.01) {
+        const pullSpeed = 6.0 * (1 + (AIDA_CHIP_MAGNET_RANGE - chipDist) / AIDA_CHIP_MAGNET_RANGE);
+        _aidaChipMesh.position.x += (cdx / chipDist) * pullSpeed * dt;
+        _aidaChipMesh.position.z += (cdz / chipDist) * pullSpeed * dt;
+        // Fast spinning when attracted
+        _aidaChipMesh.rotation.y += dt * 5.0;
+        _aidaChipMesh.position.y = 0.3 + Math.sin(_campTime * 6.0) * 0.1;
+        _aidaChipMesh.traverse(function (child) {
+          if (child._aidaChipBody && child.material) {
+            child.material.emissiveIntensity = 1.5 + Math.abs(Math.sin(_campTime * 8.0)) * 1.0;
+          }
+        });
+      } else {
+        // Normal float + glow
+        _aidaChipMesh.position.y = 0.06 + Math.sin(_campTime * 2.8) * 0.08;
+        _aidaChipMesh.rotation.y += dt * 1.2;
+        _aidaChipMesh.traverse(function (child) {
+          if (child._aidaChipBody && child.material) {
+            child.material.emissiveIntensity = 0.9 + Math.abs(Math.sin(_campTime * 3.0)) * 0.8;
+          }
+        });
+      }
+
+      // ── Auto-pickup: suck chip into hand at very close range ──
+      if (chipDist <= AIDA_CHIP_AUTO_PICKUP) {
+        _pickUpAidaChip();
+      }
     }
 
     if (_menuOpen) return; // don't show prompts while a menu is open
     if (!_promptEl) return;
 
-    // ─ Chip proximity prompt ─
+    // ─ Chip proximity prompt — use chip's live position (it moves via magnet) ─
     if (!_aidaIntroState.chipPickedUp && _aidaChipMesh && _aidaChipMesh.visible) {
-      const cdx = _playerPos.x - AIDA_CHIP_POS.x;
-      const cdz = _playerPos.z - AIDA_CHIP_POS.z;
+      const cdx = _playerPos.x - _aidaChipMesh.position.x;
+      const cdz = _playerPos.z - _aidaChipMesh.position.z;
       if (Math.sqrt(cdx * cdx + cdz * cdz) < AIDA_INTRO_RADIUS) {
         _promptEl.textContent = '💾 Aida Chip — Pick up [E]';
         _promptEl.style.display = 'block';
@@ -4625,8 +4652,9 @@
       if (_keys['KeyE']) {
         // Priority: A.I.D.A chip pickup / robot insertion (intro quest)
         if (!_aidaIntroState.chipPickedUp && _aidaChipMesh && _aidaChipMesh.visible) {
-          const cdx = _playerPos.x - AIDA_CHIP_POS.x;
-          const cdz = _playerPos.z - AIDA_CHIP_POS.z;
+          // Use chip's live position (chip moves via magnet attraction)
+          const cdx = _playerPos.x - _aidaChipMesh.position.x;
+          const cdz = _playerPos.z - _aidaChipMesh.position.z;
           if (Math.sqrt(cdx * cdx + cdz * cdz) < AIDA_INTRO_RADIUS) {
             _keys['KeyE'] = false; // consume key
             _pickUpAidaChip();
@@ -5058,8 +5086,9 @@
 
     // ── A.I.D.A intro interactions (chip pickup / robot insertion) ─
     if (!_aidaIntroState.chipPickedUp && _aidaChipMesh && _aidaChipMesh.visible) {
-      const cdx = _playerPos.x - AIDA_CHIP_POS.x;
-      const cdz = _playerPos.z - AIDA_CHIP_POS.z;
+      // Use chip's live position (chip moves via magnet)
+      const cdx = _playerPos.x - _aidaChipMesh.position.x;
+      const cdz = _playerPos.z - _aidaChipMesh.position.z;
       if (Math.sqrt(cdx * cdx + cdz * cdz) < AIDA_INTRO_RADIUS) {
         _pickUpAidaChip();
         return;
@@ -6148,6 +6177,18 @@
   // ──────────────────────────────────────────────────────────
   // Player Profile UI — top-left corner of camp HUD
   // ──────────────────────────────────────────────────────────
+
+  /**
+   * Resolve the player's display name from the most authoritative source available.
+   * Priority: saveData.playerName → localStorage['wds_playerName'] (set by Welcome screen) → 'UNIT-001'.
+   * Returns the raw (un-uppercased) name string.
+   */
+  function _resolvePlayerName() {
+    var sd = (typeof saveData !== 'undefined') ? saveData : null;
+    return (sd && sd.playerName) ||
+      (typeof localStorage !== 'undefined' && localStorage.getItem('wds_playerName')) ||
+      'UNIT-001';
+  }
   function _ensureCampProfile() {
     if (document.getElementById('camp-profile-ui')) {
       _updateCampProfile();
@@ -6186,7 +6227,7 @@
     const nameEl = document.createElement('div');
     nameEl.id = 'camp-profile-name';
     nameEl.style.cssText = 'color:#00ffff;font-family:Bangers,cursive;font-size:15px;letter-spacing:1.5px;';
-    nameEl.textContent = 'UNIT-001';
+    nameEl.textContent = _resolvePlayerName().toUpperCase();
 
     const levelEl = document.createElement('div');
     levelEl.id = 'camp-profile-level';
@@ -6237,15 +6278,16 @@
 
   function _updateCampProfile() {
     const sd = (typeof saveData !== 'undefined') ? saveData : null;
-    if (!sd) return;
 
     const nameEl = document.getElementById('camp-profile-name');
     const levelEl = document.getElementById('camp-profile-level');
     const badge = document.getElementById('camp-profile-badge');
 
+    // Resolve name using shared helper (saveData → localStorage → fallback)
     if (nameEl) {
-      nameEl.textContent = (sd.playerName || 'UNIT-001').toUpperCase();
+      nameEl.textContent = _resolvePlayerName().toUpperCase();
     }
+    if (!sd) return;
     if (levelEl) {
       // FIX: Use accountLevel (permanent profile level) instead of in-run level
       const accLvl = sd.accountLevel || (sd.account && sd.account.level) || 1;
@@ -6288,7 +6330,8 @@
     _openMenu();
     var sd = (typeof saveData !== 'undefined') ? saveData : null;
     var accLvl = (sd && sd.accountLevel) || 1;
-    var playerName = (sd && sd.playerName) || 'UNIT-001';
+    // Resolve name using shared helper (saveData → localStorage → fallback)
+    var playerName = _resolvePlayerName();
     // Get rank
     var rank = 'RECRUIT';
     if (window.GameAccount && window.GameAccount.getMilestones) {
