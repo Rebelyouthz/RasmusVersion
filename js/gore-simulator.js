@@ -2,12 +2,20 @@ const GoreSimulator = {
   debug: false,
   onHit(enemy, weapon, hitPoint, hitNormal) {
     if (!enemy || enemy.dead) return;
-    BloodSimulatorV21.onEnemyHit(enemy, hitPoint, weapon.type);
+    if (window.BloodSimulatorV21) {
+      window.BloodSimulatorV21.onEnemyHit(enemy, hitPoint, weapon.type);
+    } else if (window.BloodV2) {
+      window.BloodV2.hit(enemy, weapon.type, hitPoint, hitNormal);
+    }
     if (weapon.type === 'sword' && Math.random() < 0.65) this.sliceEnemy(enemy, hitPoint, hitNormal);
   },
   onKill(enemy, weapon, killVX = 0, killVZ = 0) {
     if (!enemy) return;
-    BloodSimulatorV21.onEnemyDeath(enemy, enemy.mesh.position);
+    if (window.BloodSimulatorV21) {
+      window.BloodSimulatorV21.onEnemyDeath(enemy, enemy.mesh.position);
+    } else if (window.BloodV2) {
+      window.BloodV2.kill(enemy, weapon.type);
+    }
     if (weapon.type === 'sword') this.dismemberEnemy(enemy, killVX, killVZ);
     else if (weapon.type === 'boomerang') this.boomerangKill(enemy);
     else if (weapon.type === 'shuriken') this.shurikenKill(enemy);
@@ -18,13 +26,22 @@ const GoreSimulator = {
     body.scale.set(1, 0.5, 1);
     const bloodPos = hitPoint.clone();
     for (let i = 0; i < 35; i++) {
-      BloodSimulatorV21.rawBurst(bloodPos.x, bloodPos.y + Math.random() * 1.2, bloodPos.z, 12, {viscosity: 0.45});
+      if (window.BloodSimulatorV21) {
+        window.BloodSimulatorV21.rawBurst(bloodPos.x, bloodPos.y + Math.random() * 1.2, bloodPos.z, 12, {viscosity: 0.45});
+      } else if (window.BloodV2) {
+        window.BloodV2.rawBurst(bloodPos.x, bloodPos.y + Math.random() * 1.2, bloodPos.z, 12, {visc: 0.45});
+      }
     }
   },
   dismemberEnemy(enemy, vx, vz) {
     if (this.debug) console.log('💀 DISMEMBER');
     const pos = enemy.mesh.position;
-    BloodSimulatorV21.rawBurst(pos.x, pos.y + 1.8, pos.z, 220, {spreadXZ: 22, spreadY: 32, viscosity: 0.38});
+    if (window.BloodSimulatorV21) {
+      window.BloodSimulatorV21.rawBurst(pos.x, pos.y + 1.8, pos.z, 220, {spreadXZ: 22, spreadY: 32, viscosity: 0.38});
+    } else if (window.BloodV2) {
+      // BloodV2.rawBurst is radial (no separate Y spread); spdMax=32 matches spreadY (the larger axis)
+      window.BloodV2.rawBurst(pos.x, pos.y + 1.8, pos.z, 220, {spdMin: 8, spdMax: 32, visc: 0.38});
+    }
   },
   boomerangKill(enemy) {
     if (this.debug) console.log('🌀 BOOMERANG KILL');
