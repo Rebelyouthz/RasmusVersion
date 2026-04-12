@@ -526,20 +526,28 @@
       width: 100%;
     }
 
-    /* ── Animated spinning border glow (conic gradient sweep) ── */
+    /* ── Animated pulsing border glow ── */
     .border-flow {
       position: absolute;
       inset: -3px;
       border-radius: inherit;
       z-index: -1;
       pointer-events: none;
-      background: conic-gradient(from 0deg, transparent 60%, rgba(255,255,255,0.25) 75%, transparent 90%);
-      animation: border-flow-spin 2.5s linear infinite;
-      will-change: transform;
+      background: linear-gradient(
+        135deg,
+        transparent 0%,
+        rgba(255,255,255,0.2) 25%,
+        transparent 50%,
+        rgba(255,255,255,0.15) 75%,
+        transparent 100%
+      );
+      background-size: 300% 300%;
+      animation: border-flow-pulse 3s ease-in-out infinite;
     }
-    @keyframes border-flow-spin {
-      0%   { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+    @keyframes border-flow-pulse {
+      0%   { background-position: 0% 0%;   opacity: 0.4; }
+      50%  { background-position: 100% 100%; opacity: 0.85; }
+      100% { background-position: 0% 0%;   opacity: 0.4; }
     }
 
     /* ── Green selection edge (shown when card is chosen) ── */

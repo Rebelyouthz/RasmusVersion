@@ -3029,13 +3029,18 @@
     .border-flow::before {
       content: '';
       position: absolute;
-      inset: -50%;
-      background: conic-gradient(
-        transparent 0deg,
-        var(--rarity-glow-color, rgba(200,230,255,0.7)) 60deg,
-        transparent 120deg
+      inset: -2px;
+      border-radius: inherit;
+      background: linear-gradient(
+        135deg,
+        transparent 0%,
+        var(--rarity-glow-color, rgba(200,230,255,0.7)) 25%,
+        transparent 50%,
+        var(--rarity-glow-color, rgba(200,230,255,0.5)) 75%,
+        transparent 100%
       );
-      animation: border-spin var(--spin-dur, 3s) linear infinite;
+      background-size: 300% 300%;
+      animation: border-pulse var(--pulse-dur, 3s) ease-in-out infinite;
       opacity: 0.75;
     }
     .border-flow::after {
@@ -3045,16 +3050,17 @@
       border-radius: 16px;
       background: linear-gradient(180deg, #1a1a2e 0%, #0d1020 100%);
     }
-    @keyframes border-spin {
-      from { transform: rotate(0deg); }
-      to   { transform: rotate(360deg); }
+    @keyframes border-pulse {
+      0%   { background-position: 0% 0%;   opacity: 0.4; }
+      50%  { background-position: 100% 100%; opacity: 0.85; }
+      100% { background-position: 0% 0%;   opacity: 0.4; }
     }
-    .upgrade-card.rarity-common    { --spin-dur: 4s; }
-    .upgrade-card.rarity-uncommon  { --spin-dur: 3.5s; }
-    .upgrade-card.rarity-rare      { --spin-dur: 3s; }
-    .upgrade-card.rarity-epic      { --spin-dur: 2s; }
-    .upgrade-card.rarity-legendary { --spin-dur: 1.4s; }
-    .upgrade-card.rarity-mythical  { --spin-dur: 0.9s; }
+    .upgrade-card.rarity-common    { --pulse-dur: 4s; }
+    .upgrade-card.rarity-uncommon  { --pulse-dur: 3.5s; }
+    .upgrade-card.rarity-rare      { --pulse-dur: 3s; }
+    .upgrade-card.rarity-epic      { --pulse-dur: 2s; }
+    .upgrade-card.rarity-legendary { --pulse-dur: 1.4s; }
+    .upgrade-card.rarity-mythical  { --pulse-dur: 0.9s; }
 
     /* Hold-progress fill that sweeps the card border during the 1.2s hold */
     .hold-progress {
@@ -3359,12 +3365,12 @@
       font-size: 2.8em;
       filter: drop-shadow(0 0 12px rgba(120,80,255,0.8)) drop-shadow(0 0 25px rgba(0,180,255,0.5));
       z-index: 1;
-      animation: cardBackSpin 6s linear infinite;
+      animation: cardBackFloat 3s ease-in-out infinite;
     }
-    @keyframes cardBackSpin {
-      0%   { transform: rotate(0deg) scale(1.0); }
-      50%  { transform: rotate(180deg) scale(1.1); }
-      100% { transform: rotate(360deg) scale(1.0); }
+    @keyframes cardBackFloat {
+      0%   { transform: translateY(0) scale(1.0);  filter: drop-shadow(0 0 12px rgba(120,80,255,0.8)) drop-shadow(0 0 25px rgba(0,180,255,0.5)); }
+      50%  { transform: translateY(-6px) scale(1.08); filter: drop-shadow(0 0 18px rgba(120,80,255,1)) drop-shadow(0 0 35px rgba(0,180,255,0.8)); }
+      100% { transform: translateY(0) scale(1.0);  filter: drop-shadow(0 0 12px rgba(120,80,255,0.8)) drop-shadow(0 0 25px rgba(0,180,255,0.5)); }
     }
     /* When flipped, show front */
     .upgrade-card.card-flipped .card-inner {
