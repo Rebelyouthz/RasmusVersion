@@ -46,9 +46,28 @@ const GoreSimulator = {
   },
   boomerangKill(enemy) {
     if (this.debug) console.log('🌀 BOOMERANG KILL');
+    const pos = enemy.mesh ? enemy.mesh.position : enemy.position;
+    if (!pos) return;
+    // Spinning decapitation — wide radial burst + mist
+    if (window.BloodSimulatorV21) {
+      window.BloodSimulatorV21.rawBurst(pos.x, pos.y + 1.2, pos.z, 80, {spreadXZ: 18, spreadY: 20, viscosity: 0.45});
+      window.BloodSimulatorV21.spawnMist(pos.x, pos.y + 0.8, pos.z, 10);
+      window.BloodSimulatorV21.addWoundPulse(pos.x, pos.y + 0.5, pos.z, 0xcc1100, 3);
+    } else if (window.BloodV2) {
+      window.BloodV2.rawBurst(pos.x, pos.y + 1.2, pos.z, 80, {spdMin: 5, spdMax: 18, visc: 0.45});
+    }
   },
   shurikenKill(enemy) {
     if (this.debug) console.log('⭐ SHURIKEN KILL');
+    const pos = enemy.mesh ? enemy.mesh.position : enemy.position;
+    if (!pos) return;
+    // Precision puncture — twin arterial jets forward + fine mist
+    if (window.BloodSimulatorV21) {
+      window.BloodSimulatorV21.arterialJet(pos.x, pos.y + 1.0, pos.z, 1, 0, 0xcc1100);
+      window.BloodSimulatorV21.spawnMist(pos.x, pos.y + 0.6, pos.z, 6, 0xee2200);
+    } else if (window.BloodV2) {
+      window.BloodV2.rawBurst(pos.x, pos.y + 1.0, pos.z, 40, {spdMin: 6, spdMax: 14, visc: 0.50});
+    }
   }
 };
 window.GoreSimulator = GoreSimulator;

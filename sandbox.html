@@ -59,12 +59,68 @@
     /* Keep ui-layer visible once sandbox boots */
     #ui-layer { display: none; }
 
-    /* ── Settings button (Eye of Horus) ────────────────────────────────────── */
-    #settings-btn {
+    /* ── Top-right HUD row: [💀][kills][XP bar][settings] ──────────────────── */
+    #hud-top-right-row {
       position: fixed !important;
-      top: 12px !important;
-      right: 12px !important;
+      top: 10px !important;
+      right: 10px !important;
       z-index: 9995 !important;
+      display: flex !important;
+      flex-direction: row !important;
+      align-items: center !important;
+      gap: 6px !important;
+      pointer-events: none !important;
+    }
+    #hud-skull-icon {
+      font-size: 22px;
+      line-height: 1;
+      filter: drop-shadow(0 0 4px rgba(0,0,0,0.9));
+    }
+    #hud-kill-count {
+      color: rgba(255,215,55,0.95);
+      font-family: Bangers, cursive;
+      font-size: 18px;
+      letter-spacing: 1.5px;
+      text-shadow: 0 0 8px rgba(0,0,0,0.9);
+      min-width: 32px;
+      text-align: right;
+    }
+    #hud-xp-mini-bar-wrap {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 4px;
+      background: rgba(0,0,0,0.5);
+      border: 1px solid rgba(255,215,0,0.35);
+      border-radius: 6px;
+      padding: 2px 6px;
+      height: 22px;
+      min-width: 90px;
+    }
+    #hud-xp-mini-fill {
+      height: 10px;
+      width: 0%;
+      background: linear-gradient(90deg,#3498DB,#5DADE2);
+      border-radius: 4px;
+      transition: width 0.3s ease;
+      min-width: 2px;
+      flex-shrink: 0;
+    }
+    #hud-xp-mini-text {
+      color: rgba(255,255,255,0.85);
+      font-family: Bangers, cursive;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+    /* Settings button lives inside the HUD row — override fixed positioning */
+    #settings-btn {
+      position: relative !important;
+      top: auto !important;
+      right: auto !important;
+      z-index: auto !important;
+      pointer-events: auto !important;
+      flex-shrink: 0 !important;
       width: 40px;
       height: 40px;
       border-radius: 50%;
@@ -79,8 +135,7 @@
       transition: background 0.2s, border-color 0.2s, transform 0.2s;
       padding: 0;
       font-family: 'Segoe UI Symbol', 'DejaVu Sans', sans-serif;
-      pointer-events: auto;
-      text-indent: -9999px; /* Hide any text content in button */
+      text-indent: -9999px;
       overflow: hidden;
     }
     #settings-btn:hover {
@@ -754,9 +809,18 @@
     <!-- Pause / menu button -->
     <button id="menu-btn" title="Menu" onclick="window.isPaused=!window.isPaused; this.textContent=window.isPaused?'▶':'☰';">☰</button>
 
-    <!-- Hidden stubs so game-hud.js lookups don't throw -->
-    <button id="stats-btn"     class="btn-small" style="display:none;">STATS</button>
-    <button id="settings-btn" title="Settings (Esc)" aria-label="Settings"></button>
+    <!-- Top-right HUD row: [💀 skull][kill count][XP mini-bar][⚙ settings] -->
+    <div id="hud-top-right-row">
+      <span id="hud-skull-icon">💀</span>
+      <span id="hud-kill-count">0</span>
+      <div id="hud-xp-mini-bar-wrap">
+        <div id="hud-xp-mini-fill"></div>
+        <span id="hud-xp-mini-text">0%</span>
+      </div>
+      <!-- Hidden stubs so game-hud.js lookups don't throw -->
+      <button id="stats-btn" class="btn-small" style="display:none;">STATS</button>
+      <button id="settings-btn" title="Settings (Esc)" aria-label="Settings"></button>
+    </div>
     <button id="equipment-btn" style="display:none;">⚔️</button>
     <div id="minimap-container" style="display:none;"><div id="minimap"></div></div>
     <div id="companion-skills-panel" style="display:none;">

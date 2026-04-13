@@ -1105,30 +1105,16 @@
 
   // ─── Persistent HUD elements (kill count + session timer) ────────────────────
   function _initPersistentHUD() {
-    if (!document.getElementById('hud-kill-count')) {
-      var kc = document.createElement('div');
-      kc.id = 'hud-kill-count';
-      kc.style.cssText = [
-        'position:fixed',
-        'top:14px',
-        'right:16px',
-        'color:rgba(255,215,55,0.9)',
-        'font-family:Bangers,cursive',
-        'font-size:14px',
-        'letter-spacing:1.5px',
-        'text-shadow:0 0 8px rgba(0,0,0,0.9)',
-        'z-index:9000',
-        'pointer-events:none',
-      ].join(';');
-      kc.textContent = '💀 0';
-      document.body.appendChild(kc);
-    }
+    // Kill count is now in #hud-top-right-row in sandbox.html — just initialise the text
+    var kc = document.getElementById('hud-kill-count');
+    if (kc) kc.textContent = '0';
+
     if (!document.getElementById('hud-session-timer')) {
       var st = document.createElement('div');
       st.id = 'hud-session-timer';
       st.style.cssText = [
         'position:fixed',
-        'top:88px',
+        'top:58px',
         'left:10px',
         'color:rgba(255,215,55,0.9)',
         'font-family:Bangers,cursive',
@@ -1165,7 +1151,15 @@
 
   function _updateKillCountHUD() {
     var kc = document.getElementById('hud-kill-count');
-    if (kc && playerStats) kc.textContent = '💀 ' + (playerStats.kills || 0);
+    if (kc && playerStats) kc.textContent = (playerStats.kills || 0);
+    // Update XP mini bar in the top-right row
+    if (playerStats) {
+      var expPct = Math.min(100, ((playerStats.exp || 0) / (playerStats.expReq || 100)) * 100);
+      var fill = document.getElementById('hud-xp-mini-fill');
+      var txt  = document.getElementById('hud-xp-mini-text');
+      if (fill) fill.style.width = expPct.toFixed(1) + '%';
+      if (txt)  txt.textContent  = Math.ceil(expPct) + '%';
+    }
   }
 
   // ─── Projectile pool ─────────────────────────────────────────────────────────

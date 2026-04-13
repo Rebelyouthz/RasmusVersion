@@ -11177,6 +11177,22 @@
   0%, 100% { opacity: 0.5; }
   50%       { opacity: 1.0; }
 }
+/* AIDA portrait idle glow/pulse animation */
+@keyframes aidaPortraitGlow {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(0,255,255,0.5)); }
+  50%       { filter: drop-shadow(0 0 20px rgba(0,255,255,0.95)) drop-shadow(0 0 8px rgba(180,100,255,0.5)); }
+}
+.aida-portrait-img {
+  width: 80%;
+  max-width: 120px;
+  border-radius: 4px;
+  animation: aidaPortraitGlow 2.8s ease-in-out infinite;
+}
+.aida-portrait-svg {
+  width: 80%;
+  max-width: 120px;
+  animation: aidaPortraitGlow 2.8s ease-in-out infinite;
+}
 
 /* ── Inventory Screen Reusable Components ───────────────── */
 .inv-currency-chip {

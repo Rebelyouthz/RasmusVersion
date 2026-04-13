@@ -267,8 +267,8 @@
      * Includes a static AIDA portrait on the left and suppresses floating bubbles.
      */
     function showCinematicDialogue(speakerName, text, onClose) {
-      // Suppress in sandbox
-      if (window._engine2SandboxMode === true || window.location.pathname.includes('sandbox.html')) {
+      // Only suppress in active sandbox gameplay (not camp/index.html)
+      if (window._engine2SandboxMode === true) {
         if (onClose) onClose();
         return;
       }
@@ -323,10 +323,14 @@
         'padding-bottom:8px', 'position:relative', 'overflow:hidden'
       ].join(';');
 
-      // CSS-art AIDA portrait
+      // AIDA portrait — try real image first (img/aida_profile.png), fall back to SVG
+      // TODO: Replace img/aida_profile.png with final artist-approved AIDA portrait
+      const _aidaImgPath = 'img/aida_profile.png';
       portraitPanel.innerHTML = `
-        <svg viewBox="0 0 80 120" xmlns="http://www.w3.org/2000/svg"
-             style="width:80%;max-width:120px;filter:drop-shadow(0 0 10px rgba(0,255,255,0.55))">
+        <img class="aida-portrait-img" src="${_aidaImgPath}" alt="A.I.D.A."
+             onerror="this.style.display='none';this.nextElementSibling.style.display='block';"
+             style="display:block;">
+        <svg class="aida-portrait-svg" viewBox="0 0 80 120" xmlns="http://www.w3.org/2000/svg" style="display:none">
           <!-- Head -->
           <ellipse cx="40" cy="32" rx="20" ry="24" fill="#0d1a2a" stroke="#00ffff" stroke-width="1.2"/>
           <!-- Eyes — glowing cyan slits -->

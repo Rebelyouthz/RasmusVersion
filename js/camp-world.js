@@ -1776,9 +1776,11 @@
     _aidaIntroState.chipPickedUp = !!introState.chipPickedUp;
     _aidaIntroState.chipInserted = !!introState.chipInserted;
 
-    // If chip already inserted, robot eyes should be on
+    // If chip already inserted, robot eyes should be on and bubble suppressed
     if (_aidaIntroState.chipInserted) {
       _aidaRobotEyesOn(true);
+      // Permanently suppress the old "Help Me" bubble
+      window._suppressAidaBubbles = true;
       // If Quest Hall is already built, park AIDA in front of it instead of the campfire
       const qmData = sd && sd.campBuildings && sd.campBuildings.questMission;
       if (qmData && qmData.level > 0) {
@@ -2008,6 +2010,15 @@
       if (!sd.aidaIntroState) sd.aidaIntroState = {};
       sd.aidaIntroState.chipInserted = true;
       if (typeof saveSaveData === 'function') saveSaveData();
+    }
+
+    // Permanently suppress the old "Help Me" bubble now that chip is inserted
+    window._suppressAidaBubbles = true;
+    if (_robotBubbleEl) {
+      _robotBubbleEl.style.opacity = '0';
+      _robotBubbleEl.style.display = 'none';
+      if (_robotBubbleEl.parentNode) _robotBubbleEl.parentNode.removeChild(_robotBubbleEl);
+      _robotBubbleEl = null;
     }
 
     _aidaRobotEyesOn(true);
