@@ -753,11 +753,33 @@
     [id^="tutorial-"], [class^="tutorial-"] { display: none !important; }
 
     /* ── Death / Game-Over Screen – removed; RunEndScreen handles all end-of-run UI ── */
+
+    /* Page link back to camp page */
+    .sandbox-page-link {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 10001;
+      background: rgba(0, 0, 0, 0.65);
+      color: #FFD700;
+      border: 1px solid rgba(255, 215, 0, 0.6);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-family: 'Bangers', cursive;
+      letter-spacing: 1px;
+      text-decoration: none;
+      line-height: 1;
+    }
+    .sandbox-page-link:hover {
+      background: rgba(35, 25, 55, 0.9);
+    }
   </style>
 </head>
 <body>
 
   <!-- Engine 2.0 overlay removed — clean screen -->
+
+  <a class="sandbox-page-link" href="index.html" aria-label="Go to camp page">⛺ CAMP</a>
 
   <!-- ── Loading Screen ─────────────────────────────────────────────────── -->
   <div id="loading-screen">
