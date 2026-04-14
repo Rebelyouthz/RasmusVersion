@@ -266,6 +266,10 @@
     const _eyeSyncPos   = new THREE.Vector3();
     const _eyeSyncEuler = new THREE.Euler();   // identity (0,0,0) — eyes are spheres, no rotation needed
     const _eyeSyncScale = new THREE.Vector3(1, 1, 1);
+    // FIX 4: Pre-allocated reusable vectors for weapon flashes and directions (eliminate per-frame allocations)
+    const _tmpFlashDir = new THREE.Vector3();
+    const _tmpWeaponDir = new THREE.Vector3();
+    const _tmpEmissiveColor = new THREE.Color();
 
     // ─── Frustum Culling ────────────────────────────────────────────────────────
     // Reusable Frustum + matrix objects — updated once per frame.
@@ -1742,12 +1746,13 @@
               
               // Per-weapon muzzle flash system
               if (typeof window.spawnWeaponMuzzleFlash === 'function') {
-                const flashDir = new THREE.Vector3(
+                // FIX 4: Reuse pre-allocated _tmpFlashDir instead of new Vector3()
+                _tmpFlashDir.set(
                   Math.sin(player.mesh.rotation.y),
                   0,
                   Math.cos(player.mesh.rotation.y)
                 );
-                window.spawnWeaponMuzzleFlash('gun', player.mesh.position, flashDir, scene);
+                window.spawnWeaponMuzzleFlash('gun', player.mesh.position, _tmpFlashDir, scene);
               }
 
               // Gun kickback effect - snappy recoil via scale squish
@@ -1783,12 +1788,13 @@
 
         // Per-weapon muzzle flash system
         if (typeof window.spawnWeaponMuzzleFlash === 'function') {
-          const flashDir = new THREE.Vector3(
+          // FIX 4: Reuse pre-allocated _tmpFlashDir instead of new Vector3()
+          _tmpFlashDir.set(
             Math.sin(angle),
             0,
             Math.cos(angle)
           );
-          window.spawnWeaponMuzzleFlash('sword', player.mesh.position, flashDir, scene);
+          window.spawnWeaponMuzzleFlash('sword', player.mesh.position, _tmpFlashDir, scene);
         }
       }
 
@@ -1857,12 +1863,13 @@
 
         // Per-weapon muzzle flash system (casting effect from player)
         if (typeof window.spawnWeaponMuzzleFlash === 'function') {
-          const dir = new THREE.Vector3(
+          // FIX 4: Reuse pre-allocated _tmpWeaponDir instead of new Vector3()
+          _tmpWeaponDir.set(
             targetX - player.mesh.position.x,
             0,
             targetZ - player.mesh.position.z
           ).normalize();
-          window.spawnWeaponMuzzleFlash('meteor', player.mesh.position, dir, scene);
+          window.spawnWeaponMuzzleFlash('meteor', player.mesh.position, _tmpWeaponDir, scene);
         }
 
         weapons.meteor.lastShot = time;
@@ -1904,12 +1911,13 @@
 
             // Per-weapon muzzle flash system
             if (typeof window.spawnWeaponMuzzleFlash === 'function') {
-              const dir = new THREE.Vector3(
+              // FIX 4: Reuse pre-allocated _tmpWeaponDir instead of new Vector3()
+              _tmpWeaponDir.set(
                 nearestEnemy.mesh.position.x - drone.mesh.position.x,
                 0,
                 nearestEnemy.mesh.position.z - drone.mesh.position.z
               ).normalize();
-              window.spawnWeaponMuzzleFlash('droneTurret', drone.mesh.position, dir, scene);
+              window.spawnWeaponMuzzleFlash('droneTurret', drone.mesh.position, _tmpWeaponDir, scene);
             }
 
             playSound('shoot');
@@ -1973,12 +1981,13 @@
 
           // Per-weapon muzzle flash system
           if (typeof window.spawnWeaponMuzzleFlash === 'function') {
-            const flashDir = new THREE.Vector3(
+            // FIX 4: Reuse pre-allocated _tmpFlashDir instead of new Vector3()
+            _tmpFlashDir.set(
               Math.sin(player.mesh.rotation.y),
               0,
               Math.cos(player.mesh.rotation.y)
             );
-            window.spawnWeaponMuzzleFlash('doubleBarrel', player.mesh.position, flashDir, scene);
+            window.spawnWeaponMuzzleFlash('doubleBarrel', player.mesh.position, _tmpFlashDir, scene);
           }
 
           weapons.doubleBarrel.lastShot = time;
@@ -2004,12 +2013,13 @@
 
           // Per-weapon muzzle flash system
           if (typeof window.spawnWeaponMuzzleFlash === 'function') {
-            const dir = new THREE.Vector3(
+            // FIX 4: Reuse pre-allocated _tmpWeaponDir instead of new Vector3()
+            _tmpWeaponDir.set(
               nearest.mesh.position.x - player.mesh.position.x,
               0,
               nearest.mesh.position.z - player.mesh.position.z
             ).normalize();
-            window.spawnWeaponMuzzleFlash('iceSpear', player.mesh.position, dir, scene);
+            window.spawnWeaponMuzzleFlash('iceSpear', player.mesh.position, _tmpWeaponDir, scene);
           }
 
           weapons.iceSpear.lastShot = time;
@@ -2177,12 +2187,13 @@
 
           // Per-weapon muzzle flash system
           if (typeof window.spawnWeaponMuzzleFlash === 'function') {
-            const dir = new THREE.Vector3(
+            // FIX 4: Reuse pre-allocated _tmpWeaponDir instead of new Vector3()
+            _tmpWeaponDir.set(
               nearest.mesh.position.x - player.mesh.position.x,
               0,
               nearest.mesh.position.z - player.mesh.position.z
             ).normalize();
-            window.spawnWeaponMuzzleFlash('lightning', nearest.mesh.position, dir, scene);
+            window.spawnWeaponMuzzleFlash('lightning', nearest.mesh.position, _tmpWeaponDir, scene);
           }
 
           weapons.lightning.lastShot = time;
@@ -2354,12 +2365,13 @@
 
           // Per-weapon muzzle flash system
           if (typeof window.spawnWeaponMuzzleFlash === 'function') {
-            const dir = new THREE.Vector3(
+            // FIX 4: Reuse pre-allocated _tmpWeaponDir instead of new Vector3()
+            _tmpWeaponDir.set(
               nearest.mesh.position.x - player.mesh.position.x,
               0,
               nearest.mesh.position.z - player.mesh.position.z
             ).normalize();
-            window.spawnWeaponMuzzleFlash('homingMissile', player.mesh.position, dir, scene);
+            window.spawnWeaponMuzzleFlash('homingMissile', player.mesh.position, _tmpWeaponDir, scene);
           }
 
           weapons.homingMissile.lastShot = time;
@@ -2631,7 +2643,9 @@
           p.isFireball = true;
           p.explosionRadius = weapons.fireball.explosionRadius || 3;
           p.mesh.material.color.setHex(0xFF4400);
-          p.mesh.material.emissive = new THREE.Color(0xFF2200);
+          // FIX 4: Reuse pre-allocated _tmpEmissiveColor instead of new THREE.Color()
+          _tmpEmissiveColor.setHex(0xFF2200);
+          p.mesh.material.emissive = _tmpEmissiveColor;
           p.mesh.material.emissiveIntensity = 0.6;
           p.mesh.scale.set(0.6, 0.6, 0.6);
           _rescaleProjSpeed(p, 0.35); // fireballs are lobbed slowly for explosive area damage

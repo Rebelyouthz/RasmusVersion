@@ -6328,6 +6328,8 @@
     const segH = 0.12;
     // Black/Gold colour scheme: outermost ring is gold-tinted, inner are near-black
     const SPIRAL_COLORS_BG = [0x1A1400, 0x221A00, 0xB8860B]; // innermost black, then dark gold, outermost gold
+    // FIX 2: Black Metallic fallback material for texture failures
+    const FALLBACK_MAT_PROPS = { color: 0x111111, roughness: 0.2, metalness: 0.85 };
     for (let r = 0; r < SPIRAL_RING_COUNT; r++) {
       const ringR = SPIRAL_RING_RADII[r];
       const arcLen = (2 * Math.PI * ringR) / SPIRAL_SEG_COUNT * 0.88;
@@ -6357,10 +6359,11 @@
     }
 
     // Elevator platform — Black-Gold disc below the player
+    // FIX 2: Hardcode Black Metallic fallback to prevent pink texture failure
     const platGeo = new THREE.CylinderGeometry(2.2, 2.4, 0.2, 24);
     const platMat = new THREE.MeshStandardMaterial({
-      color: 0x1A1400, roughness: 0.3, metalness: 0.9,
-      emissive: 0x443300, emissiveIntensity: 0.4,
+      color: 0x111111, roughness: 0.2, metalness: 0.85, // Black Metallic fallback
+      emissive: 0x222222, emissiveIntensity: 0.15,
     });
     _elevatorPlatform = new THREE.Mesh(platGeo, platMat);
     _elevatorPlatform.position.set(0, SPAWN_SHAFT_DEPTH, 0);

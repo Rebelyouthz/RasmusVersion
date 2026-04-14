@@ -28,23 +28,23 @@ const _BSV21_MIST = {
   robot:         0xaaccff,
 };
 
+// FIX 4: Strict particle caps to prevent severe lag
+// Maximum 150 blood drops/particles simultaneously to resolve FPS drops
 // Device capability detection — auto-scales pool sizes:
-// Low-memory/mobile (≤2GB or touch device): ≤120 drops / ≤64 mist
-// Mid-tier (≤4GB): 600 drops / 400 mist
-// Desktop/high-memory (>4GB): ≥1200 drops / ≥800 mist
+// Low-memory/mobile (≤2GB or touch device): ≤100 drops / ≤50 mist
+// Mid-tier (≤4GB): 150 drops / 100 mist (STRICT CAP)
+// Desktop/high-memory (>4GB): 150 drops / 100 mist (STRICT CAP - never exceed)
 (function _bsv21DetectDevice() {
   const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
     || ('ontouchstart' in window && navigator.maxTouchPoints > 1);
   const mem = (navigator.deviceMemory || (isMobile ? 2 : 8));
   if (isMobile || mem <= 2) {
-    window._BSV21_MAX_DROPS = 120;
-    window._BSV21_MAX_MIST  = 64;
-  } else if (mem <= 4) {
-    window._BSV21_MAX_DROPS = 600;
-    window._BSV21_MAX_MIST  = 400;
+    window._BSV21_MAX_DROPS = 100;
+    window._BSV21_MAX_MIST  = 50;
   } else {
-    window._BSV21_MAX_DROPS = 1200;
-    window._BSV21_MAX_MIST  = 800;
+    // FIX 4: Cap at 150 drops max for all devices to eliminate lag
+    window._BSV21_MAX_DROPS = 150;
+    window._BSV21_MAX_MIST  = 100;
   }
 }());
 
@@ -96,7 +96,7 @@ const BloodSimulatorV21 = {
     this.dropIM.frustumCulled = false;
     this.dropIM.instanceColor = new THREE.InstancedBufferAttribute(
       new Float32Array(this.MAX_DROPS * 3), 3);
-    this.dropIM.setColorAt(0, new THREE.Color(0x8B0000));
+    // FIX 4: Remove new THREE.Color() allocation in init - use pre-allocated _color instead
     scene.add(this.dropIM);
 
     // Mist pool

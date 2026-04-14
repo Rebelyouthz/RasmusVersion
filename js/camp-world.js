@@ -468,6 +468,7 @@
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
+    ground.visible = true; // FIX 1: ALWAYS visible - base terrain must never disappear
     _campScene.add(ground);
 
     // Central dirt circle (around campfire)
@@ -482,6 +483,7 @@
     const dirt = new THREE.Mesh(dirtGeo, dirtMat);
     dirt.rotation.x = -Math.PI / 2;
     dirt.position.y = 0.05;
+    dirt.visible = true; // FIX 1: ALWAYS visible - base terrain must never disappear
     _campScene.add(dirt);
 
     // Stone ring around firepit
@@ -5601,6 +5603,9 @@
   function _refreshBuildings() {
     if (!_saveData) return;
     const THREE = T();
+    // FIX 1: Ensure camp scene itself remains visible (never hide parent container)
+    if (_campScene) _campScene.visible = true;
+
     for (const def of BUILDING_DEFS) {
       const grp = _buildingMeshes[def.id];
       if (!grp) continue;

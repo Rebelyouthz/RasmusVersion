@@ -36,7 +36,7 @@ function init() {
   );
 
   if (typeof window._ensureEntityPools === 'function') window._ensureEntityPools();
-  if (window.BloodV2 && typeof THREE !== 'undefined') window.BloodV2.init(scene);
+  // FIX 3: ONLY use BloodSimulatorV21 - purge BloodV2.init() call
   if (window.TraumaSystem && typeof THREE !== 'undefined') window.TraumaSystem.init(scene);
   if (window.GameObjectPool) window.GameObjectPool.prewarm();
   console.log('[Init] Scene created OK');
