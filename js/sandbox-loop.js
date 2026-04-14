@@ -4285,10 +4285,11 @@
   // ── Small "LEVEL UP!" text that rises from the character's head ──
   // Starts tiny, grows to 50% of the fire text size, then fades out.
   var _smallLvlUpEl = null;
+  // FIX 4: Pre-allocate reusable vector for level-up text projection (avoid GC pressure)
+  var _sVec = new THREE.Vector3();
   function _spawnSmallLevelUpText() {
     if (!player || !player.mesh || !camera || !renderer) return;
     // Project player position to screen space
-    var _sVec = new THREE.Vector3();
     _sVec.copy(player.mesh.position);
     _sVec.y += 1.8; // above character head
     _sVec.project(camera);
