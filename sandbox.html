@@ -754,18 +754,22 @@
 
     /* ── Death / Game-Over Screen – removed; RunEndScreen handles all end-of-run UI ── */
 
+    :root {
+      --sandbox-page-link-z: 10001; /* Above HUD/overlays so link remains clickable */
+    }
+
     /* Page link back to camp page */
     .sandbox-page-link {
       position: fixed;
       top: 10px;
       left: 10px;
-      z-index: 10001;
+      z-index: var(--sandbox-page-link-z);
       background: rgba(0, 0, 0, 0.65);
       color: #FFD700;
       border: 1px solid rgba(255, 215, 0, 0.6);
       border-radius: 8px;
       padding: 6px 10px;
-      font-family: 'Bangers', cursive;
+      font-family: 'Bangers', cursive; /* Loaded in this document head */
       letter-spacing: 1px;
       text-decoration: none;
       line-height: 1;
