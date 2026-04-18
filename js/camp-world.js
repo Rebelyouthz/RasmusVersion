@@ -91,11 +91,6 @@
   // Track MutationObservers created by buildings so we can disconnect them on scene rebuild
   const _buildingObservers = [];
 
-  // WebGL context-loss guard — set true when the shared renderer's context is lost
-  // so render() returns early instead of spamming TypeErrors every frame.
-  let _contextLost           = false;
-  let _contextListenersAdded = false; // ensure listeners are added only once
-
   let _playerMesh  = null;
   let _playerVel   = { x: 0, z: 0 };
   let _playerPos   = { x: SPAWN_POS.x, z: SPAWN_POS.z };
@@ -304,17 +299,6 @@
     _buildingMeshes = {};
     // Disconnect all MutationObservers from the previous scene build to prevent leaks
     while (_buildingObservers.length) _buildingObservers.pop().disconnect();
-    // Reset particle/flame/glow arrays so a clean rebuild doesn't accumulate stale entries
-    // from a previous (possibly failed) _buildScene() call.
-    _flameMeshes       = [];
-    _glowRings         = [];
-    _sparkVelocities   = [];
-    _sparkLifetimes    = [];
-    _dustVelocities    = [];
-    _dustLifetimes     = [];
-    _fireflyVelocities = [];
-    _fireflyLifetimes  = [];
-    _fireflyPhases     = [];
     _campScene = new THREE.Scene();
     _campScene.background = new THREE.Color(0x0a0c18); // deep night sky
     _campScene.fog = new THREE.FogExp2(0x120e08, 0.035); // heavy fog/mist for culling
@@ -640,6 +624,7 @@
       glowRing.rotation.x = -Math.PI / 2;
       glowRing.position.y = 0.01 + g * 0.005;
       _campScene.add(glowRing);
+      _glowRings = _glowRings || [];
       _glowRings.push({ mesh: glowRing, baseMat: glowMat, phase: g * Math.PI * 0.67 });
     }
 
@@ -3894,16 +3879,13 @@
     const glowC = document.createElement('canvas');
     glowC.width = 64; glowC.height = 64;
     const gCtx = glowC.getContext('2d');
-    if (gCtx) {
-      const gGrad = gCtx.createRadialGradient(32,32,0,32,32,32);
-      gGrad.addColorStop(0, 'rgba(140,100,255,0.95)');
-      gGrad.addColorStop(0.4, 'rgba(60,20,200,0.5)');
-      gGrad.addColorStop(1, 'rgba(0,0,0,0)');
-      gCtx.fillStyle = gGrad;
-      gCtx.fillRect(0, 0, 64, 64);
-    }
-    const glowTex = _canvasToDataTexture(THREE, glowC, 64, 64) || _blankDataTexture64(THREE);
-    glowTex.needsUpdate = true;
+    const gGrad = gCtx.createRadialGradient(32,32,0,32,32,32);
+    gGrad.addColorStop(0, 'rgba(140,100,255,0.95)');
+    gGrad.addColorStop(0.4, 'rgba(60,20,200,0.5)');
+    gGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    gCtx.fillStyle = gGrad;
+    gCtx.fillRect(0, 0, 64, 64);
+    const glowTex = new THREE.CanvasTexture(glowC);
     const glowMat = new THREE.SpriteMaterial({ map: glowTex, color: 0x8844ff, transparent: true, blending: THREE.AdditiveBlending, opacity: 0.7, depthWrite: false });
     const glow = new THREE.Sprite(glowMat);
     glow.position.set(0, 3.2, 0);
@@ -4000,16 +3982,13 @@
     const _glowCanvas = document.createElement('canvas');
     _glowCanvas.width = 64; _glowCanvas.height = 64;
     const _gCtx = _glowCanvas.getContext('2d');
-    if (_gCtx) {
-      const _gGrad = _gCtx.createRadialGradient(32, 32, 0, 32, 32, 32);
-      _gGrad.addColorStop(0, 'rgba(220,140,255,0.9)');
-      _gGrad.addColorStop(0.35, 'rgba(150,50,255,0.55)');
-      _gGrad.addColorStop(1, 'rgba(0,0,0,0)');
-      _gCtx.fillStyle = _gGrad;
-      _gCtx.fillRect(0, 0, 64, 64);
-    }
-    const glowTex = _canvasToDataTexture(THREE, _glowCanvas, 64, 64) || _blankDataTexture64(THREE);
-    glowTex.needsUpdate = true;
+    const _gGrad = _gCtx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    _gGrad.addColorStop(0, 'rgba(220,140,255,0.9)');
+    _gGrad.addColorStop(0.35, 'rgba(150,50,255,0.55)');
+    _gGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    _gCtx.fillStyle = _gGrad;
+    _gCtx.fillRect(0, 0, 64, 64);
+    const glowTex = new THREE.CanvasTexture(_glowCanvas);
     const glowSpriteMat = new THREE.SpriteMaterial({
       map: glowTex, color: 0xcc88ff, transparent: true,
       blending: THREE.AdditiveBlending, opacity: 0.75, depthWrite: false
@@ -4125,15 +4104,12 @@
     const _glowC = document.createElement('canvas');
     _glowC.width = 64; _glowC.height = 64;
     const _gc = _glowC.getContext('2d');
-    if (_gc) {
-      const _rg = _gc.createRadialGradient(32, 32, 2, 32, 32, 32);
-      _rg.addColorStop(0, 'rgba(0,255,255,0.9)');
-      _rg.addColorStop(1, 'rgba(0,255,255,0)');
-      _gc.fillStyle = _rg;
-      _gc.fillRect(0, 0, 64, 64);
-    }
-    const shrineGlowTex = _canvasToDataTexture(THREE, _glowC, 64, 64) || _blankDataTexture64(THREE);
-    shrineGlowTex.needsUpdate = true;
+    const _rg = _gc.createRadialGradient(32, 32, 2, 32, 32, 32);
+    _rg.addColorStop(0, 'rgba(0,255,255,0.9)');
+    _rg.addColorStop(1, 'rgba(0,255,255,0)');
+    _gc.fillStyle = _rg;
+    _gc.fillRect(0, 0, 64, 64);
+    const shrineGlowTex = new THREE.CanvasTexture(_glowC);
     const shrineGlowMat = new THREE.SpriteMaterial({
       map: shrineGlowTex, color: 0x00ffff, transparent: true,
       blending: THREE.AdditiveBlending, opacity: 0.7, depthWrite: false
@@ -4292,63 +4268,26 @@
     return m;
   }
 
-  // ── Helper: rasterise a canvas to a DataTexture and free the 2D context ─
-  // iOS Safari has a hard limit on simultaneous canvas 2D contexts (~8-16).
-  // Using DataTexture lets us extract the pixel data and release the canvas,
-  // preventing "getContext('2d') → null" TypeErrors on context-limited devices.
-  function _canvasToDataTexture(THREE, canvas, width, height) {
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return null; // context limit hit — caller should handle gracefully
-    const imageData = ctx.getImageData(0, 0, width, height);
-    // WebGL typed-array uploads ignore UNPACK_FLIP_Y_WEBGL, so flip manually:
-    const srcData = imageData.data; // Uint8ClampedArray, top-row-first
-    const rowBytes = width * 4;
-    const flipped  = new Uint8Array(width * height * 4);
-    for (let row = 0; row < height; row++) {
-      flipped.set(
-        srcData.subarray((height - 1 - row) * rowBytes, (height - row) * rowBytes),
-        row * rowBytes
-      );
-    }
-    // canvas / ctx go out of scope after this function — context slot is freed
-    const tex = new THREE.DataTexture(flipped, width, height, THREE.RGBAFormat);
-    tex.needsUpdate = true;
-    return tex;
-  }
-
-  // Returns a transparent 64×64 DataTexture as a safe fallback when the 2D context
-  // limit is hit and _canvasToDataTexture returns null.
-  function _blankDataTexture64(THREE) {
-    const tex = new THREE.DataTexture(new Uint8Array(64 * 64 * 4), 64, 64, THREE.RGBAFormat);
-    tex.needsUpdate = true;
-    return tex;
-  }
-
   // ── Floating name sign above each building ───────────────
   function _addNameSign(grp, label, x, y, z) {
     const THREE = T();
-    const W = 256, H = 64;
+    // Use a canvas texture for the label
     const canvas = document.createElement('canvas');
-    canvas.width = W;
-    canvas.height = H;
-
-    // Draw into a temporary canvas — context is released after pixel extraction
+    canvas.width = 256;
+    canvas.height = 64;
     const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.fillStyle = 'rgba(20,12,4,0.82)';
-      ctx.fillRect(0, 0, W, H);
-      ctx.strokeStyle = '#c8a248';
-      ctx.lineWidth = 3;
-      ctx.strokeRect(3, 3, W - 6, H - 6);
-      ctx.fillStyle = '#f0d890';
-      ctx.font = 'bold 22px "Segoe UI", Arial, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(label, W / 2, H / 2);
-    }
+    ctx.fillStyle = 'rgba(20,12,4,0.82)';
+    ctx.fillRect(0, 0, 256, 64);
+    ctx.strokeStyle = '#c8a248';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(3, 3, 250, 58);
+    ctx.fillStyle = '#f0d890';
+    ctx.font = 'bold 22px "Segoe UI", Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, 128, 32);
 
-    const tex = _canvasToDataTexture(THREE, canvas, W, H);
-    if (!tex) return; // context unavailable — skip sign rather than crash
+    const tex = new THREE.CanvasTexture(canvas);
     const signGeo = new THREE.PlaneGeometry(2.6, 0.65);
     const signMat = new THREE.MeshBasicMaterial({
       map: tex,
@@ -4391,8 +4330,7 @@
         _sparkVelocities[i].z *= 0.98;
       }
     }
-    if (_sparkSystem && _sparkSystem.geometry.attributes.position)
-      _sparkSystem.geometry.attributes.position.needsUpdate = true;
+    if (_sparkSystem) _sparkSystem.geometry.attributes.position.needsUpdate = true;
 
     // ── Smoke particles ─────────────────────────────────────
     if (_smokeSystem && _smokePositions && _smokeLifetimes) {
@@ -4412,8 +4350,7 @@
           _smokeVelocities[s].z *= 0.99;
         }
       }
-      if (_smokeSystem.geometry.attributes.position)
-        _smokeSystem.geometry.attributes.position.needsUpdate = true;
+      _smokeSystem.geometry.attributes.position.needsUpdate = true;
     }
     // ── Pulsating glow rings around fire ────────────────────
     if (_glowRings) {
@@ -4445,8 +4382,7 @@
         _dustPositions[i * 3 + 2] += _dustVelocities[i].z * dt;
       }
     }
-    if (_dustSystem && _dustSystem.geometry.attributes.position)
-      _dustSystem.geometry.attributes.position.needsUpdate = true;
+    if (_dustSystem) _dustSystem.geometry.attributes.position.needsUpdate = true;
 
     // ── Green fireflies ──────────────────────────────────────
     if (!_fireflySystem || !_fireflyPositions) return;
@@ -4490,7 +4426,7 @@
       // Update pulsing glow phase
       _fireflyPhases[i] += dt * 3.0; // Pulse frequency
     }
-    if (_fireflySystem && _fireflySystem.geometry.attributes.position) {
+    if (_fireflySystem) {
       _fireflySystem.geometry.attributes.position.needsUpdate = true;
       // Pulsing glow effect
       const pulseIntensity = 0.6 + 0.4 * Math.sin(_campTime * 2.5);
@@ -4510,7 +4446,6 @@
       _fireLight.intensity = 6.5 * flicker;  // Updated to match new base intensity
     }
     _flameMeshes.forEach((f, i) => {
-      if (!f || !f.material) return; // guard against stale entries from a failed build
       const s = 0.9 + 0.1 * Math.sin(_campTime * (8 + i * 3.1));
       f.scale.set(s, 0.85 + 0.2 * Math.sin(_campTime * (6 + i * 2.7)), s);
       f.material.opacity = 0.7 + 0.15 * Math.sin(_campTime * (5 + i * 1.5));
@@ -7070,28 +7005,6 @@
     }
   }
 
-  // ── WebGL context-loss / context-restored handlers ────────
-  // Registered once on the renderer's canvas so we stop rendering when the
-  // GPU context is lost (prevents repeated TypeError spam) and force a clean
-  // scene rebuild when it is restored.
-  function _registerContextListeners(rendererRef) {
-    if (_contextListenersAdded || !rendererRef || !rendererRef.domElement) return;
-    _contextListenersAdded = true;
-    rendererRef.domElement.addEventListener('webglcontextlost', function (e) {
-      e.preventDefault(); // prevents the browser from permanently disabling rendering; allows 'webglcontextrestored' to fire later
-      _contextLost = true;
-      console.warn('[CampWorld] WebGL context lost — rendering paused');
-    }, false);
-    rendererRef.domElement.addEventListener('webglcontextrestored', function () {
-      _contextLost = false;
-      // GPU resources (textures, buffers, programs) were all destroyed —
-      // force a full scene rebuild on the next camp visit.
-      _campScene  = null;
-      _campCamera = null;
-      console.log('[CampWorld] WebGL context restored — scene will rebuild on next visit');
-    }, false);
-  }
-
   // ──────────────────────────────────────────────────────────
   // Public API
   // ──────────────────────────────────────────────────────────
@@ -7109,7 +7022,6 @@
       return;
     }
     _renderer = rendererRef;
-    _registerContextListeners(rendererRef);
     _isBuilding = true;
     try {
       _buildScene();
@@ -7140,7 +7052,6 @@
     _renderer  = renderer;
     _saveData  = saveData;
     _callbacks = callbacks || {};
-    _registerContextListeners(renderer);
 
     // Build scene once — wrap in try/catch so a partial build failure
     // resets _campScene to null, allowing a clean retry on the next enter().
@@ -7751,8 +7662,6 @@
    */
   function render() {
     if (!_isActive || !_campScene || !_campCamera || !_renderer) return;
-    // Skip rendering while the WebGL context is lost to avoid TypeError spam.
-    if (_contextLost) return;
     _renderer.render(_campScene, _campCamera);
     // Render UI overlay on top without clearing — avatar rendering disabled
     if (_uiScene && _uiCamera) {
