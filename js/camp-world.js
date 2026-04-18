@@ -3902,7 +3902,7 @@
       gCtx.fillStyle = gGrad;
       gCtx.fillRect(0, 0, 64, 64);
     }
-    const glowTex = _canvasToDataTexture(THREE, glowC, 64, 64) || new THREE.DataTexture(new Uint8Array(64*64*4), 64, 64, THREE.RGBAFormat);
+    const glowTex = _canvasToDataTexture(THREE, glowC, 64, 64) || _blankDataTexture64(THREE);
     glowTex.needsUpdate = true;
     const glowMat = new THREE.SpriteMaterial({ map: glowTex, color: 0x8844ff, transparent: true, blending: THREE.AdditiveBlending, opacity: 0.7, depthWrite: false });
     const glow = new THREE.Sprite(glowMat);
@@ -4008,7 +4008,7 @@
       _gCtx.fillStyle = _gGrad;
       _gCtx.fillRect(0, 0, 64, 64);
     }
-    const glowTex = _canvasToDataTexture(THREE, _glowCanvas, 64, 64) || new THREE.DataTexture(new Uint8Array(64*64*4), 64, 64, THREE.RGBAFormat);
+    const glowTex = _canvasToDataTexture(THREE, _glowCanvas, 64, 64) || _blankDataTexture64(THREE);
     glowTex.needsUpdate = true;
     const glowSpriteMat = new THREE.SpriteMaterial({
       map: glowTex, color: 0xcc88ff, transparent: true,
@@ -4132,7 +4132,7 @@
       _gc.fillStyle = _rg;
       _gc.fillRect(0, 0, 64, 64);
     }
-    const shrineGlowTex = _canvasToDataTexture(THREE, _glowC, 64, 64) || new THREE.DataTexture(new Uint8Array(64*64*4), 64, 64, THREE.RGBAFormat);
+    const shrineGlowTex = _canvasToDataTexture(THREE, _glowC, 64, 64) || _blankDataTexture64(THREE);
     shrineGlowTex.needsUpdate = true;
     const shrineGlowMat = new THREE.SpriteMaterial({
       map: shrineGlowTex, color: 0x00ffff, transparent: true,
@@ -4312,6 +4312,14 @@
     }
     // canvas / ctx go out of scope after this function — context slot is freed
     const tex = new THREE.DataTexture(flipped, width, height, THREE.RGBAFormat);
+    tex.needsUpdate = true;
+    return tex;
+  }
+
+  // Returns a transparent 64×64 DataTexture as a safe fallback when the 2D context
+  // limit is hit and _canvasToDataTexture returns null.
+  function _blankDataTexture64(THREE) {
+    const tex = new THREE.DataTexture(new Uint8Array(64 * 64 * 4), 64, 64, THREE.RGBAFormat);
     tex.needsUpdate = true;
     return tex;
   }
@@ -7070,7 +7078,7 @@
     if (_contextListenersAdded || !rendererRef || !rendererRef.domElement) return;
     _contextListenersAdded = true;
     rendererRef.domElement.addEventListener('webglcontextlost', function (e) {
-      e.preventDefault(); // required so the browser attempts automatic restore
+      e.preventDefault(); // prevents the browser from permanently disabling rendering; allows 'webglcontextrestored' to fire later
       _contextLost = true;
       console.warn('[CampWorld] WebGL context lost — rendering paused');
     }, false);
