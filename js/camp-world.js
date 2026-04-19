@@ -4312,6 +4312,9 @@
     }
     // canvas / ctx go out of scope after this function — context slot is freed
     const tex = new THREE.DataTexture(flipped, width, height, THREE.RGBAFormat);
+    tex.magFilter  = THREE.LinearFilter;
+    tex.minFilter  = THREE.LinearFilter;
+    tex.colorSpace = THREE.SRGBColorSpace;
     tex.needsUpdate = true;
     return tex;
   }
@@ -7088,7 +7091,10 @@
       // force a full scene rebuild on the next camp visit.
       _campScene  = null;
       _campCamera = null;
-      console.log('[CampWorld] WebGL context restored — scene will rebuild on next visit');
+      // If camp was active during restoration, stop routing frames here until
+      // the normal enter/rebuild flow runs again.
+      _isActive = false;
+      console.log('[CampWorld] WebGL context restored — camp deactivated and scene will rebuild on next visit');
     }, false);
   }
 
