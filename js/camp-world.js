@@ -95,6 +95,7 @@
   // so render() returns early instead of spamming TypeErrors every frame.
   let _contextLost           = false;
   let _contextListenersAdded = false; // ensure listeners are added only once
+  let _contextWasActive      = false; // whether camp was active when context was lost
 
   let _playerMesh  = null;
   let _playerVel   = { x: 0, z: 0 };
@@ -317,7 +318,7 @@
     _fireflyPhases     = [];
     _campScene = new THREE.Scene();
     _campScene.background = new THREE.Color(0x0a0c18); // deep night sky
-    _campScene.fog = new THREE.FogExp2(0x120e08, 0.035); // heavy fog/mist for culling
+    _campScene.fog = new THREE.FogExp2(0x120e08, 0.015); // reduced density for better distant visibility
 
     // ── Lighting ────────────────────────────────────────────
     // Warmer dim ambient – cozy sky light
@@ -5667,7 +5668,18 @@
   // Refresh building visibility based on save data
   // ──────────────────────────────────────────────────────────
   function _refreshBuildings() {
-    if (!_saveData) return;
+    if (!_saveData) {
+      // No save data available — show all buildings in blueprint mode as visible placeholders
+      // so the camp is not completely empty of structures.
+      for (const def of BUILDING_DEFS) {
+        const grp = _buildingMeshes[def.id];
+        if (!grp) continue;
+        grp.visible = true;
+        _setBlueprintMode(grp, true);
+        _setConstructionMode(grp, false);
+      }
+      return;
+    }
     const THREE = T();
     for (const def of BUILDING_DEFS) {
       const grp = _buildingMeshes[def.id];
@@ -7083,18 +7095,40 @@
     rendererRef.domElement.addEventListener('webglcontextlost', function (e) {
       e.preventDefault(); // prevents the browser from permanently disabling rendering; allows 'webglcontextrestored' to fire later
       _contextLost = true;
+      _contextWasActive = _isActive; // remember if camp was active so we can reactivate after restore
       console.warn('[CampWorld] WebGL context lost — rendering paused');
     }, false);
     rendererRef.domElement.addEventListener('webglcontextrestored', function () {
       _contextLost = false;
       // GPU resources (textures, buffers, programs) were all destroyed —
-      // force a full scene rebuild on the next camp visit.
+      // force a full scene rebuild.
       _campScene  = null;
       _campCamera = null;
-      // If camp was active during restoration, stop routing frames here until
-      // the normal enter/rebuild flow runs again.
       _isActive = false;
-      console.log('[CampWorld] WebGL context restored — camp deactivated and scene will rebuild on next visit');
+      console.log('[CampWorld] WebGL context restored — scheduling scene rebuild');
+      // Attempt automatic rebuild so the screen does not stay permanently black.
+      // A short delay lets the browser fully reinitialise the WebGL context and
+      // flush any pending driver/OS operations before we try to compile shaders and
+      // upload geometry. Without this pause some drivers fire 'webglcontextrestored'
+      // before the context is truly usable, causing the first draw to silently fail.
+      setTimeout(function () {
+        if (!_renderer) return;
+        try {
+          // After a context loss any in-flight _buildScene() call will have failed,
+          // so it is safe (and necessary) to clear the build-guard before retrying.
+          if (_isBuilding) {
+            _isBuilding = false;
+          }
+          _buildScene();
+          _refreshBuildings();
+          if (_contextWasActive) {
+            _isActive = true;
+            console.log('[CampWorld] Scene rebuilt and camp reactivated after context restore');
+          }
+        } catch (err) {
+          console.error('[CampWorld] Failed to rebuild scene after context restore:', err);
+        }
+      }, 100);
     }, false);
   }
 
