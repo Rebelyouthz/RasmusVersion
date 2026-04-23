@@ -326,7 +326,7 @@
     _fireflyPhases     = [];
     _campScene = new THREE.Scene();
     _campScene.background = new THREE.Color(0x0a0c18); // deep night sky
-    _campScene.fog = new THREE.FogExp2(0x120e08, 0.012); // light atmospheric fog — reduced from 0.035 to prevent distant buildings from disappearing
+    _campScene.fog = new THREE.FogExp2(0x120e08, 0.015); // light atmospheric fog — density 0.015 so distant buildings remain visible
 
     // ── Lighting ────────────────────────────────────────────
     // Warmer dim ambient – cozy sky light
@@ -2203,11 +2203,11 @@
 
     // Animate glowing tips blink and ring rotation
     _bennyMesh.traverse(function (child) {
-      if (child._aidaTip) {
+      if (child._aidaTip && child.material && child.material.isMaterial) {
         const blink = 0.6 + Math.sin(_campTime * 4.5 + (child.position.x > 0 ? 1.2 : 0)) * 0.6;
         child.material.emissiveIntensity = Math.max(0, blink);
       }
-      if (child._aidaRing) {
+      if (child._aidaRing && child.material && child.material.isMaterial) {
         child.rotation.z += dt * 0.6;
         const pulse = 0.12 + Math.sin(_campTime * 3.0) * 0.10;
         child.material.opacity = Math.max(0, pulse);
@@ -5734,8 +5734,9 @@
         }
         child.material = child.userData._blueprintMat;
       } else {
-        // Restore original material
-        if (child.userData._origMaterial) {
+        // Restore original material — guard against null/disposed material refs
+        // that could cause a TypeError in the WebGL render loop.
+        if (child.userData._origMaterial && child.userData._origMaterial.isMaterial) {
           child.material = child.userData._origMaterial;
         }
       }
@@ -5750,7 +5751,7 @@
     grp.traverse(child => {
       if (!child.isMesh) return;
       if (enable) {
-        if (!child.userData._origMaterial) {
+        if (!child.userData._origMaterial && child.material && child.material.isMaterial) {
           child.userData._origMaterial = child.material;
         }
         if (!child.userData._constructionMat) {
@@ -5765,8 +5766,10 @@
         }
         child.material = child.userData._constructionMat;
       } else {
-        // Restore original material if currently showing construction mode
-        if (child.userData._origMaterial && child.userData._constructionMat &&
+        // Restore original material if currently showing construction mode — guard
+        // against null/disposed material refs to prevent render-loop TypeErrors.
+        if (child.userData._origMaterial && child.userData._origMaterial.isMaterial &&
+            child.userData._constructionMat &&
             (child.material === child.userData._constructionMat)) {
           child.material = child.userData._origMaterial;
         }
