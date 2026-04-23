@@ -145,6 +145,8 @@
   let _isActive    = false;
   let _menuOpen    = false;  // true while a building menu overlay is visible
   let _menuOpenTs  = 0;      // timestamp (ms) when _menuOpen was last set true
+  // Maximum time (ms) _menuOpen can remain true before the failsafe forces a reset
+  const _MENU_OPEN_FAILSAFE_MS = 30000;
 
   // Campfire light + flame for flickering
   let _fireLight   = null;
@@ -5635,11 +5637,11 @@
     // rendering is deferred; empirically 350ms covers one full render cycle).
     if (Date.now() - _menuOpenTs < 350) return;
 
-    // Failsafe: if _menuOpen has been stuck for more than 30 seconds, force-resume
+    // Failsafe: if _menuOpen has been stuck for more than _MENU_OPEN_FAILSAFE_MS, force-resume
     // regardless of any overlay state. This prevents permanent player freezes caused
     // by overlays that close without properly resetting _menuOpen.
     const menuAge = Date.now() - _menuOpenTs;
-    if (menuAge > 30000) {
+    if (menuAge > _MENU_OPEN_FAILSAFE_MS) {
       console.warn('[CampWorld] _menuOpen failsafe triggered after ' + Math.round(menuAge / 1000) + 's — forcing resume');
       _resumeInput();
       return;
