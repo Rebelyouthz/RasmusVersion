@@ -96,6 +96,15 @@
   let _contextLost           = false;
   let _contextListenersAdded = false; // ensure listeners are added only once
 
+  // Render-error circuit breaker: if the render loop throws TypeErrors repeatedly
+  // (e.g. due to a broken material or disposed geometry in the scene), we pause
+  // rendering for a short cooldown to prevent accumulating GL errors that would
+  // trigger a WebGL context loss.
+  let _renderErrorCount    = 0;
+  let _renderPausedUntilMs = 0;
+  const _RENDER_ERROR_THRESHOLD = 3;   // errors before tripping the breaker
+  const _RENDER_PAUSE_MS        = 2000; // 2-second cooldown after threshold
+
   let _playerMesh  = null;
   let _playerVel   = { x: 0, z: 0 };
   let _playerPos   = { x: SPAWN_POS.x, z: SPAWN_POS.z };
@@ -317,7 +326,7 @@
     _fireflyPhases     = [];
     _campScene = new THREE.Scene();
     _campScene.background = new THREE.Color(0x0a0c18); // deep night sky
-    _campScene.fog = new THREE.FogExp2(0x120e08, 0.035); // heavy fog/mist for culling
+    _campScene.fog = new THREE.FogExp2(0x120e08, 0.012); // light atmospheric fog — reduced from 0.035 to prevent distant buildings from disappearing
 
     // ── Lighting ────────────────────────────────────────────
     // Warmer dim ambient – cozy sky light
@@ -4296,7 +4305,14 @@
   // iOS Safari has a hard limit on simultaneous canvas 2D contexts (~8-16).
   // Using DataTexture lets us extract the pixel data and release the canvas,
   // preventing "getContext('2d') → null" TypeErrors on context-limited devices.
-  function _canvasToDataTexture(THREE, canvas, width, height) {
+  //
+  // colorSpace — optional THREE.js colorSpace constant (default: THREE.NoColorSpace).
+  //   All current callers (procedural glow gradients, text signs) work correctly with
+  //   NoColorSpace (the DataTexture default).  Do NOT pass THREE.SRGBColorSpace unless
+  //   the target device is known to support EXT_sRGB: on WebGL1 devices without that
+  //   extension the sRGB internal format is unsupported, which causes a shader-program
+  //   compilation failure and a persistent TypeError in the render loop.
+  function _canvasToDataTexture(THREE, canvas, width, height, colorSpace) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return null; // context limit hit — caller should handle gracefully
     const imageData = ctx.getImageData(0, 0, width, height);
@@ -4314,7 +4330,7 @@
     const tex = new THREE.DataTexture(flipped, width, height, THREE.RGBAFormat);
     tex.magFilter  = THREE.LinearFilter;
     tex.minFilter  = THREE.LinearFilter;
-    tex.colorSpace = THREE.SRGBColorSpace;
+    if (colorSpace !== undefined) tex.colorSpace = colorSpace;
     tex.needsUpdate = true;
     return tex;
   }
@@ -5858,6 +5874,7 @@
     const grp = _buildingMeshes[buildingId];
     if (!grp) return;
     const THREE = T();
+    if (!THREE || !_campScene) return; // scene not ready — skip animation safely
 
     // Remove blueprint and construction mode immediately
     _setBlueprintMode(grp, false);
@@ -5936,7 +5953,7 @@
         for (const lightInfo of buildingLights) {
           lightInfo.light.intensity = lightInfo.originalIntensity;
         }
-        _campScene.remove(foundation);
+        if (_campScene) { _campScene.remove(foundation); }
         foundationGeo.dispose();
         foundationMat.dispose();
       }
@@ -5993,7 +6010,7 @@
         } else {
           // Cleanup
           for (const beamInfo of beams) {
-            _campScene.remove(beamInfo.mesh);
+            if (_campScene) { _campScene.remove(beamInfo.mesh); }
             beamInfo.mesh.geometry.dispose();
             beamInfo.mat.dispose();
           }
@@ -6149,16 +6166,16 @@
         if (pt < 1) {
           requestAnimationFrame(animParticles);
         } else {
-          // Cleanup all particle systems
-          _campScene.remove(burstParticles);
+          // Cleanup all particle systems (guard against _campScene being replaced/nulled during async animation)
+          if (_campScene) { _campScene.remove(burstParticles); }
           burstGeo.dispose();
           burstMat.dispose();
 
-          _campScene.remove(sparkleParticles);
+          if (_campScene) { _campScene.remove(sparkleParticles); }
           sparkleGeo.dispose();
           sparkleMat.dispose();
 
-          _campScene.remove(dustParticles);
+          if (_campScene) { _campScene.remove(dustParticles); }
           dustGeo.dispose();
           dustMat.dispose();
         }
@@ -7759,10 +7776,33 @@
     if (!_isActive || !_campScene || !_campCamera || !_renderer) return;
     // Skip rendering while the WebGL context is lost to avoid TypeError spam.
     if (_contextLost) return;
+    // Skip rendering during circuit-breaker cooldown period.
+    if (_renderPausedUntilMs) {
+      const now = performance.now();
+      if (now < _renderPausedUntilMs) return;
+      _renderPausedUntilMs = 0; // cooldown elapsed — clear stale timestamp
+    }
     _renderer.render(_campScene, _campCamera);
+    // Successful render — reset the error counter.
+    _renderErrorCount = 0;
     // Render UI overlay on top without clearing — avatar rendering disabled
     if (_uiScene && _uiCamera) {
       // Profile avatar sprite sheet removed; _uiScene kept for future UI elements
+    }
+  }
+
+  /**
+   * notifyRenderError()
+   * Called by the game loop whenever render() throws.  Counts consecutive errors
+   * and activates the circuit-breaker pause after _RENDER_ERROR_THRESHOLD errors to
+   * prevent WebGL context loss from accumulated GL errors.
+   */
+  function notifyRenderError() {
+    _renderErrorCount++;
+    if (_renderErrorCount >= _RENDER_ERROR_THRESHOLD) {
+      _renderPausedUntilMs = performance.now() + _RENDER_PAUSE_MS;
+      _renderErrorCount = 0;
+      console.warn(`[CampWorld] Render circuit breaker tripped — pausing render for ${_RENDER_PAUSE_MS / 1000}s to prevent WebGL context loss`);
     }
   }
 
@@ -7924,6 +7964,7 @@
     exit,
     update,
     render,
+    notifyRenderError,
     refreshBuildings,
     playBuildingAppearAnimation: _playBuildingAppearAnimation,
     playBuildingUnlockAnimation: _playBuildingUnlockAnimation,
