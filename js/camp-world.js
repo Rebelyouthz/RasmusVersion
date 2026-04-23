@@ -5266,12 +5266,15 @@
       if (Math.sqrt(rdx * rdx + rdz * rdz) < AIDA_INTRO_RADIUS) {
         const DS = window.DialogueSystem;
         if (DS && DS.DIALOGUES && DS.DIALOGUES.aidaQuestHallHint) {
-          _openMenu();
           _playerVel.x = 0; _playerVel.z = 0;
           _keys = {}; _touch.active = false;
+          // Call DS.show() BEFORE _openMenu() so _isCampMenuOpen() is still false
+          // and the dialogue is not suppressed.  _openMenu() is called immediately after
+          // so _checkMenuClosed() keeps input frozen until onComplete fires.
           DS.show(DS.DIALOGUES.aidaQuestHallHint, {
             onComplete: function() { _resumeInput(); }
           });
+          _openMenu();
         }
         return;
       }
@@ -5637,6 +5640,19 @@
     // rendering is deferred; empirically 350ms covers one full render cycle).
     if (Date.now() - _menuOpenTs < 350) return;
 
+    // Failsafe: force-resume unconditionally after _MENU_OPEN_FAILSAFE_MS to prevent
+    // permanent player freeze.  This check must come BEFORE the overlay loop so that
+    // a visible ds-bubble (or any other overlay) cannot block the failsafe indefinitely.
+    const menuAge = Date.now() - _menuOpenTs;
+    if (menuAge > _MENU_OPEN_FAILSAFE_MS) {
+      console.warn('[CampWorld] _menuOpen failsafe triggered after ' + Math.round(menuAge / 1000) + 's — forcing resume');
+      _resumeInput();
+      return;
+    }
+
+    // Build overlay: dynamically-created element with no stable ID — use its flag.
+    if (window._buildOverlayActive) return;
+
     const campScreen = document.getElementById('camp-screen');
     // If camp-screen itself is hidden, another full-screen took over; wait for it.
     if (campScreen && campScreen.style.display === 'none') return;
@@ -5658,13 +5674,6 @@
     }
 
     // No overlay detected — resume camp input.
-    // Failsafe: if _menuOpen has been stuck for more than _MENU_OPEN_FAILSAFE_MS with no
-    // visible overlay, force-resume and warn. This handles overlays that close without
-    // properly resetting _menuOpen (e.g. dynamically created elements without stable IDs).
-    const menuAge = Date.now() - _menuOpenTs;
-    if (menuAge > _MENU_OPEN_FAILSAFE_MS) {
-      console.warn('[CampWorld] _menuOpen failsafe triggered after ' + Math.round(menuAge / 1000) + 's — forcing resume');
-    }
     _resumeInput();
   }
 
@@ -5746,9 +5755,9 @@
         }
         child.material = child.userData._blueprintMat;
       } else {
-        // Restore original material — guard against null/disposed material refs
-        // that could cause a TypeError in the WebGL render loop.
-        if (child.userData._origMaterial && child.userData._origMaterial.isMaterial) {
+        // Restore original material — use a simple null-check instead of isMaterial
+        // so the restore works for all material types and THREE.js versions.
+        if (child.userData._origMaterial != null) {
           child.material = child.userData._origMaterial;
         }
       }
@@ -5763,7 +5772,9 @@
     grp.traverse(child => {
       if (!child.isMesh) return;
       if (enable) {
-        if (!child.userData._origMaterial && child.material && child.material.isMaterial) {
+        // Store original material using a simple null-check so it works for all
+        // material types (arrays, non-standard materials, older THREE versions).
+        if (!child.userData._origMaterial && child.material != null) {
           child.userData._origMaterial = child.material;
         }
         if (!child.userData._constructionMat) {
@@ -5778,11 +5789,12 @@
         }
         child.material = child.userData._constructionMat;
       } else {
-        // Restore original material if currently showing construction mode — guard
-        // against null/disposed material refs to prevent render-loop TypeErrors.
-        if (child.userData._origMaterial && child.userData._origMaterial.isMaterial &&
-            child.userData._constructionMat &&
-            (child.material === child.userData._constructionMat)) {
+        // Always restore the original material if it was stored — do not require
+        // child.material === _constructionMat because _setBlueprintMode may have
+        // already swapped the material back before this runs.  A simple null-check
+        // avoids the over-strict isMaterial / equality guards that left meshes with
+        // the wireframe scaffold material in the render loop (TypeError crash).
+        if (child.userData._origMaterial != null) {
           child.material = child.userData._origMaterial;
         }
       }
@@ -7972,7 +7984,13 @@
   window.CampWorld = {
     get isActive() { return _isActive; },
     get menuOpen() { return _menuOpen; },
-    pauseInput: function () { _menuOpen = true; _menuOpenTs = Date.now(); document.body.classList.add('camp-menu-open'); },
+    pauseInput: function () {
+      _menuOpen = true; _menuOpenTs = Date.now(); document.body.classList.add('camp-menu-open');
+      // Dismiss any active AIDA dialogue so ds-bubble cannot block _checkMenuClosed().
+      if (window.DialogueSystem && typeof window.DialogueSystem.hideOnMenuOpen === 'function') {
+        window.DialogueSystem.hideOnMenuOpen();
+      }
+    },
     resumeInput: _resumeInput,
     _forceResumeInput: _resumeInput,
     enter,
