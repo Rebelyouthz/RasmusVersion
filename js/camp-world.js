@@ -5640,18 +5640,21 @@
     // rendering is deferred; empirically 350ms covers one full render cycle).
     if (Date.now() - _menuOpenTs < 350) return;
 
-    // Failsafe: force-resume unconditionally after _MENU_OPEN_FAILSAFE_MS to prevent
-    // permanent player freeze.  This check must come BEFORE the overlay loop so that
-    // a visible ds-bubble (or any other overlay) cannot block the failsafe indefinitely.
+    // Build overlay: dynamically-created element with no stable ID — use its flag.
+    if (window._buildOverlayActive) return;
+
+    // Active DialogueSystem dialogue should hold input frozen until dismissed.
+    if (window.DialogueSystem && typeof window.DialogueSystem.isActive === 'function' && window.DialogueSystem.isActive()) return;
+
+    // Failsafe: if _menuOpen has been stuck for more than _MENU_OPEN_FAILSAFE_MS with no
+    // visible overlay (build overlay gone, dialogue gone), force-resume to prevent permanent
+    // player freeze caused by overlays that close without resetting _menuOpen.
     const menuAge = Date.now() - _menuOpenTs;
     if (menuAge > _MENU_OPEN_FAILSAFE_MS) {
       console.warn('[CampWorld] _menuOpen failsafe triggered after ' + Math.round(menuAge / 1000) + 's — forcing resume');
       _resumeInput();
       return;
     }
-
-    // Build overlay: dynamically-created element with no stable ID — use its flag.
-    if (window._buildOverlayActive) return;
 
     const campScreen = document.getElementById('camp-screen');
     // If camp-screen itself is hidden, another full-screen took over; wait for it.
