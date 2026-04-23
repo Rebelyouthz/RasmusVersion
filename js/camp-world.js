@@ -5637,16 +5637,6 @@
     // rendering is deferred; empirically 350ms covers one full render cycle).
     if (Date.now() - _menuOpenTs < 350) return;
 
-    // Failsafe: if _menuOpen has been stuck for more than _MENU_OPEN_FAILSAFE_MS, force-resume
-    // regardless of any overlay state. This prevents permanent player freezes caused
-    // by overlays that close without properly resetting _menuOpen.
-    const menuAge = Date.now() - _menuOpenTs;
-    if (menuAge > _MENU_OPEN_FAILSAFE_MS) {
-      console.warn('[CampWorld] _menuOpen failsafe triggered after ' + Math.round(menuAge / 1000) + 's — forcing resume');
-      _resumeInput();
-      return;
-    }
-
     const campScreen = document.getElementById('camp-screen');
     // If camp-screen itself is hidden, another full-screen took over; wait for it.
     if (campScreen && campScreen.style.display === 'none') return;
@@ -5667,7 +5657,14 @@
       if (cts.display !== 'none') return;
     }
 
-    // No overlay detected — resume camp input
+    // No overlay detected — resume camp input.
+    // Failsafe: if _menuOpen has been stuck for more than _MENU_OPEN_FAILSAFE_MS with no
+    // visible overlay, force-resume and warn. This handles overlays that close without
+    // properly resetting _menuOpen (e.g. dynamically created elements without stable IDs).
+    const menuAge = Date.now() - _menuOpenTs;
+    if (menuAge > _MENU_OPEN_FAILSAFE_MS) {
+      console.warn('[CampWorld] _menuOpen failsafe triggered after ' + Math.round(menuAge / 1000) + 's — forcing resume');
+    }
     _resumeInput();
   }
 
