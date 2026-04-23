@@ -724,7 +724,16 @@
         lastTime = time;
         gameTime = time / 1000;
         try { window.CampWorld.update(_campDt); } catch (e) { console.error('[CampWorld] Update error:', e); }
-        try { window.CampWorld.render(); } catch (e) { console.error('[CampWorld] Render error:', e); }
+        try {
+          window.CampWorld.render();
+        } catch (e) {
+          console.error('[CampWorld] Render error:', e);
+          // Notify CampWorld so its circuit breaker can trip after repeated errors,
+          // preventing accumulated GL errors from triggering a WebGL context loss.
+          if (typeof window.CampWorld.notifyRenderError === 'function') {
+            window.CampWorld.notifyRenderError();
+          }
+        }
         return;
       }
 
