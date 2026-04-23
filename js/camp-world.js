@@ -145,6 +145,8 @@
   let _isActive    = false;
   let _menuOpen    = false;  // true while a building menu overlay is visible
   let _menuOpenTs  = 0;      // timestamp (ms) when _menuOpen was last set true
+  // Maximum time (ms) _menuOpen can remain true before the failsafe forces a reset
+  const _MENU_OPEN_FAILSAFE_MS = 30000;
 
   // Campfire light + flame for flickering
   let _fireLight   = null;
@@ -5268,7 +5270,7 @@
           _playerVel.x = 0; _playerVel.z = 0;
           _keys = {}; _touch.active = false;
           DS.show(DS.DIALOGUES.aidaQuestHallHint, {
-            onComplete: function() { _menuOpen = false; document.body.classList.remove('camp-menu-open'); }
+            onComplete: function() { _resumeInput(); }
           });
         }
         return;
@@ -5382,6 +5384,8 @@
     'camp-reward-overlay',
     // Profile modal overlay
     'camp-profile-modal',
+    // Dialogue system bubble (A.I.D.A speech/cinematic)
+    'ds-bubble',
   ];
   window._CAMP_OVERLAY_IDS = _OVERLAY_IDS;
 
@@ -5632,6 +5636,7 @@
     // the overlay hasn't been appended to DOM yet (JS is synchronous but DOM
     // rendering is deferred; empirically 350ms covers one full render cycle).
     if (Date.now() - _menuOpenTs < 350) return;
+
     const campScreen = document.getElementById('camp-screen');
     // If camp-screen itself is hidden, another full-screen took over; wait for it.
     if (campScreen && campScreen.style.display === 'none') return;
@@ -5652,7 +5657,14 @@
       if (cts.display !== 'none') return;
     }
 
-    // No overlay detected — resume camp input
+    // No overlay detected — resume camp input.
+    // Failsafe: if _menuOpen has been stuck for more than _MENU_OPEN_FAILSAFE_MS with no
+    // visible overlay, force-resume and warn. This handles overlays that close without
+    // properly resetting _menuOpen (e.g. dynamically created elements without stable IDs).
+    const menuAge = Date.now() - _menuOpenTs;
+    if (menuAge > _MENU_OPEN_FAILSAFE_MS) {
+      console.warn('[CampWorld] _menuOpen failsafe triggered after ' + Math.round(menuAge / 1000) + 's — forcing resume');
+    }
     _resumeInput();
   }
 
