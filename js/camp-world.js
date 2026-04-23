@@ -4305,7 +4305,14 @@
   // iOS Safari has a hard limit on simultaneous canvas 2D contexts (~8-16).
   // Using DataTexture lets us extract the pixel data and release the canvas,
   // preventing "getContext('2d') → null" TypeErrors on context-limited devices.
-  function _canvasToDataTexture(THREE, canvas, width, height) {
+  //
+  // colorSpace — optional THREE.js colorSpace constant (default: THREE.NoColorSpace).
+  //   All current callers (procedural glow gradients, text signs) work correctly with
+  //   NoColorSpace (the DataTexture default).  Do NOT pass THREE.SRGBColorSpace unless
+  //   the target device is known to support EXT_sRGB: on WebGL1 devices without that
+  //   extension the sRGB internal format is unsupported, which causes a shader-program
+  //   compilation failure and a persistent TypeError in the render loop.
+  function _canvasToDataTexture(THREE, canvas, width, height, colorSpace) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return null; // context limit hit — caller should handle gracefully
     const imageData = ctx.getImageData(0, 0, width, height);
@@ -4323,11 +4330,7 @@
     const tex = new THREE.DataTexture(flipped, width, height, THREE.RGBAFormat);
     tex.magFilter  = THREE.LinearFilter;
     tex.minFilter  = THREE.LinearFilter;
-    // Do NOT set colorSpace = THREE.SRGBColorSpace here: on some WebGL1 devices that
-    // lack the EXT_sRGB extension the sRGB internal format is unsupported, which
-    // causes a shader-program compilation failure and a persistent TypeError in the
-    // render loop every frame after the building sign's material is first activated.
-    // The DataTexture default (NoColorSpace) is visually fine for sign labels.
+    if (colorSpace !== undefined) tex.colorSpace = colorSpace;
     tex.needsUpdate = true;
     return tex;
   }
@@ -7774,7 +7777,11 @@
     // Skip rendering while the WebGL context is lost to avoid TypeError spam.
     if (_contextLost) return;
     // Skip rendering during circuit-breaker cooldown period.
-    if (_renderPausedUntilMs && performance.now() < _renderPausedUntilMs) return;
+    if (_renderPausedUntilMs) {
+      const now = performance.now();
+      if (now < _renderPausedUntilMs) return;
+      _renderPausedUntilMs = 0; // cooldown elapsed — clear stale timestamp
+    }
     _renderer.render(_campScene, _campCamera);
     // Successful render — reset the error counter.
     _renderErrorCount = 0;
