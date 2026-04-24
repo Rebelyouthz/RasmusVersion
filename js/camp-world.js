@@ -5406,6 +5406,8 @@
     'camp-profile-modal',
     // Dialogue system bubble (A.I.D.A speech/cinematic)
     'ds-bubble',
+    // Build-progress overlay (camp-skill-system.js _showBuildOverlay)
+    'camp-build-overlay',
   ];
   window._CAMP_OVERLAY_IDS = _OVERLAY_IDS;
 
@@ -5680,24 +5682,27 @@
       }
     }
 
-    // Failsafe: if _menuOpen has been stuck long enough AND no DOM overlay is visible,
-    // force-resume even if _buildOverlayActive or DialogueSystem.isActive() are stuck true.
-    // This prevents permanent player freeze when programmatic flags are not cleaned up.
     const menuAge = Date.now() - _menuOpenTs;
-    if (!overlayVisible && menuAge > _MENU_OPEN_FAILSAFE_MS) {
-      console.warn('[CampWorld] _menuOpen failsafe triggered after ' + Math.round(menuAge / 1000) + 's — forcing resume');
+
+    if (!overlayVisible) {
+      // No DOM overlay is visible — the build-progress overlay now has a stable id
+      // ('camp-build-overlay') and is included in _OVERLAY_IDS, so the DOM check above
+      // is authoritative.  Resume immediately; log if we've hit the original failsafe
+      // threshold to aid debugging.
+      if (menuAge > _MENU_OPEN_FAILSAFE_MS) {
+        console.warn('[CampWorld] _menuOpen failsafe triggered after ' + Math.round(menuAge / 1000) + 's — forcing resume');
+      }
       _resumeInput();
       return;
     }
 
-    // Build overlay: dynamically-created element with no stable ID — use its flag.
+    // Build overlay: flag is still checked as a belt-and-suspenders guard when the
+    // DOM element IS present (e.g., during the brief window before the element is
+    // removed from the DOM after _buildOverlayActive is cleared).
     if (window._buildOverlayActive) return;
 
     // Active DialogueSystem dialogue should hold input frozen until dismissed.
     if (window.DialogueSystem && typeof window.DialogueSystem.isActive === 'function' && window.DialogueSystem.isActive()) return;
-
-    // No overlay detected — resume camp input.
-    if (!overlayVisible) _resumeInput();
   }
 
   function _resumeInput() {
