@@ -1351,8 +1351,7 @@
       emissive: 0x0d47a1,
       emissiveIntensity: 0.3,
       shininess: 90,
-      transparent: true,
-      opacity: 0.85,
+      transparent: false,
       depthWrite: true
     });
     const body = new THREE.Mesh(bodyGeo, bodyMat);
@@ -1371,7 +1370,7 @@
     const glowGeo = new THREE.SphereGeometry(PLAYER_RADIUS + 0.04, 16, 12);
     const glowMat = new THREE.MeshBasicMaterial({
       color: 0x4FC3F7, transparent: true, opacity: 0.15, side: THREE.BackSide,
-      depthWrite: false
+      depthWrite: true
     });
     const glow = new THREE.Mesh(glowGeo, glowMat);
     glow.renderOrder = PLAYER_RENDER_ORDER;
@@ -5754,70 +5753,10 @@
   function _playBuildingAppearAnimation(buildingId) {
     const grp = _buildingMeshes[buildingId];
     if (!grp) return;
-    const THREE = T();
 
-    // Show at construction scale with shimmer particles
+    // Show at construction scale immediately (no complex particle RAF loops that can crash)
     grp.visible = true;
     grp.scale.set(CONSTRUCTION_SCALE, CONSTRUCTION_SCALE, CONSTRUCTION_SCALE);
-
-    // Create initial shimmer/reveal particles
-    if (_campScene) {
-      const SHIMMER_COUNT = 50;
-      const shimmerGeo = new THREE.BufferGeometry();
-      const shimmerPos = new Float32Array(SHIMMER_COUNT * 3);
-      const shimmerVel = [];
-
-      for (let i = 0; i < SHIMMER_COUNT; i++) {
-        const a = Math.random() * Math.PI * 2;
-        const r = Math.random() * 3;
-        const h = Math.random() * 4;
-        shimmerPos[i * 3]     = grp.position.x + Math.sin(a) * r;
-        shimmerPos[i * 3 + 1] = h;
-        shimmerPos[i * 3 + 2] = grp.position.z + Math.cos(a) * r;
-
-        shimmerVel.push({
-          x: (Math.random() - 0.5) * 0.5,
-          y: 0.3 + Math.random() * 0.5,
-          z: (Math.random() - 0.5) * 0.5
-        });
-      }
-
-      shimmerGeo.setAttribute('position', new THREE.BufferAttribute(shimmerPos, 3));
-      const shimmerMat = new THREE.PointsMaterial({
-        color: 0xFF9933,
-        size: 0.25,
-        transparent: true,
-        opacity: 1.0,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false
-      });
-      const shimmerParticles = new THREE.Points(shimmerGeo, shimmerMat);
-      _campScene.add(shimmerParticles);
-
-      const pStartMs = performance.now();
-      function animShimmer() {
-        const pt = Math.min((performance.now() - pStartMs) / 1500, 1);
-        shimmerMat.opacity = 1.0 - pt;
-
-        for (let i = 0; i < SHIMMER_COUNT; i++) {
-          shimmerPos[i * 3]     += shimmerVel[i].x * 0.016;
-          shimmerPos[i * 3 + 1] += shimmerVel[i].y * 0.016;
-          shimmerPos[i * 3 + 2] += shimmerVel[i].z * 0.016;
-        }
-        shimmerGeo.attributes.position.needsUpdate = true;
-
-        if (pt < 1) {
-          requestAnimationFrame(animShimmer);
-        } else {
-          if (_campScene) {
-            _campScene.remove(shimmerParticles);
-          }
-          shimmerGeo.dispose();
-          shimmerMat.dispose();
-        }
-      }
-      requestAnimationFrame(animShimmer);
-    }
   }
 
   // Play a construction animation when a building is first unlocked
@@ -5826,6 +5765,15 @@
     if (!grp) return;
     const THREE = T();
     if (!THREE || !_campScene) return; // scene not ready — skip animation safely
+
+    // Guard against NaN positions which would corrupt the WebGL scene
+    if (!isFinite(grp.position.x) || !isFinite(grp.position.y) || !isFinite(grp.position.z)) {
+      grp.scale.set(1, 1, 1); // Still show the building even if we skip particles
+      return;
+    }
+    const gx = grp.position.x;
+    const gz = grp.position.z;
+    const gy = grp.position.y;
 
     // Enhanced build animation: ground glow → foundation → scale up with stunning particles
     const ANIM_DURATION_MS      = 1200; // Longer for more drama
@@ -5848,7 +5796,7 @@
     });
     const foundation = new THREE.Mesh(foundationGeo, foundationMat);
     foundation.rotation.x = -Math.PI / 2;
-    foundation.position.set(grp.position.x, 0.02, grp.position.z);
+    foundation.position.set(gx, 0.02, gz);
     _campScene.add(foundation);
 
     // ═══ 2. Building scale animation with foundation glow and light fade-in ═══
@@ -5926,9 +5874,9 @@
         });
         const beam = new THREE.Mesh(beamGeo, beamMat);
         beam.position.set(
-          grp.position.x + Math.sin(angle) * 1.5,
+          gx + Math.sin(angle) * 1.5,
           4,
-          grp.position.z + Math.cos(angle) * 1.5
+          gz + Math.cos(angle) * 1.5
         );
         beam.rotation.x = Math.PI * 0.05; // Slight outward tilt
         beam.rotation.z = -angle;
@@ -5978,9 +5926,9 @@
       for (let i = 0; i < BURST_COUNT; i++) {
         const a = Math.random() * Math.PI * 2;
         const r = Math.random() * 1.5;
-        burstPos[i * 3]     = grp.position.x + Math.sin(a) * r;
-        burstPos[i * 3 + 1] = grp.position.y + 0.3;
-        burstPos[i * 3 + 2] = grp.position.z + Math.cos(a) * r;
+        burstPos[i * 3]     = gx + Math.sin(a) * r;
+        burstPos[i * 3 + 1] = gy + 0.3;
+        burstPos[i * 3 + 2] = gz + Math.cos(a) * r;
 
         burstVel.push({
           x: Math.sin(a) * (2.5 + Math.random() * 2),
@@ -6018,9 +5966,9 @@
       for (let i = 0; i < SPARKLE_COUNT; i++) {
         const a = Math.random() * Math.PI * 2;
         const r = Math.random() * 3;
-        sparklePos[i * 3]     = grp.position.x + Math.sin(a) * r;
+        sparklePos[i * 3]     = gx + Math.sin(a) * r;
         sparklePos[i * 3 + 1] = 0.1;
-        sparklePos[i * 3 + 2] = grp.position.z + Math.cos(a) * r;
+        sparklePos[i * 3 + 2] = gz + Math.cos(a) * r;
 
         sparkleVel.push({
           x: (Math.random() - 0.5) * 0.8,
@@ -6051,9 +5999,9 @@
       for (let i = 0; i < DUST_COUNT; i++) {
         const a = Math.random() * Math.PI * 2;
         const r = Math.random() * 2.5;
-        dustPos[i * 3]     = grp.position.x + Math.sin(a) * r;
+        dustPos[i * 3]     = gx + Math.sin(a) * r;
         dustPos[i * 3 + 1] = 0.5 + Math.random() * 2;
-        dustPos[i * 3 + 2] = grp.position.z + Math.cos(a) * r;
+        dustPos[i * 3 + 2] = gz + Math.cos(a) * r;
 
         dustVel.push({
           x: (Math.random() - 0.5) * 1.5,
