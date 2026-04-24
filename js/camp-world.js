@@ -1822,11 +1822,11 @@
       _aidaRobotEyesOn(true);
       // Permanently suppress the old "Help Me" bubble
       window._suppressAidaBubbles = true;
-      // If Quest Hall is already built, park AIDA in front of it instead of the campfire
-      const qmData = sd && sd.campBuildings && sd.campBuildings.questMission;
-      if (qmData && qmData.level > 0) {
-        robotGrp.position.set(AIDA_QUEST_HALL_POS.x, 0, AIDA_QUEST_HALL_POS.z);
-      }
+    }
+    // If Quest Hall is already built, park AIDA in front of it regardless of chip state
+    const qmData = sd && sd.campBuildings && sd.campBuildings.questMission;
+    if (qmData && qmData.level > 0) {
+      robotGrp.position.set(AIDA_QUEST_HALL_POS.x, 0, AIDA_QUEST_HALL_POS.z);
     }
   }
 
@@ -2220,10 +2220,10 @@
       }
     });
 
-    // Always face the player
+    // Always face the player (use mesh's actual position — it may have moved during walk animations)
     if (_playerMesh) {
-      const dx = _playerPos.x - BENNY_POS.x;
-      const dz = _playerPos.z - BENNY_POS.z;
+      const dx = _playerPos.x - _bennyMesh.position.x;
+      const dz = _playerPos.z - _bennyMesh.position.z;
       if (Math.abs(dx) > 0.05 || Math.abs(dz) > 0.05) {
         const targetAngle = Math.atan2(dx, dz);
         let da = targetAngle - _bennyMesh.rotation.y;
@@ -2247,10 +2247,10 @@
       DS.setPosition(sx, sy);
     }
 
-    // Check proximity for first greeting
+    // Check proximity for first greeting (use mesh's actual position)
     if (_playerMesh && !_bennyGreeted) {
-      const dx = _playerPos.x - BENNY_POS.x;
-      const dz = _playerPos.z - BENNY_POS.z;
+      const dx = _playerPos.x - _bennyMesh.position.x;
+      const dz = _playerPos.z - _bennyMesh.position.z;
       // Skip greeting until A.I.D.A chip is inserted — terminal is offline until then
       if (Math.sqrt(dx * dx + dz * dz) < BENNY_GREET_RADIUS && _aidaIntroState.chipInserted) {
         _bennyGreeted = true;
@@ -4918,10 +4918,12 @@
       let da = targetAngle - _playerMesh.rotation.y;
       while (da > Math.PI)  da -= Math.PI * 2;
       while (da < -Math.PI) da += Math.PI * 2;
-      // Track angular velocity for banking lean
+      // Track angular velocity for banking lean; guard against dt=0 to avoid Infinity
       const angVel = da / Math.max(dt, 0.001);
-      _campAngularVel += (angVel - _campAngularVel) * Math.min(dt * 12, 0.7);
-      _playerMesh.rotation.y += da * 0.25;
+      if (isFinite(angVel)) {
+        _campAngularVel += (angVel - _campAngularVel) * Math.min(dt * 12, 0.7);
+      }
+      if (isFinite(da)) _playerMesh.rotation.y += da * 0.25;
       
       // Slide detection: sharp turn at speed
       const turnIntensity = Math.abs(_campAngularVel) * speed;
@@ -5085,12 +5087,18 @@
       // Settle forward lean for non-run states
       _campForwardLean += (0 - _campForwardLean) * Math.min(dt * 8, 0.45);
     }
+    // NaN guard: if lean values are invalid (e.g. from a dt=0 edge case), reset
+    // to zero so no NaN is ever written to the mesh's Euler rotation — a NaN
+    // rotation corrupts the world-matrix and causes a WebGL TypeError in render.
+    if (!isFinite(_campBankLean))    _campBankLean    = 0;
+    if (!isFinite(_campForwardLean)) _campForwardLean = 0;
     _playerMesh.rotation.x = _campForwardLean;
     _playerMesh.rotation.z = _campBankLean;
 
     // Bandage tail physics — sway based on movement
     if (_playerBandageTail) {
-      _playerBandageTail.rotation.x = Math.sin(_campTime * 4 + speed) * 0.2 * (1 + speed * 0.1);
+      const tailSwing = Math.sin(_campTime * 4 + speed) * 0.2 * (1 + speed * 0.1);
+      if (isFinite(tailSwing)) _playerBandageTail.rotation.x = tailSwing;
     }
 
     // ── Update sprite animator overlay (disabled — see _initSpriteOverlay) ──
@@ -7107,7 +7115,7 @@
       if (_aidaChipMesh)  _aidaChipMesh.visible  = !_aidaIntroState.chipPickedUp;
       if (_aidaRobotMesh) _aidaRobotEyesOn(_aidaIntroState.chipInserted);
       // If Quest Hall already built, move AIDA to stand in front of it
-      if (_aidaIntroState.chipInserted && _aidaRobotMesh) {
+      if (_aidaRobotMesh) {
         const _qmData = _saveData && _saveData.campBuildings && _saveData.campBuildings.questMission;
         if (_qmData && _qmData.level > 0) {
           _aidaRobotMesh.position.set(AIDA_QUEST_HALL_POS.x, 0, AIDA_QUEST_HALL_POS.z);
@@ -7736,8 +7744,8 @@
     _refreshBuildings();
     // Refresh prompt UI in case a building's state changed
     _updatePromptUI();
-    // If Quest Hall just got built and AIDA chip is inserted, walk AIDA to Quest Hall
-    if (_aidaIntroState.chipInserted && _aidaRobotMesh && !_robotLapActive) {
+    // If Quest Hall just got built, walk AIDA to Quest Hall regardless of chip state
+    if (_aidaRobotMesh && !_robotLapActive) {
       const _qmBd = _saveData && _saveData.campBuildings && _saveData.campBuildings.questMission;
       if (_qmBd && _qmBd.level > 0) {
         _aidaRobotMesh.position.set(AIDA_QUEST_HALL_POS.x, 0, AIDA_QUEST_HALL_POS.z);
