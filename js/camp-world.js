@@ -5657,21 +5657,20 @@
     // rendering is deferred; empirically 350ms covers one full render cycle).
     if (Date.now() - _menuOpenTs < 350) return;
 
-    // Build overlay: dynamically-created element with no stable ID — use its flag.
-    if (window._buildOverlayActive) return;
-
-    // Active DialogueSystem dialogue should hold input frozen until dismissed.
-    if (window.DialogueSystem && typeof window.DialogueSystem.isActive === 'function' && window.DialogueSystem.isActive()) return;
-
-    // Failsafe: if _menuOpen has been stuck for more than _MENU_OPEN_FAILSAFE_MS with no
-    // visible overlay (build overlay gone, dialogue gone), force-resume to prevent permanent
-    // player freeze caused by overlays that close without resetting _menuOpen.
+    // Failsafe: always fires regardless of other guards — prevents permanent player
+    // freeze when _buildOverlayActive or DialogueSystem.isActive() get stuck true.
     const menuAge = Date.now() - _menuOpenTs;
     if (menuAge > _MENU_OPEN_FAILSAFE_MS) {
       console.warn('[CampWorld] _menuOpen failsafe triggered after ' + Math.round(menuAge / 1000) + 's — forcing resume');
       _resumeInput();
       return;
     }
+
+    // Build overlay: dynamically-created element with no stable ID — use its flag.
+    if (window._buildOverlayActive) return;
+
+    // Active DialogueSystem dialogue should hold input frozen until dismissed.
+    if (window.DialogueSystem && typeof window.DialogueSystem.isActive === 'function' && window.DialogueSystem.isActive()) return;
 
     const campScreen = document.getElementById('camp-screen');
     // If camp-screen itself is hidden, another full-screen took over; wait for it.
@@ -5773,7 +5772,9 @@
             side: THREE.DoubleSide
           });
         }
-        child.material = child.userData._blueprintMat;
+        child.material = Array.isArray(child.userData._origMaterial)
+          ? child.userData._origMaterial.map(() => child.userData._blueprintMat)
+          : child.userData._blueprintMat;
       } else {
         // Restore original material — use _isValidMaterial so arrays-of-Materials are
         // fully validated (each entry checked) before the assignment.  Clear the cached
@@ -5816,7 +5817,9 @@
             side: THREE.DoubleSide
           });
         }
-        child.material = child.userData._constructionMat;
+        child.material = Array.isArray(child.userData._origMaterial)
+          ? child.userData._origMaterial.map(() => child.userData._constructionMat)
+          : child.userData._constructionMat;
       } else {
         // Restore the original material — do not require child.material ===
         // _constructionMat because _setBlueprintMode may have already swapped the
