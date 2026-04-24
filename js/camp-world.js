@@ -151,6 +151,10 @@
   let _menuOpenTs  = 0;      // timestamp (ms) when _menuOpen was last set true
   // Maximum time (ms) _menuOpen can remain true before the failsafe forces a reset
   const _MENU_OPEN_FAILSAFE_MS = 30000;
+  // Grace window (ms) given to the build overlay (which has no stable DOM id) before
+  // _checkMenuClosed() force-resumes even though _buildOverlayActive is still true.
+  // The build animation takes ~2.4 s, so 8 s is more than enough for a clean close.
+  const _BUILD_OVERLAY_GRACE_MS = 8000;
 
   // Campfire light + flame for flickering
   let _fireLight   = null;
@@ -5680,12 +5684,20 @@
       }
     }
 
-    // Failsafe: if _menuOpen has been stuck long enough AND no DOM overlay is visible,
-    // force-resume even if _buildOverlayActive or DialogueSystem.isActive() are stuck true.
-    // This prevents permanent player freeze when programmatic flags are not cleaned up.
     const menuAge = Date.now() - _menuOpenTs;
-    if (!overlayVisible && menuAge > _MENU_OPEN_FAILSAFE_MS) {
-      console.warn('[CampWorld] _menuOpen failsafe triggered after ' + Math.round(menuAge / 1000) + 's — forcing resume');
+
+    if (!overlayVisible) {
+      // No DOM overlay is visible.  Resume immediately unless _buildOverlayActive is set —
+      // that flag covers the build-progress overlay which has no stable HTML id and therefore
+      // cannot be detected via the _OVERLAY_IDS list.  Give it a short (8 s) grace window; if
+      // it has not cleared by then the flag is stuck and we force-resume to prevent a permanent
+      // player freeze.  DialogueSystem.isActive() is intentionally NOT consulted here because
+      // the ds-bubble element IS included in _OVERLAY_IDS; if it were genuinely active the
+      // overlayVisible check above would have caught it.
+      if (window._buildOverlayActive && menuAge < _BUILD_OVERLAY_GRACE_MS) return;
+      if (menuAge > _MENU_OPEN_FAILSAFE_MS) {
+        console.warn('[CampWorld] _menuOpen failsafe triggered after ' + Math.round(menuAge / 1000) + 's — forcing resume');
+      }
       _resumeInput();
       return;
     }
@@ -5695,9 +5707,6 @@
 
     // Active DialogueSystem dialogue should hold input frozen until dismissed.
     if (window.DialogueSystem && typeof window.DialogueSystem.isActive === 'function' && window.DialogueSystem.isActive()) return;
-
-    // No overlay detected — resume camp input.
-    if (!overlayVisible) _resumeInput();
   }
 
   function _resumeInput() {
