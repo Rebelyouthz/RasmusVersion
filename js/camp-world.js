@@ -5657,10 +5657,34 @@
     // rendering is deferred; empirically 350ms covers one full render cycle).
     if (Date.now() - _menuOpenTs < 350) return;
 
-    // Failsafe: always fires regardless of other guards — prevents permanent player
-    // freeze when _buildOverlayActive or DialogueSystem.isActive() get stuck true.
+    const campScreen = document.getElementById('camp-screen');
+    // If camp-screen itself is hidden, another full-screen took over; wait for it.
+    if (campScreen && campScreen.style.display === 'none') return;
+
+    // Check if any overlay element (from the building callback list) is visible
+    let overlayVisible = false;
+    for (let i = 0; i < _OVERLAY_IDS.length; i++) {
+      const el = document.getElementById(_OVERLAY_IDS[i]);
+      if (!el) continue;
+      // Use getComputedStyle so we catch CSS-visible elements as well as inline-styled ones
+      const cs = getComputedStyle(el);
+      if (cs.display !== 'none') { overlayVisible = true; break; }
+    }
+
+    // Check for camp tab panels that might be open (skill tree, training)
+    if (!overlayVisible) {
+      const campTabs = document.getElementById('camp-tabs');
+      if (campTabs) {
+        const cts = getComputedStyle(campTabs);
+        if (cts.display !== 'none') overlayVisible = true;
+      }
+    }
+
+    // Failsafe: if _menuOpen has been stuck long enough AND no DOM overlay is visible,
+    // force-resume even if _buildOverlayActive or DialogueSystem.isActive() are stuck true.
+    // This prevents permanent player freeze when programmatic flags are not cleaned up.
     const menuAge = Date.now() - _menuOpenTs;
-    if (menuAge > _MENU_OPEN_FAILSAFE_MS) {
+    if (!overlayVisible && menuAge > _MENU_OPEN_FAILSAFE_MS) {
       console.warn('[CampWorld] _menuOpen failsafe triggered after ' + Math.round(menuAge / 1000) + 's — forcing resume');
       _resumeInput();
       return;
@@ -5672,28 +5696,8 @@
     // Active DialogueSystem dialogue should hold input frozen until dismissed.
     if (window.DialogueSystem && typeof window.DialogueSystem.isActive === 'function' && window.DialogueSystem.isActive()) return;
 
-    const campScreen = document.getElementById('camp-screen');
-    // If camp-screen itself is hidden, another full-screen took over; wait for it.
-    if (campScreen && campScreen.style.display === 'none') return;
-
-    // Check if any overlay element (from the building callback list) is visible
-    for (let i = 0; i < _OVERLAY_IDS.length; i++) {
-      const el = document.getElementById(_OVERLAY_IDS[i]);
-      if (!el) continue;
-      // Use getComputedStyle so we catch CSS-visible elements as well as inline-styled ones
-      var cs = getComputedStyle(el);
-      if (cs.display !== 'none') return;
-    }
-
-    // Check for camp tab panels that might be open (skill tree, training)
-    const campTabs = document.getElementById('camp-tabs');
-    if (campTabs) {
-      var cts = getComputedStyle(campTabs);
-      if (cts.display !== 'none') return;
-    }
-
     // No overlay detected — resume camp input.
-    _resumeInput();
+    if (!overlayVisible) _resumeInput();
   }
 
   function _resumeInput() {
