@@ -143,6 +143,7 @@
   // dialogue bubble is managed by window.DialogueSystem
   const BENNY_POS  = { x: 4, z: 7 }; // near camp entrance
   const BENNY_GREET_RADIUS = 3.5;
+  const CONSTRUCTION_SCALE = 0.6; // scale applied to unlocked-but-unbuilt buildings as a visual cue
   let _bennyGreeted = false;      // whether A.I.D.A greeting has fired this session
 
   let _campTime    = 0;
@@ -5716,7 +5717,6 @@
   // ──────────────────────────────────────────────────────────
   function _refreshBuildings() {
     if (!_saveData) return;
-    const THREE = T();
     for (const def of BUILDING_DEFS) {
       const grp = _buildingMeshes[def.id];
       if (!grp) continue;
@@ -5725,124 +5725,35 @@
       const isBuilt = bd ? (bd.level > 0) : false;
 
       if (isBuilt) {
-        // Fully built — show normally
+        // Fully built — show at full scale
         grp.visible = true;
-        _setBlueprintMode(grp, false);
-        _setConstructionMode(grp, false);
+        grp.scale.set(1, 1, 1);
       } else if (isUnlocked) {
-        // Unlocked by quest but NOT yet built — show in construction/scaffolding mode
+        // Unlocked but not yet built — scale down slightly as construction cue
         grp.visible = true;
-        _setBlueprintMode(grp, false);
-        _setConstructionMode(grp, true);
+        grp.scale.set(CONSTRUCTION_SCALE, CONSTRUCTION_SCALE, CONSTRUCTION_SCALE);
       } else {
-        // Locked — completely hidden, camp starts empty and builds piece by piece
+        // Locked — completely hidden
         grp.visible = false;
-        _setBlueprintMode(grp, false);
-        _setConstructionMode(grp, false);
       }
     }
   }
 
   // Apply or remove blueprint (locked) visual mode to a building group
-  function _setBlueprintMode(grp, enable) {
-    const THREE = T();
-    grp.traverse(child => {
-      if (!child.isMesh) return;
-      if (enable) {
-        // Store original material if not already stored
-        if (!child.userData._origMaterial) {
-          child.userData._origMaterial = child.material;
-        }
-        // Blueprint: wireframe + semi-transparent blue tint
-        if (!child.userData._blueprintMat) {
-          child.userData._blueprintMat = new THREE.MeshBasicMaterial({
-            color: 0x4488FF,
-            transparent: true,
-            opacity: 0.18,
-            wireframe: false,
-            depthWrite: false,
-            side: THREE.DoubleSide
-          });
-        }
-        child.material = Array.isArray(child.userData._origMaterial)
-          ? child.userData._origMaterial.map(() => child.userData._blueprintMat)
-          : child.userData._blueprintMat;
-      } else {
-        // Restore original material — use _isValidMaterial so arrays-of-Materials are
-        // fully validated (each entry checked) before the assignment.  Clear the cached
-        // value when it is non-null but invalid so the mesh is not permanently stuck
-        // displaying the blueprint material on future refreshes.
-        if (child.userData._origMaterial != null) {
-          const mat = child.userData._origMaterial;
-          if (_isValidMaterial(mat)) {
-            child.material = mat;
-          } else {
-            // Stale/invalid cache — clear so the mesh can be repaired on the next pass.
-            child.userData._origMaterial = null;
-          }
-        }
-      }
-    });
-  }
+  function _setBlueprintMode(grp, enable) {}
 
   // Apply or remove construction (needs-build) visual mode to a building group.
-  // Shows the building as a semi-transparent orange scaffold — distinct from both
-  // the blue blueprint (locked) and normal (built) appearances.
-  function _setConstructionMode(grp, enable) {
-    const THREE = T();
-    grp.traverse(child => {
-      if (!child.isMesh) return;
-      if (enable) {
-        // Store original material — validate with _isValidMaterial so only a proper
-        // Material/Material-array is cached; an invalid current material is never
-        // saved as the "original" and all array entries are confirmed to be Materials.
-        if (!child.userData._origMaterial && _isValidMaterial(child.material)) {
-          child.userData._origMaterial = child.material;
-        }
-        if (!child.userData._constructionMat) {
-          child.userData._constructionMat = new THREE.MeshBasicMaterial({
-            color: 0xFF9933,
-            transparent: true,
-            opacity: 0.45,
-            wireframe: true,
-            depthWrite: false,
-            side: THREE.DoubleSide
-          });
-        }
-        child.material = Array.isArray(child.userData._origMaterial)
-          ? child.userData._origMaterial.map(() => child.userData._constructionMat)
-          : child.userData._constructionMat;
-      } else {
-        // Restore the original material — do not require child.material ===
-        // _constructionMat because _setBlueprintMode may have already swapped the
-        // material back.  Use _isValidMaterial so array entries are also checked;
-        // clear stale invalid cache rather than leaving the mesh broken.
-        if (child.userData._origMaterial != null) {
-          const mat = child.userData._origMaterial;
-          if (_isValidMaterial(mat)) {
-            child.material = mat;
-          } else {
-            child.userData._origMaterial = null;
-          }
-        }
-      }
-    });
-  }
+  function _setConstructionMode(grp, enable) {}
 
-  // Play animation when a building is first unlocked and appears as construction scaffolding
+  // Play animation when a building is first unlocked and appears in construction mode
   function _playBuildingAppearAnimation(buildingId) {
     const grp = _buildingMeshes[buildingId];
     if (!grp) return;
     const THREE = T();
 
-    // Building materializes from transparency with shimmer effect
-    const APPEAR_DURATION_MS = 800;
-    const startTime = performance.now();
-
-    // Start with construction mode already applied
-    _setBlueprintMode(grp, false);
-    _setConstructionMode(grp, true);
+    // Show at construction scale with shimmer particles
     grp.visible = true;
+    grp.scale.set(CONSTRUCTION_SCALE, CONSTRUCTION_SCALE, CONSTRUCTION_SCALE);
 
     // Create initial shimmer/reveal particles
     if (_campScene) {
@@ -5868,7 +5779,7 @@
 
       shimmerGeo.setAttribute('position', new THREE.BufferAttribute(shimmerPos, 3));
       const shimmerMat = new THREE.PointsMaterial({
-        color: 0xFF9933, // Orange construction color
+        color: 0xFF9933,
         size: 0.25,
         transparent: true,
         opacity: 1.0,
@@ -5902,28 +5813,6 @@
       }
       requestAnimationFrame(animShimmer);
     }
-
-    // Fade in the construction wireframe
-    grp.traverse(child => {
-      if (child.isMesh && child.userData._constructionMat) {
-        const mat = child.userData._constructionMat;
-        const originalOpacity = 0.45;
-        mat.opacity = 0;
-
-        function fadeIn() {
-          const elapsed = performance.now() - startTime;
-          const t = Math.min(elapsed / APPEAR_DURATION_MS, 1.0);
-          mat.opacity = originalOpacity * t;
-
-          if (t < 1.0) {
-            requestAnimationFrame(fadeIn);
-          } else {
-            mat.opacity = originalOpacity;
-          }
-        }
-        requestAnimationFrame(fadeIn);
-      }
-    });
   }
 
   // Play a construction animation when a building is first unlocked
@@ -5932,23 +5821,6 @@
     if (!grp) return;
     const THREE = T();
     if (!THREE || !_campScene) return; // scene not ready — skip animation safely
-
-    // Remove blueprint and construction mode immediately
-    _setBlueprintMode(grp, false);
-    _setConstructionMode(grp, false);
-
-    // Safety: replace any mesh child that still has a null or invalid material
-    // after mode restoration — use a single cached fallback instance per group
-    // rather than allocating one per mesh, to avoid unnecessary GPU memory growth.
-    const fallbackMaterial = grp.userData._unlockFallbackMaterial ||
-      (grp.userData._unlockFallbackMaterial = new THREE.MeshBasicMaterial({ color: 0x888888 }));
-    grp.traverse(function(child) {
-      if (!child.isMesh) return;
-      if (!_isValidMaterial(child.material)) {
-        console.warn('[CampWorld] _playBuildingUnlockAnimation: mesh "' + (child.name || child.uuid) + '" has invalid material after restore — applying fallback');
-        child.material = fallbackMaterial;
-      }
-    });
 
     // Enhanced build animation: ground glow → foundation → scale up with stunning particles
     const ANIM_DURATION_MS      = 1200; // Longer for more drama
