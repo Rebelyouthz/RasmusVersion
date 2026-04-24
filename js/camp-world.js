@@ -2089,19 +2089,8 @@
       sd.campBuildings.questMission.unlocked = true;
     }
     if (typeof saveSaveData === 'function') saveSaveData();
-    // Show reward notification with OK press requirement
-    if (window._showRewardEarned) {
-      window._showRewardEarned(
-        ['🪵 +3 Wood', '🪨 +3 Stone'],
-        '🤖 A.I.D.A — Resources Provided',
-        function() {
-          // After OK, show player bubble with hint
-          if (window._showPlayerBubble) {
-            window._showPlayerBubble('Now I can build the Quest Hall...', 4000);
-          }
-        }
-      );
-    } else if (typeof showStatChange === 'function') {
+    // Grant resources silently — no modal, no input freeze
+    if (typeof showStatChange === 'function') {
       showStatChange('🎁 A.I.D.A: +3 Wood, +3 Stone — Build the Quest Hall!', 'rare');
     }
     if (typeof window.CampWorld !== 'undefined' && window.CampWorld.refreshBuildings) {
@@ -2265,23 +2254,22 @@
     const sd = window.saveData;
     if (sd.bennyGreetingShown) return;  // already seen
 
-    // Show greeting on first camp visit
-    sd.bennyGreetingShown = true;
-    if (typeof saveSaveData === 'function') saveSaveData();
-
     const DS = window.DialogueSystem;
     if (!DS) {
-      _showBennySpeech('> Follow me!');
-      setTimeout(function () { _hideBennySpeech(); }, 4000);
+      console.warn('[CampWorld] _triggerBennyGreeting: DialogueSystem not available — will retry on next visit');
       return;
     }
 
+    // Mark greeting as shown only after DS is confirmed available, so a race
+    // condition during load does not permanently suppress the welcome sequence.
+    sd.bennyGreetingShown = true;
+    if (typeof saveSaveData === 'function') saveSaveData();
+
     // Show camp welcome sequence as cinematic popup (long text stays in the popup).
-    // After it closes, show a brief "Follow me!" above AIDA's head, then the contextual hint.
+    // After it closes, show the contextual hint via the Dialogue System directly.
     DS.show(DS.DIALOGUES.campWelcome, {
       onComplete: function () {
-        _showBennySpeech('> Follow me!');
-        setTimeout(function () { _hideBennySpeech(); _showBennyContextualHint(); }, 3000);
+        _showBennyContextualHint();
       }
     });
   }
@@ -2389,8 +2377,6 @@
     const DS = window.DialogueSystem;
     if (DS) {
       DS.show([{ text: '> Follow my signal.', emotion: 'task' }]);
-    } else {
-      _showBennySpeech(speechText || '> Relocating. Follow.');
     }
 
     // Animate walk to building (both Benny and player)
@@ -2427,7 +2413,6 @@
           DS.show([{ text: speechText || '> Node location confirmed. Construct when ready.', emotion: 'task' }]);
         }
         setTimeout(function () {
-          _hideBennySpeech();
           var retStart = performance.now();
           function returnStep() {
             var rt = Math.min((performance.now() - retStart) / walkDuration, 1);
@@ -2532,7 +2517,6 @@
             }
           });
         } else {
-          _showBennySpeech(speechText || '> Construct now.');
           if (typeof onDialogClosed === 'function') onDialogClosed();
           setTimeout(_startBennyReturn, 2000);
         }
@@ -2540,7 +2524,6 @@
     }
 
     function _startBennyReturn() {
-      _hideBennySpeech();
       var retStart = performance.now();
       function returnStep2() {
         var rt = Math.min((performance.now() - retStart) / walkDuration, 1);
@@ -7349,52 +7332,45 @@
       if (window.saveData && window.saveData.bennyGreetingShown) {
         setTimeout(function () {
           if (!_isActive) return;
+          var DS = window.DialogueSystem;
+          if (!DS) {
+            console.warn('[CampWorld] quest hint: DialogueSystem not available');
+            return;
+          }
           var sd = window.saveData;
           var tq = sd && sd.tutorialQuests;
           if (tq && tq.readyToClaim && tq.readyToClaim.length > 0) {
-            _showBennySpeech('Duuude welcome back!\nGo claim your\nquest in the\nMain Building! 📜');
-            setTimeout(function () { _hideBennySpeech(); }, 4000);
+            DS.show([{ text: 'Duuude welcome back! Go claim your quest in the Main Building! 📜', emotion: 'task' }]);
           } else if (tq && tq.currentQuest) {
             var currentQ = (typeof getCurrentQuest === 'function') ? getCurrentQuest() : null;
             if (currentQ) {
               // Context-aware hints for the new slow-burn quest chain
               if (currentQ.id === 'quest_buildQuesthall') {
-                _showBennySpeech('Walk to the\nQuest Hall plot\nand build it! 🏗️\n(I gave you materials)');
-                setTimeout(function () { _hideBennySpeech(); }, 5000);
+                DS.show([{ text: 'Walk to the Quest Hall plot and build it! 🏗️ (I gave you materials)', emotion: 'task' }]);
               } else if (currentQ.id === 'firstRunDeath') {
-                _showBennySpeech('Head out and fight!\nDie once so\nI can... calibrate. ⚔️');
-                setTimeout(function () { _hideBennySpeech(); }, 5000);
+                DS.show([{ text: 'Head out and fight! Die once so I can... calibrate. ⚔️', emotion: 'task' }]);
               } else if (currentQ.id === 'quest_dailyRoutine') {
-                _showBennySpeech('Hey dude! 🌊\nSurvive 2 minutes\nin your next run\nto unlock daily rewards!');
-                setTimeout(function () { _hideBennySpeech(); }, 5000);
+                DS.show([{ text: 'Hey dude! 🌊 Survive 2 minutes in your next run to unlock daily rewards!', emotion: 'task' }]);
               } else if (currentQ.id === 'quest_harvester') {
-                _showBennySpeech('Reach Level 3\nin a run to unlock\nthe Forge, dude! 🔨');
-                setTimeout(function () { _hideBennySpeech(); }, 5000);
+                DS.show([{ text: 'Reach Level 3 in a run to unlock the Forge, dude! 🔨', emotion: 'task' }]);
               } else if (currentQ.id === 'quest_firstBlood') {
                 var w = (sd.resources && sd.resources.wood) || 0;
                 var s = (sd.resources && sd.resources.stone) || 0;
-                _showBennySpeech('Gather resources!\n🪵 Wood: ' + w + '/30\n🪨 Stone: ' + s + '/30\nThen turn them in!');
-                setTimeout(function () { _hideBennySpeech(); }, 5000);
+                DS.show([{ text: 'Gather resources! 🪵 Wood: ' + w + '/30 🪨 Stone: ' + s + '/30 Then turn them in!', emotion: 'task' }]);
               } else if (currentQ.id === 'quest_gainingStats') {
                 var kills = sd.totalKills || 0;
-                _showBennySpeech('Keep fighting!\n⚔️ ' + kills + '/300 kills\nThe Skill Tree\nawaits, dude! 🌳');
-                setTimeout(function () { _hideBennySpeech(); }, 5000);
+                DS.show([{ text: 'Keep fighting! ⚔️ ' + kills + '/300 kills The Skill Tree awaits, dude! 🌳', emotion: 'task' }]);
               } else if (currentQ.id === 'quest_eggHunt') {
-                _showBennySpeech('Reach Level 15 and\nfind the Mysterious\nEgg out there! 🥚');
-                setTimeout(function () { _hideBennySpeech(); }, 5000);
+                DS.show([{ text: 'Reach Level 15 and find the Mysterious Egg out there! 🥚', emotion: 'task' }]);
               } else if (currentQ.id === 'quest_newFriend') {
-                _showBennySpeech('You found the egg!\nClaim your quest\nat the Main Building\nto hatch it! 🐣');
-                setTimeout(function () { _hideBennySpeech(); }, 5000);
+                DS.show([{ text: 'You found the egg! Claim your quest at the Main Building to hatch it! 🐣', emotion: 'task' }]);
               } else if (currentQ.id === 'quest_pushingLimits') {
-                _showBennySpeech('Defeat the Boss\nat Wave 10 to\nunlock Special Attacks\nand the Warehouse! 🏆');
-                setTimeout(function () { _hideBennySpeech(); }, 5000);
+                DS.show([{ text: 'Defeat the Boss at Wave 10 to unlock Special Attacks and the Warehouse! 🏆', emotion: 'task' }]);
               } else if (currentQ.id === 'questForge0_unlock' || currentQ.id === 'questForge0b_craftTools') {
                 // Legacy forge quest hints
-                _showBennySpeech('Duude! Build the\nForge and craft\ntools to gather\nresources! 🔨');
-                setTimeout(function () { _hideBennySpeech(); }, 5000);
+                DS.show([{ text: 'Duude! Build the Forge and craft tools to gather resources! 🔨', emotion: 'task' }]);
               } else {
-                _showBennySpeech('Hey dude!\nYour quest:\n' + currentQ.name);
-                setTimeout(function () { _hideBennySpeech(); }, 3500);
+                DS.show([{ text: 'Hey dude! Your quest: ' + currentQ.name, emotion: 'task' }]);
               }
             }
           }
@@ -7448,7 +7424,7 @@
     if (_promptEl) _promptEl.style.display = 'none';
     if (_interactBtn) _interactBtn.style.display = 'none';
     _hideTouchIndicator();
-    _hideBennySpeech();
+    if (window.DialogueSystem) window.DialogueSystem.dismiss();
     // Reset camp animation state
     _campAnimState = 'idle';
     _campAnimTimer = 0;
