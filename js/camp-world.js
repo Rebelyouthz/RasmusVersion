@@ -5763,7 +5763,7 @@
         // causes a persistent TypeError in THREE.js's render loop on every frame.
         if (child.userData._origMaterial != null) {
           const mat = child.userData._origMaterial;
-          if (mat && (mat.isMaterial || Array.isArray(mat))) {
+          if (mat.isMaterial || Array.isArray(mat)) {
             child.material = mat;
           }
         }
@@ -5783,7 +5783,7 @@
         // that an invalid current material is never saved as the "original".
         if (!child.userData._origMaterial && child.material != null) {
           const cur = child.material;
-          if (cur && (cur.isMaterial || Array.isArray(cur))) {
+          if (cur.isMaterial || Array.isArray(cur)) {
             child.userData._origMaterial = cur;
           }
         }
@@ -5805,7 +5805,7 @@
         // cannot slip through and cause a TypeError in the render loop.
         if (child.userData._origMaterial != null) {
           const mat = child.userData._origMaterial;
-          if (mat && (mat.isMaterial || Array.isArray(mat))) {
+          if (mat.isMaterial || Array.isArray(mat)) {
             child.material = mat;
           }
         }
@@ -5877,7 +5877,9 @@
         if (pt < 1) {
           requestAnimationFrame(animShimmer);
         } else {
-          if (_campScene) { _campScene.remove(shimmerParticles); }
+          if (_campScene) {
+            _campScene.remove(shimmerParticles);
+          }
           shimmerGeo.dispose();
           shimmerMat.dispose();
         }
@@ -7860,7 +7862,9 @@
     });
     if (toRemove.length > 0) {
       toRemove.forEach(function(obj) {
-        if (obj.parent) { obj.parent.remove(obj); }
+        if (obj.parent) {
+          obj.parent.remove(obj);
+        }
       });
       console.warn('[CampWorld] _sanitizeScene: removed ' + toRemove.length + ' mesh(es) with invalid materials to recover render loop');
     }
