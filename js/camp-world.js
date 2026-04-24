@@ -1553,7 +1553,11 @@
     shadowDisc.position.y = -PLAYER_RADIUS + 0.02;
     grp.add(shadowDisc);
 
-    grp.renderOrder = PLAYER_RENDER_ORDER;
+    grp.traverse(function (child) {
+      if (child && child.isMesh) {
+        child.renderOrder = PLAYER_RENDER_ORDER;
+      }
+    });
     grp.position.set(_playerPos.x, PLAYER_RADIUS, _playerPos.z);
     _playerMesh = grp;
     _campScene.add(grp);
