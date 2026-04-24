@@ -144,6 +144,7 @@
   const BENNY_POS  = { x: 4, z: 7 }; // near camp entrance
   const BENNY_GREET_RADIUS = 3.5;
   const CONSTRUCTION_SCALE = 0.6; // scale applied to unlocked-but-unbuilt buildings as a visual cue
+  const PLAYER_RENDER_ORDER = 999; // renderOrder for player meshes — ensures they render after all transparent building geometry
   let _bennyGreeted = false;      // whether A.I.D.A greeting has fired this session
 
   let _campTime    = 0;
@@ -635,7 +636,8 @@
     const haloMat = new THREE.MeshBasicMaterial({
       color: 0xff6600,
       transparent: true,
-      opacity: 0.08
+      opacity: 0.08,
+      depthWrite: false
     });
     const halo = new THREE.Mesh(haloGeo, haloMat);
     halo.rotation.x = -Math.PI / 2;
@@ -1350,10 +1352,12 @@
       emissiveIntensity: 0.3,
       shininess: 90,
       transparent: true,
-      opacity: 0.85
+      opacity: 0.85,
+      depthWrite: true
     });
     const body = new THREE.Mesh(bodyGeo, bodyMat);
     body.castShadow = true;
+    body.renderOrder = PLAYER_RENDER_ORDER;
     grp.add(body);
 
     // Shiny highlight (water reflection)
@@ -1366,9 +1370,11 @@
     // Glow shell
     const glowGeo = new THREE.SphereGeometry(PLAYER_RADIUS + 0.04, 16, 12);
     const glowMat = new THREE.MeshBasicMaterial({
-      color: 0x4FC3F7, transparent: true, opacity: 0.15, side: THREE.BackSide
+      color: 0x4FC3F7, transparent: true, opacity: 0.15, side: THREE.BackSide,
+      depthWrite: false
     });
     const glow = new THREE.Mesh(glowGeo, glowMat);
+    glow.renderOrder = PLAYER_RENDER_ORDER;
     grp.add(glow);
 
     // Eye whites — larger to match spritesheet's prominent eyes
@@ -1547,6 +1553,7 @@
     shadowDisc.position.y = -PLAYER_RADIUS + 0.02;
     grp.add(shadowDisc);
 
+    grp.renderOrder = PLAYER_RENDER_ORDER;
     grp.position.set(_playerPos.x, PLAYER_RADIUS, _playerPos.z);
     _playerMesh = grp;
     _campScene.add(grp);
