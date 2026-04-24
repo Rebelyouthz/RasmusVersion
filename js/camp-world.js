@@ -105,6 +105,10 @@
   const _RENDER_ERROR_THRESHOLD = 3;   // errors before tripping the breaker
   const _RENDER_PAUSE_MS        = 2000; // 2-second cooldown after threshold
 
+  // Shared grey fallback material used by _sanitizeScene to repair meshes with
+  // invalid materials — lazily initialised once THREE is available.
+  let _sanitizeFallbackMaterial = null;
+
   let _playerMesh  = null;
   let _playerVel   = { x: 0, z: 0 };
   let _playerPos   = { x: SPAWN_POS.x, z: SPAWN_POS.z };
@@ -4303,6 +4307,19 @@
     return m;
   }
 
+  // Returns true if `mat` is a valid THREE.js material or a non-empty array in
+  // which every element is a valid material.  Used as a pre-assign guard wherever
+  // mesh.material is set from a cached value — assigning a non-Material value
+  // causes a persistent TypeError in THREE.js's render loop on every frame.
+  function _isValidMaterial(mat) {
+    if (!mat) return false;
+    if (mat.isMaterial) return true;
+    if (Array.isArray(mat)) {
+      return mat.length > 0 && mat.every(function(m) { return m && m.isMaterial; });
+    }
+    return false;
+  }
+
   // ── Helper: rasterise a canvas to a DataTexture and free the 2D context ─
   // iOS Safari has a hard limit on simultaneous canvas 2D contexts (~8-16).
   // Using DataTexture lets us extract the pixel data and release the canvas,
@@ -5758,13 +5775,17 @@
         }
         child.material = child.userData._blueprintMat;
       } else {
-        // Restore original material — validate it is a usable material or material
-        // array before assigning; assigning a non-Material value to mesh.material
-        // causes a persistent TypeError in THREE.js's render loop on every frame.
+        // Restore original material — use _isValidMaterial so arrays-of-Materials are
+        // fully validated (each entry checked) before the assignment.  Clear the cached
+        // value when it is non-null but invalid so the mesh is not permanently stuck
+        // displaying the blueprint material on future refreshes.
         if (child.userData._origMaterial != null) {
           const mat = child.userData._origMaterial;
-          if (mat.isMaterial || Array.isArray(mat)) {
+          if (_isValidMaterial(mat)) {
             child.material = mat;
+          } else {
+            // Stale/invalid cache — clear so the mesh can be repaired on the next pass.
+            child.userData._origMaterial = null;
           }
         }
       }
@@ -5779,13 +5800,11 @@
     grp.traverse(child => {
       if (!child.isMesh) return;
       if (enable) {
-        // Store original material — only store if it is a valid material/array so
-        // that an invalid current material is never saved as the "original".
-        if (!child.userData._origMaterial && child.material != null) {
-          const cur = child.material;
-          if (cur.isMaterial || Array.isArray(cur)) {
-            child.userData._origMaterial = cur;
-          }
+        // Store original material — validate with _isValidMaterial so only a proper
+        // Material/Material-array is cached; an invalid current material is never
+        // saved as the "original" and all array entries are confirmed to be Materials.
+        if (!child.userData._origMaterial && _isValidMaterial(child.material)) {
+          child.userData._origMaterial = child.material;
         }
         if (!child.userData._constructionMat) {
           child.userData._constructionMat = new THREE.MeshBasicMaterial({
@@ -5801,12 +5820,14 @@
       } else {
         // Restore the original material — do not require child.material ===
         // _constructionMat because _setBlueprintMode may have already swapped the
-        // material back.  Validate before assigning so a stale/non-Material ref
-        // cannot slip through and cause a TypeError in the render loop.
+        // material back.  Use _isValidMaterial so array entries are also checked;
+        // clear stale invalid cache rather than leaving the mesh broken.
         if (child.userData._origMaterial != null) {
           const mat = child.userData._origMaterial;
-          if (mat.isMaterial || Array.isArray(mat)) {
+          if (_isValidMaterial(mat)) {
             child.material = mat;
+          } else {
+            child.userData._origMaterial = null;
           }
         }
       }
@@ -5921,14 +5942,16 @@
     _setBlueprintMode(grp, false);
     _setConstructionMode(grp, false);
 
-    // Safety: replace any mesh child that still has a null or non-Material material
-    // after mode restoration — this prevents a persistent TypeError in the render loop.
+    // Safety: replace any mesh child that still has a null or invalid material
+    // after mode restoration — use a single cached fallback instance per group
+    // rather than allocating one per mesh, to avoid unnecessary GPU memory growth.
+    const fallbackMaterial = grp.userData._unlockFallbackMaterial ||
+      (grp.userData._unlockFallbackMaterial = new THREE.MeshBasicMaterial({ color: 0x888888 }));
     grp.traverse(function(child) {
       if (!child.isMesh) return;
-      const mat = child.material;
-      if (mat == null || (!mat.isMaterial && !Array.isArray(mat))) {
+      if (!_isValidMaterial(child.material)) {
         console.warn('[CampWorld] _playBuildingUnlockAnimation: mesh "' + (child.name || child.uuid) + '" has invalid material after restore — applying fallback');
-        child.material = new THREE.MeshBasicMaterial({ color: 0x888888 });
+        child.material = fallbackMaterial;
       }
     });
 
@@ -7845,28 +7868,30 @@
 
   /**
    * _sanitizeScene()
-   * Traverse the camp scene and remove any Mesh objects with null or non-Material
-   * materials.  A mesh with an invalid material causes a persistent TypeError in
-   * THREE.js's render loop on every frame; removing such meshes allows rendering
-   * to recover without a full scene rebuild or WebGL context loss.
+   * Traverse the camp scene and repair any Mesh objects with null or non-Material
+   * materials by assigning a shared grey fallback material.  Repairing (rather than
+   * removing) preserves building group membership so future refresh/interaction/
+   * animation calls continue to work correctly.  Uses _isValidMaterial so that
+   * material arrays with non-Material entries are also caught and repaired.
    */
   function _sanitizeScene() {
     if (!_campScene) return;
-    const toRemove = [];
+    const THREE = T();
+    if (!THREE) return;
+    // Lazily initialise the shared fallback material once THREE is available.
+    if (!_sanitizeFallbackMaterial) {
+      _sanitizeFallbackMaterial = new THREE.MeshBasicMaterial({ color: 0x888888 });
+    }
+    let repaired = 0;
     _campScene.traverse(function(child) {
       if (!child.isMesh) return;
-      const mat = child.material;
-      if (mat == null || (!mat.isMaterial && !Array.isArray(mat))) {
-        toRemove.push(child);
+      if (!_isValidMaterial(child.material)) {
+        child.material = _sanitizeFallbackMaterial;
+        repaired++;
       }
     });
-    if (toRemove.length > 0) {
-      toRemove.forEach(function(obj) {
-        if (obj.parent) {
-          obj.parent.remove(obj);
-        }
-      });
-      console.warn('[CampWorld] _sanitizeScene: removed ' + toRemove.length + ' mesh(es) with invalid materials to recover render loop');
+    if (repaired > 0) {
+      console.warn('[CampWorld] _sanitizeScene: repaired ' + repaired + ' mesh(es) with invalid materials to recover render loop');
     }
   }
 
@@ -7882,9 +7907,9 @@
       _renderPausedUntilMs = performance.now() + _RENDER_PAUSE_MS;
       _renderErrorCount = 0;
       console.warn(`[CampWorld] Render circuit breaker tripped — pausing render for ${_RENDER_PAUSE_MS / 1000}s to prevent WebGL context loss`);
-      // Scan for and remove any mesh with a null/invalid material that may be
-      // causing the repeated TypeErrors — this lets rendering recover without a
-      // full scene rebuild or WebGL context loss.
+      // Repair any mesh with a null/invalid material that may be causing the
+      // repeated TypeErrors — this lets rendering recover without a full scene
+      // rebuild or WebGL context loss.
       _sanitizeScene();
     }
   }
