@@ -2957,6 +2957,7 @@
       var canBuild = hasWood && hasStone;
 
       var overlay = document.createElement('div');
+      overlay.id = 'camp-build-overlay';
       overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Bangers,cursive;';
 
       var panel = document.createElement('div');

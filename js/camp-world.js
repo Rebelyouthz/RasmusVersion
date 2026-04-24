@@ -151,10 +151,6 @@
   let _menuOpenTs  = 0;      // timestamp (ms) when _menuOpen was last set true
   // Maximum time (ms) _menuOpen can remain true before the failsafe forces a reset
   const _MENU_OPEN_FAILSAFE_MS = 30000;
-  // Grace window (ms) given to the build overlay (which has no stable DOM id) before
-  // _checkMenuClosed() force-resumes even though _buildOverlayActive is still true.
-  // The build animation takes ~2.4 s, so 8 s is more than enough for a clean close.
-  const _BUILD_OVERLAY_GRACE_MS = 8000;
 
   // Campfire light + flame for flickering
   let _fireLight   = null;
@@ -5410,6 +5406,8 @@
     'camp-profile-modal',
     // Dialogue system bubble (A.I.D.A speech/cinematic)
     'ds-bubble',
+    // Build-progress overlay (camp-skill-system.js _showBuildOverlay)
+    'camp-build-overlay',
   ];
   window._CAMP_OVERLAY_IDS = _OVERLAY_IDS;
 
@@ -5687,14 +5685,10 @@
     const menuAge = Date.now() - _menuOpenTs;
 
     if (!overlayVisible) {
-      // No DOM overlay is visible.  Resume immediately unless _buildOverlayActive is set —
-      // that flag covers the build-progress overlay which has no stable HTML id and therefore
-      // cannot be detected via the _OVERLAY_IDS list.  Give it a short (8 s) grace window; if
-      // it has not cleared by then the flag is stuck and we force-resume to prevent a permanent
-      // player freeze.  DialogueSystem.isActive() is intentionally NOT consulted here because
-      // the ds-bubble element IS included in _OVERLAY_IDS; if it were genuinely active the
-      // overlayVisible check above would have caught it.
-      if (window._buildOverlayActive && menuAge < _BUILD_OVERLAY_GRACE_MS) return;
+      // No DOM overlay is visible — the build-progress overlay now has a stable id
+      // ('camp-build-overlay') and is included in _OVERLAY_IDS, so the DOM check above
+      // is authoritative.  Resume immediately; log if we've hit the original failsafe
+      // threshold to aid debugging.
       if (menuAge > _MENU_OPEN_FAILSAFE_MS) {
         console.warn('[CampWorld] _menuOpen failsafe triggered after ' + Math.round(menuAge / 1000) + 's — forcing resume');
       }
@@ -5702,7 +5696,9 @@
       return;
     }
 
-    // Build overlay: dynamically-created element with no stable ID — use its flag.
+    // Build overlay: flag is still checked as a belt-and-suspenders guard when the
+    // DOM element IS present (e.g., during the brief window before the element is
+    // removed from the DOM after _buildOverlayActive is cleared).
     if (window._buildOverlayActive) return;
 
     // Active DialogueSystem dialogue should hold input frozen until dismissed.
