@@ -2254,15 +2254,16 @@
     const sd = window.saveData;
     if (sd.bennyGreetingShown) return;  // already seen
 
-    // Show greeting on first camp visit
-    sd.bennyGreetingShown = true;
-    if (typeof saveSaveData === 'function') saveSaveData();
-
     const DS = window.DialogueSystem;
     if (!DS) {
-      console.warn('[CampWorld] _triggerBennyGreeting: DialogueSystem not available — skipping welcome sequence');
+      console.warn('[CampWorld] _triggerBennyGreeting: DialogueSystem not available — will retry on next visit');
       return;
     }
+
+    // Mark greeting as shown only after DS is confirmed available, so a race
+    // condition during load does not permanently suppress the welcome sequence.
+    sd.bennyGreetingShown = true;
+    if (typeof saveSaveData === 'function') saveSaveData();
 
     // Show camp welcome sequence as cinematic popup (long text stays in the popup).
     // After it closes, show the contextual hint via the Dialogue System directly.
