@@ -5739,12 +5739,6 @@
     }
   }
 
-  // Apply or remove blueprint (locked) visual mode to a building group
-  function _setBlueprintMode(grp, enable) {}
-
-  // Apply or remove construction (needs-build) visual mode to a building group.
-  function _setConstructionMode(grp, enable) {}
-
   // Play animation when a building is first unlocked and appears in construction mode
   function _playBuildingAppearAnimation(buildingId) {
     const grp = _buildingMeshes[buildingId];
