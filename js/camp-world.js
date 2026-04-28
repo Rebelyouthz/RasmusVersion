@@ -7015,6 +7015,24 @@
       // the normal enter/rebuild flow runs again.
       _isActive = false;
       console.log('[CampWorld] WebGL context restored — camp deactivated and scene will rebuild on next visit');
+
+      // Auto re-enter: if the camp screen is still visible (player never left the
+      // camp during the context-loss/restore cycle) rebuild the scene and restart
+      // rendering automatically instead of leaving a black void.
+      var campScreenEl = document.getElementById('camp-screen');
+      var campVisible  = campScreenEl && campScreenEl.style.display !== 'none';
+      if (campVisible && _renderer && _saveData) {
+        console.log('[CampWorld] Camp screen still visible — scheduling auto re-enter after context restore');
+        setTimeout(function () {
+          if (_isActive) return; // another path already re-entered
+          try {
+            enter(_renderer, _saveData, _callbacks || {});
+            console.log('[CampWorld] Auto re-enter after context restore succeeded');
+          } catch (e) {
+            console.error('[CampWorld] Auto re-enter after context restore failed:', e);
+          }
+        }, 300);
+      }
     }, false);
   }
 
@@ -7723,15 +7741,17 @@
    * prevent WebGL context loss from accumulated GL errors.
    */
   function notifyRenderError() {
+    // Sanitize on the very first error so invalid materials are repaired before
+    // any further draw calls reach the GPU — this minimises accumulated GL errors
+    // that can trigger a WebGL context loss on mobile (especially iOS Safari).
+    if (_renderErrorCount === 0) {
+      _sanitizeScene();
+    }
     _renderErrorCount++;
     if (_renderErrorCount >= _RENDER_ERROR_THRESHOLD) {
       _renderPausedUntilMs = performance.now() + _RENDER_PAUSE_MS;
       _renderErrorCount = 0;
       console.warn(`[CampWorld] Render circuit breaker tripped — pausing render for ${_RENDER_PAUSE_MS / 1000}s to prevent WebGL context loss`);
-      // Repair any mesh with a null/invalid material that may be causing the
-      // repeated TypeErrors — this lets rendering recover without a full scene
-      // rebuild or WebGL context loss.
-      _sanitizeScene();
     }
   }
 
