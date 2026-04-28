@@ -245,7 +245,7 @@
   // ── A.I.D.A Intro — Broken Robot + Chip ──────────────────
   // Broken robot sits directly beside the campfire (south side).
   // Chip is placed clearly to the north of the fire so it's easy to spot.
-  // After Quest Hall is built (level > 0) AND chip inserted, robot moves inside.
+  // After Quest Hall is built (level > 0), robot moves in front of it regardless of chip state.
   const AIDA_ROBOT_POS  = { x: 2, z: 2 };    // directly by campfire (south side)
   const AIDA_CHIP_POS   = { x: 0, z: -5 };   // north of fire — clearly visible open area
   const AIDA_QUEST_HALL_POS = { x: 0, z: 11.5 }; // in front of Quest Hall (z:13) once built
