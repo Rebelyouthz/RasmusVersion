@@ -7025,6 +7025,9 @@
         console.log('[CampWorld] Camp screen still visible — scheduling auto re-enter after context restore');
         setTimeout(function () {
           if (_isActive) return; // another path already re-entered
+          // Re-check visibility: the player may have navigated away within the delay
+          var el = document.getElementById('camp-screen');
+          if (!el || el.style.display === 'none') return;
           try {
             enter(_renderer, _saveData, _callbacks || {});
             console.log('[CampWorld] Auto re-enter after context restore succeeded');
