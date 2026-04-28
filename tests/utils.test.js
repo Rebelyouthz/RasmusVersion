@@ -22,34 +22,34 @@ describe('getRarityColor', () => {
   const { getRarityColor } = window.GameUtils;
 
   test('returns correct color for common', () => {
-    expect(getRarityColor('common')).toBe('#AAAAAA');
+    expect(getRarityColor('common')).toBe('#aaaaaa');
   });
 
   test('returns correct color for uncommon', () => {
-    expect(getRarityColor('uncommon')).toBe('#00FF00');
+    expect(getRarityColor('uncommon')).toBe('#55cc55');
   });
 
   test('returns correct color for rare', () => {
-    expect(getRarityColor('rare')).toBe('#5DADE2');
+    expect(getRarityColor('rare')).toBe('#44aaff');
   });
 
   test('returns correct color for epic', () => {
-    expect(getRarityColor('epic')).toBe('#9B59B6');
+    expect(getRarityColor('epic')).toBe('#aa44ff');
   });
 
   test('returns correct color for legendary', () => {
-    expect(getRarityColor('legendary')).toBe('#F39C12');
+    expect(getRarityColor('legendary')).toBe('#ffd700');
   });
 
   test('returns correct color for mythic', () => {
-    expect(getRarityColor('mythic')).toBe('#E74C3C');
+    expect(getRarityColor('mythic')).toBe('#ff4444');
   });
 
   test('falls back to common color for unknown rarity', () => {
-    expect(getRarityColor('godlike')).toBe('#AAAAAA');
-    expect(getRarityColor('')).toBe('#AAAAAA');
-    expect(getRarityColor(undefined)).toBe('#AAAAAA');
-    expect(getRarityColor(null)).toBe('#AAAAAA');
+    expect(getRarityColor('godlike')).toBe('#aaaaaa');
+    expect(getRarityColor('')).toBe('#aaaaaa');
+    expect(getRarityColor(undefined)).toBe('#aaaaaa');
+    expect(getRarityColor(null)).toBe('#aaaaaa');
   });
 });
 
