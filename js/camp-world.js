@@ -2034,7 +2034,10 @@
     if (_aidaChipMesh) _aidaChipMesh.visible = false;
 
     const DS = window.DialogueSystem;
-    if (DS) DS.show(DS.DIALOGUES.aidaChipFound);
+    if (DS) {
+      DS.show(DS.DIALOGUES.aidaChipFound, { onComplete: function () { _resumeInput(); } });
+      _openMenu();
+    }
 
     if (typeof showStatusMessage === 'function') {
       showStatusMessage('Go and find the broken robot in the south area of the camp.', 4000);
@@ -2076,8 +2079,10 @@
           if (typeof window.startAidaIntroQuest === 'function') {
             window.startAidaIntroQuest();
           }
+          _resumeInput();
         }
       });
+      _openMenu();
     } else {
       _aidaGrantStarterMaterials();
       if (typeof window.startAidaIntroQuest === 'function') window.startAidaIntroQuest();
