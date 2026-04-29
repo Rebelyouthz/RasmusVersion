@@ -263,6 +263,22 @@
     if (_aidaRobotMesh) return _aidaRobotMesh.position;
     return AIDA_ROBOT_POS;
   }
+
+  /**
+   * Returns true when the AIDA intro quest (quest_findingAida) is already resolved —
+   * i.e. the quest is queued in readyToClaim, or it/firstRunDeath is in completedQuests.
+   * Used to decide whether AIDA should go to Quest Hall position and whether the
+   * "Go to Quest Hall" blocking hint should be suppressed.
+   */
+  function _isAidaQuestResolved() {
+    const _tq = typeof saveData !== 'undefined' && saveData && saveData.tutorialQuests;
+    if (!_tq) return false;
+    const _completed = (_tq.completedQuests) || [];
+    const _ready     = (_tq.readyToClaim)    || [];
+    return _completed.includes('quest_findingAida') ||
+           _completed.includes('firstRunDeath')      ||
+           _ready.includes('quest_findingAida');
+  }
   let _aidaRobotMesh  = null;  // broken robot Group
   let _aidaChipMesh   = null;  // glowing chip Mesh (hidden after pickup)
   let _aidaIntroState = {      // session cache (authoritative value in saveData)
@@ -2005,25 +2021,17 @@
     // ─ Post-insertion: show hint to go to Quest Hall ─
     // Only show this when quest_findingAida is not yet queued or claimed — once it is,
     // the player should be able to walk straight to the Quest Hall without AIDA intercepting.
-    if (_aidaIntroState.chipInserted) {
-      const _tqHint = typeof saveData !== 'undefined' && saveData && saveData.tutorialQuests;
-      const _completedHint = (_tqHint && _tqHint.completedQuests) || [];
-      const _readyHint = (_tqHint && _tqHint.readyToClaim) || [];
-      const _aidaQuestResolved = _completedHint.includes('quest_findingAida') ||
-                                  _completedHint.includes('firstRunDeath') ||
-                                  _readyHint.includes('quest_findingAida');
-      if (!_aidaQuestResolved) {
-        const _rp = _getAidaRobotPos();
-        const rdx = _playerPos.x - _rp.x;
-        const rdz = _playerPos.z - _rp.z;
-        if (Math.sqrt(rdx * rdx + rdz * rdz) < AIDA_INTRO_RADIUS) {
-          _promptEl.textContent = '🤖 A.I.D.A — Go to Quest Hall!';
-          _promptEl.style.display = 'block';
-          if (_interactBtn) {
-            _interactBtn.textContent = 'QUEST HALL';
-            _interactBtn.style.background = 'linear-gradient(135deg,#cc8800,#664400)';
-            _interactBtn.style.display = 'block';
-          }
+    if (_aidaIntroState.chipInserted && !_isAidaQuestResolved()) {
+      const _rp = _getAidaRobotPos();
+      const rdx = _playerPos.x - _rp.x;
+      const rdz = _playerPos.z - _rp.z;
+      if (Math.sqrt(rdx * rdx + rdz * rdz) < AIDA_INTRO_RADIUS) {
+        _promptEl.textContent = '🤖 A.I.D.A — Go to Quest Hall!';
+        _promptEl.style.display = 'block';
+        if (_interactBtn) {
+          _interactBtn.textContent = 'QUEST HALL';
+          _interactBtn.style.background = 'linear-gradient(135deg,#cc8800,#664400)';
+          _interactBtn.style.display = 'block';
         }
       }
     }
@@ -5304,13 +5312,7 @@
       if (Math.sqrt(rdx * rdx + rdz * rdz) < AIDA_INTRO_RADIUS) {
         // Skip AIDA hint if quest_findingAida is already queued or claimed — the player
         // should be able to walk straight to the Quest Hall and interact with it directly.
-        const _tqInt = typeof saveData !== 'undefined' && saveData && saveData.tutorialQuests;
-        const _completedInt = (_tqInt && _tqInt.completedQuests) || [];
-        const _readyInt = (_tqInt && _tqInt.readyToClaim) || [];
-        const _aidaQuestResolved = _completedInt.includes('quest_findingAida') ||
-                                    _completedInt.includes('firstRunDeath') ||
-                                    _readyInt.includes('quest_findingAida');
-        if (!_aidaQuestResolved) {
+        if (!_isAidaQuestResolved()) {
           const DS = window.DialogueSystem;
           if (DS && DS.DIALOGUES && DS.DIALOGUES.aidaQuestHallHint) {
             _playerVel.x = 0; _playerVel.z = 0;
@@ -7171,11 +7173,7 @@
       // block the player from walking up to the Quest Hall to claim the quest.
       if (_aidaRobotMesh) {
         const _qmData = _saveData && _saveData.campBuildings && _saveData.campBuildings.questMission;
-        const _tqEnter = _saveData && _saveData.tutorialQuests;
-        const _completedEnter = (_tqEnter && _tqEnter.completedQuests) || [];
-        const _aidaIntroDone = _completedEnter.includes('quest_findingAida') ||
-                               _completedEnter.includes('firstRunDeath');
-        if (_qmData && _qmData.level > 0 && _aidaIntroDone) {
+        if (_qmData && _qmData.level > 0 && _isAidaQuestResolved()) {
           _aidaRobotMesh.position.set(AIDA_QUEST_HALL_POS.x, 0, AIDA_QUEST_HALL_POS.z);
         }
       }
@@ -7809,11 +7807,7 @@
     // the player from reaching the Quest Hall to claim quest_findingAida.
     if (_aidaRobotMesh && !_robotLapActive) {
       const _qmBd = _saveData && _saveData.campBuildings && _saveData.campBuildings.questMission;
-      const _tqRb = _saveData && _saveData.tutorialQuests;
-      const _completedRb = (_tqRb && _tqRb.completedQuests) || [];
-      const _aidaIntroDoneRb = _completedRb.includes('quest_findingAida') ||
-                               _completedRb.includes('firstRunDeath');
-      if (_qmBd && _qmBd.level > 0 && _aidaIntroDoneRb) {
+      if (_qmBd && _qmBd.level > 0 && _isAidaQuestResolved()) {
         _aidaRobotMesh.position.set(AIDA_QUEST_HALL_POS.x, 0, AIDA_QUEST_HALL_POS.z);
       }
     }
