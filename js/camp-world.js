@@ -1839,9 +1839,12 @@
       // Permanently suppress the old "Help Me" bubble
       window._suppressAidaBubbles = true;
     }
-    // If Quest Hall is already built, park AIDA in front of it regardless of chip state
+    // Only park AIDA in front of the Quest Hall when the Hall is built AND the intro quest
+    // is already resolved.  If the quest is still in progress (chip inserted but not yet
+    // claimed), leave AIDA at the campfire so she does not block the player from reaching
+    // the Quest Hall.
     const qmData = sd && sd.campBuildings && sd.campBuildings.questMission;
-    if (qmData && qmData.level > 0) {
+    if (qmData && qmData.level > 0 && _isAidaQuestResolved()) {
       robotGrp.position.set(AIDA_QUEST_HALL_POS.x, 0, AIDA_QUEST_HALL_POS.z);
     }
   }
@@ -7171,10 +7174,15 @@
       // move AIDA to stand in front of it.  During the intro flow (chip inserted but
       // quest_findingAida not yet claimed) keep AIDA near the campfire so she does NOT
       // block the player from walking up to the Quest Hall to claim the quest.
-      if (_aidaRobotMesh) {
+      // Explicitly reset to campfire position when quest is unresolved, in case the
+      // scene was built with AIDA at the Quest Hall (e.g. _buildAidaIntroProps raced
+      // with a stale save that had level > 0 but quest not yet resolved).
+      if (_aidaRobotMesh && !_robotLapActive) {
         const _qmData = _saveData && _saveData.campBuildings && _saveData.campBuildings.questMission;
         if (_qmData && _qmData.level > 0 && _isAidaQuestResolved()) {
           _aidaRobotMesh.position.set(AIDA_QUEST_HALL_POS.x, 0, AIDA_QUEST_HALL_POS.z);
+        } else {
+          _aidaRobotMesh.position.set(AIDA_ROBOT_POS.x, 0, AIDA_ROBOT_POS.z);
         }
       }
 
@@ -7803,12 +7811,15 @@
     // Refresh prompt UI in case a building's state changed
     _updatePromptUI();
     // If Quest Hall is built AND player has progressed past the intro quest, walk AIDA to Quest Hall.
-    // Guard: do not move AIDA during the chip-insertion intro flow so she does not block
-    // the player from reaching the Quest Hall to claim quest_findingAida.
+    // Guard: do not move AIDA during the robot-lap animation.
+    // Explicitly reset to campfire when quest is unresolved so AIDA cannot remain
+    // parked in front of the Quest Hall from a prior scene build.
     if (_aidaRobotMesh && !_robotLapActive) {
       const _qmBd = _saveData && _saveData.campBuildings && _saveData.campBuildings.questMission;
       if (_qmBd && _qmBd.level > 0 && _isAidaQuestResolved()) {
         _aidaRobotMesh.position.set(AIDA_QUEST_HALL_POS.x, 0, AIDA_QUEST_HALL_POS.z);
+      } else {
+        _aidaRobotMesh.position.set(AIDA_ROBOT_POS.x, 0, AIDA_ROBOT_POS.z);
       }
     }
   }
