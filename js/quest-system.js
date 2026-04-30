@@ -5091,40 +5091,53 @@
       _updateCampCornerWidgets();
       // ── Aida guidance: nudge player toward Profile Building if they have pending rewards ──
       _checkAndShowAidaProgressionNudge();
-      // Check for first-time camp visit
+      // Check for first-time camp visit.
+      // NOTE: Old saves that predate the hasVisitedCamp field have it defaulted to false
+      // during migration (save-system.js line 465).  To avoid wiping their camp progress we
+      // only run the new-player setup when the save is clearly fresh: no completed quests
+      // and no prior runs recorded.
       if (!saveData.hasVisitedCamp) {
+        // Always mark as visited so this block never runs twice regardless of save age.
         saveData.hasVisitedCamp = true;
-        // Quest Hall starts unlocked but NOT yet built — player must build it as their first quest.
-        // All other buildings remain locked until quests unlock them.
-        if (saveData.campBuildings) {
-          // Unlock Quest Hall so it shows in construction mode
-          if (saveData.campBuildings.questMission) {
-            saveData.campBuildings.questMission.unlocked = true;
-            saveData.campBuildings.questMission.level = 0; // Player must build it
-          }
-          // Lock all other buildings for fresh start quest flow
-          const keepBuilt = ['questMission'];
-          Object.keys(saveData.campBuildings).forEach(function(bId) {
-            if (!keepBuilt.includes(bId)) {
-              saveData.campBuildings[bId].unlocked = false;
-              saveData.campBuildings[bId].level = 0;
+
+        const _completedQuests = (saveData.tutorialQuests && saveData.tutorialQuests.completedQuests) || [];
+        const _isLikelyNewSave = (saveData.runCount || 0) === 0 &&
+                                 (saveData.totalRuns || 0) === 0 &&
+                                 _completedQuests.length === 0;
+
+        if (_isLikelyNewSave) {
+          // Quest Hall starts unlocked but NOT yet built — player must build it as their first quest.
+          // All other buildings remain locked until quests unlock them.
+          if (saveData.campBuildings) {
+            // Unlock Quest Hall so it shows in construction mode
+            if (saveData.campBuildings.questMission) {
+              saveData.campBuildings.questMission.unlocked = true;
+              saveData.campBuildings.questMission.level = 0; // Player must build it
             }
-          });
-        }
+            // Lock all other buildings for fresh start quest flow
+            const keepBuilt = ['questMission'];
+            Object.keys(saveData.campBuildings).forEach(function(bId) {
+              if (!keepBuilt.includes(bId)) {
+                saveData.campBuildings[bId].unlocked = false;
+                saveData.campBuildings[bId].level = 0;
+              }
+            });
+          }
 
-        // Give starter resources so the player can build future buildings (the Forge, Skill Tree, etc.).
-        // The Quest Hall itself is free (isFree:true), but later buildings cost wood+stone.
-        if (!saveData.resources) saveData.resources = {};
-        saveData.resources.wood  = (saveData.resources.wood  || 0) + 5;
-        saveData.resources.stone = (saveData.resources.stone || 0) + 5;
-        
-        if (!saveData.storyQuests.welcomeShown) {
-          saveData.storyQuests.welcomeShown = true;
-        }
+          // Give starter resources so the player can build future buildings (the Forge, Skill Tree, etc.).
+          // The Quest Hall itself is free (isFree:true), but later buildings cost wood+stone.
+          if (!saveData.resources) saveData.resources = {};
+          saveData.resources.wood  = (saveData.resources.wood  || 0) + 5;
+          saveData.resources.stone = (saveData.resources.stone || 0) + 5;
 
-        // Pre-activate the first quest: build the Quest Hall
-        if (typeof window.initFirstQuest === 'function') {
-          window.initFirstQuest();
+          if (!saveData.storyQuests.welcomeShown) {
+            saveData.storyQuests.welcomeShown = true;
+          }
+
+          // Pre-activate the first quest: build the Quest Hall
+          if (typeof window.initFirstQuest === 'function') {
+            window.initFirstQuest();
+          }
         }
         
         saveSaveData();

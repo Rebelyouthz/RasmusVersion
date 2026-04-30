@@ -12,7 +12,7 @@
       // Guard: skip HUD update if core state is not ready
       if (typeof playerStats === 'undefined' || !playerStats) return;
 
-      // Minimap runs every frame for smooth real-time updates
+      // updateMinimap() is called every frame but the current implementation is a no-op stub.
       updateMinimap();
       // Quest arrow removed
 

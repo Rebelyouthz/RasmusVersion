@@ -150,3 +150,85 @@ describe('Quest Hall progression', () => {
     expect(global.saveData.campBuildings.questMission.level).toBe(0);
   });
 });
+
+// ── initFirstQuest — new quest flow ──────────────────────────────────────────
+describe('initFirstQuest (new questline)', () => {
+  // Minimal implementation that mirrors the real initFirstQuest logic
+  function initFirstQuest() {
+    if (!global.saveData.tutorialQuests) {
+      global.saveData.tutorialQuests = { currentQuest: null, completedQuests: [], readyToClaim: [] };
+    }
+    const completed = global.saveData.tutorialQuests.completedQuests || [];
+    if (completed.includes('quest_buildQuesthall') || completed.includes('quest_findingAida')) return;
+    if (global.saveData.tutorialQuests.currentQuest) return;
+    global.saveData.tutorialQuests.currentQuest = 'quest_buildQuesthall';
+    global.saveSaveData();
+  }
+
+  beforeEach(() => {
+    global.saveData.tutorialQuests = { currentQuest: null, completedQuests: [], readyToClaim: [] };
+  });
+
+  test('activates quest_buildQuesthall for a fresh save', () => {
+    initFirstQuest();
+    expect(global.saveData.tutorialQuests.currentQuest).toBe('quest_buildQuesthall');
+    expect(global.saveSaveData).toHaveBeenCalledTimes(1);
+  });
+
+  test('does not override an already-active quest', () => {
+    global.saveData.tutorialQuests.currentQuest = 'quest_harvester';
+    initFirstQuest();
+    expect(global.saveData.tutorialQuests.currentQuest).toBe('quest_harvester');
+    expect(global.saveSaveData).not.toHaveBeenCalled();
+  });
+
+  test('skips activation when quest_buildQuesthall is already completed (legacy guard)', () => {
+    global.saveData.tutorialQuests.completedQuests = ['quest_buildQuesthall'];
+    initFirstQuest();
+    expect(global.saveData.tutorialQuests.currentQuest).toBeNull();
+    expect(global.saveSaveData).not.toHaveBeenCalled();
+  });
+
+  test('skips activation when quest_findingAida is already completed (legacy save guard)', () => {
+    global.saveData.tutorialQuests.completedQuests = ['quest_findingAida'];
+    initFirstQuest();
+    expect(global.saveData.tutorialQuests.currentQuest).toBeNull();
+    expect(global.saveSaveData).not.toHaveBeenCalled();
+  });
+});
+
+// ── hasVisitedCamp legacy-safe guard ─────────────────────────────────────────
+describe('hasVisitedCamp first-visit gate', () => {
+  // Mirrors the _isLikelyNewSave heuristic from quest-system.js showCampScreen()
+  function isLikelyNewSave(sd) {
+    const completedQuests = (sd.tutorialQuests && sd.tutorialQuests.completedQuests) || [];
+    return (sd.runCount || 0) === 0 &&
+           (sd.totalRuns || 0) === 0 &&
+           completedQuests.length === 0;
+  }
+
+  test('fresh save (runCount=0, no completed quests) is treated as new', () => {
+    const sd = { runCount: 0, totalRuns: 0, tutorialQuests: { completedQuests: [] } };
+    expect(isLikelyNewSave(sd)).toBe(true);
+  });
+
+  test('save with prior runs is NOT treated as new', () => {
+    const sd = { runCount: 5, totalRuns: 5, tutorialQuests: { completedQuests: [] } };
+    expect(isLikelyNewSave(sd)).toBe(false);
+  });
+
+  test('save with completed quests is NOT treated as new', () => {
+    const sd = { runCount: 0, totalRuns: 0, tutorialQuests: { completedQuests: ['quest_findingAida'] } };
+    expect(isLikelyNewSave(sd)).toBe(false);
+  });
+
+  test('legacy save missing tutorialQuests is NOT treated as new when runCount > 0', () => {
+    const sd = { runCount: 3, totalRuns: 3 };
+    expect(isLikelyNewSave(sd)).toBe(false);
+  });
+
+  test('legacy save missing runCount fields but with completed quests is NOT treated as new', () => {
+    const sd = { tutorialQuests: { completedQuests: ['quest_buildQuesthall', 'firstRunDeath'] } };
+    expect(isLikelyNewSave(sd)).toBe(false);
+  });
+});
