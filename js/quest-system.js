@@ -5094,12 +5094,13 @@
       // Check for first-time camp visit
       if (!saveData.hasVisitedCamp) {
         saveData.hasVisitedCamp = true;
-        // Quest Hall is the only building built at start — all others lock until quests unlock them
+        // Quest Hall starts unlocked but NOT yet built — player must build it as their first quest.
+        // All other buildings remain locked until quests unlock them.
         if (saveData.campBuildings) {
-          // Ensure Quest Hall is built
+          // Unlock Quest Hall so it shows in construction mode
           if (saveData.campBuildings.questMission) {
             saveData.campBuildings.questMission.unlocked = true;
-            saveData.campBuildings.questMission.level = 1;
+            saveData.campBuildings.questMission.level = 0; // Player must build it
           }
           // Lock all other buildings for fresh start quest flow
           const keepBuilt = ['questMission'];
@@ -5110,12 +5111,17 @@
             }
           });
         }
+
+        // Give starter resources so the player can build their first buildings
+        if (!saveData.resources) saveData.resources = {};
+        saveData.resources.wood  = (saveData.resources.wood  || 0) + 5;
+        saveData.resources.stone = (saveData.resources.stone || 0) + 5;
         
         if (!saveData.storyQuests.welcomeShown) {
           saveData.storyQuests.welcomeShown = true;
         }
 
-        // Pre-activate Quest 1 so player sees it immediately in the Quest Hall
+        // Pre-activate the first quest: build the Quest Hall
         if (typeof window.initFirstQuest === 'function') {
           window.initFirstQuest();
         }

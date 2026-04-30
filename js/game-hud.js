@@ -12,9 +12,9 @@
       // Guard: skip HUD update if core state is not ready
       if (typeof playerStats === 'undefined' || !playerStats) return;
 
-      // Minimap and quest arrow run every frame for smooth real-time updates
+      // Minimap runs every frame for smooth real-time updates
       updateMinimap();
-      updateQuestArrow();
+      // Quest arrow removed
 
       const nowMs = Date.now();
       if (nowMs - lastHudUpdateMs < 100) return; // Throttle DOM updates to max 10/sec

@@ -225,23 +225,7 @@
       </button>
     </div>
 
-    <!-- Camp Quest Arrow: waterdrop-shaped, points to current quest objective in 3D camp -->
-    <div id="camp-quest-arrow" style="display:none; position:fixed; z-index:200; pointer-events:none;">
-      <svg width="48" height="60" viewBox="0 0 48 60">
-        <defs>
-          <filter id="cqa-glow">
-            <feGaussianBlur stdDeviation="2" result="blur"/>
-            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
-        </defs>
-        <!-- Waterdrop body -->
-        <path d="M24 4 C24 4, 44 28, 44 38 C44 49.6 35.6 58 24 58 C12.4 58 4 49.6 4 38 C4 28 24 4 24 4 Z" 
-              fill="#FFD700" stroke="#000" stroke-width="2.5" filter="url(#cqa-glow)" opacity="0.92"/>
-        <!-- Arrow inside -->
-        <text x="24" y="42" text-anchor="middle" font-size="20" font-weight="bold" fill="#000" font-family="Arial">↑</text>
-      </svg>
-      <div id="camp-quest-arrow-dist" style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);background:#FFD700;color:#000;font-size:11px;font-weight:bold;padding:2px 6px;border-radius:8px;white-space:nowrap;font-family:'Bangers',cursive;letter-spacing:0.5px;"></div>
-    </div>
+    <!-- Camp Quest Arrow removed -->
 
     <!-- Unspent Points Notification Bar (legacy, hidden) -->
     <div id="camp-unspent-bar" class="camp-unspent-bar" style="display:none;">
@@ -524,8 +508,7 @@
       <!-- In-game gold counter -->
       <div id="hud-gold" style="font-size:13px;color:#FFD700;text-shadow:0 0 6px rgba(255,215,0,0.8),1px 1px 2px rgba(0,0,0,0.8);font-weight:bold;margin-top:3px;">💰 0</div>
       
-      <!-- Quest Arrow Guidance (in-game) -->
-      <div id="quest-arrow">❗➤</div>
+      <!-- Quest Arrow removed -->
       
       <!-- Combo Timer Display -->
       <div class="stat-text" id="combo-timer"></div>
