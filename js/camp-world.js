@@ -2170,7 +2170,7 @@
       metalness: 0.1,
       transparent: true,
       opacity: 0.92,
-      depthWrite: false,
+      depthWrite: false
     });
     const screen = new THREE.Mesh(screenGeo, screenMat);
     screen.position.set(0, 0.85, 0.11);
@@ -2626,6 +2626,41 @@
   }
 
   // Shared material helpers
+  //
+  // TRANSPARENT MATERIAL RULE — MUST read before adding new transparent materials:
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Any material with `transparent: true` MUST also set `depthWrite: false`.
+  // Failing to do so causes the transparent object to write opaque depth values
+  // during Three.js's transparent render pass, occluding later transparent draws
+  // and corrupting GPU state.  On iOS/Safari this manifests as repeated TypeErrors
+  // in the render loop → render circuit-breaker trips → WebGL context loss.
+  //
+  // EXCEPTION: opaque player body (bodyMat) is intentionally transparent:false /
+  // depthWrite:true so it correctly owns the depth buffer for the player mesh.
+  //
+  // Use _tMat() below whenever you need a transparent Three.js material to
+  // ensure depthWrite:false is never accidentally omitted in future code.
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * _tMat(Ctor, params)
+   * Convenience wrapper that creates a transparent Three.js material and
+   * automatically enforces `depthWrite: false`.  Pass any Material constructor
+   * (e.g. THREE.MeshBasicMaterial) and the usual options object; `transparent`
+   * and `depthWrite` are always set correctly regardless of what `params` says.
+   *
+   * @param {typeof THREE.Material} Ctor  - Three.js Material constructor (e.g. THREE.MeshBasicMaterial)
+   * @param {Object}                params - Material options (transparent/depthWrite are always overridden)
+   * @returns {THREE.Material}
+   */
+  function _tMat(Ctor, params) {
+    if (typeof Ctor !== 'function') {
+      console.error('[CampWorld] _tMat: Ctor must be a Three.js Material constructor, got', typeof Ctor);
+      return new T().MeshBasicMaterial({ color: 0xff00ff });
+    }
+    return new Ctor(Object.assign({}, params, { transparent: true, depthWrite: false }));
+  }
+
   function _mat(color, emissive, eIntensity) {
     const THREE = T();
     return new THREE.MeshPhongMaterial({
