@@ -2330,8 +2330,8 @@
     let hint = null;
 
     // Walk down the tutorial chain and give the most relevant directive
-    if (!completed.includes('quest_buildQuesthall') && !completed.includes('quest_findingAida')) {
-      // First quest: build the Quest Hall
+    if (!completed.includes('quest_buildQuesthall')) {
+      // First quest: build the Quest Hall (also handles legacy saves where quest_findingAida was first)
       hint = { text: '> Directive: construct the Command Node. Walk to the Quest Hall plot and build it — no materials required.', emotion: 'task' };
     } else if (!completed.includes('firstRunDeath') && current === 'firstRunDeath') {
       hint = { text: '> Directive: initiate a run and sustain a termination event. This is... required for calibration.', emotion: 'task' };

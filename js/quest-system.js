@@ -5112,7 +5112,8 @@
           });
         }
 
-        // Give starter resources so the player can build their first buildings
+        // Give starter resources so the player can build future buildings (the Forge, Skill Tree, etc.).
+        // The Quest Hall itself is free (isFree:true), but later buildings cost wood+stone.
         if (!saveData.resources) saveData.resources = {};
         saveData.resources.wood  = (saveData.resources.wood  || 0) + 5;
         saveData.resources.stone = (saveData.resources.stone || 0) + 5;
