@@ -417,20 +417,7 @@
     
     /* Quest Arrow Guidance */
     #quest-arrow {
-      display: none;
-      position: fixed;
-      font-size: 36px;
-      color: #FFD700;
-      text-shadow: 0 0 20px rgba(255,215,0,1), 0 0 40px rgba(255,215,0,0.6);
-      pointer-events: none;
-      z-index: 50;
-      transform-origin: center center;
-      transition: left 0.1s, top 0.1s, opacity 0.3s;
-    }
-
-    /* Off-screen: arrow pulses to draw attention */
-    #quest-arrow.quest-arrow-pulsing {
-      animation: questArrowPulse 1s ease-in-out infinite;
+      display: none !important; /* Quest arrow removed */
     }
     
     /* Stats Bar - Removed (Stats accessible via Stats Button Modal only) */

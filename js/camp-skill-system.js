@@ -1814,18 +1814,20 @@
         conditions: []
       },
 
-      // === QUEST 1b (legacy compatibility only — skipped in new flow) ===
+      // === QUEST 1: Build the Quest Hall ===
+      // First thing the player does on their first camp visit.
+      // Quest Hall is free to build (isFree: true), auto-claims on completion.
       quest_buildQuesthall: {
         id: 'quest_buildQuesthall',
-        name: 'Command Node Online',
-        description: 'Quest Hall is already online. Proceed to your first run.',
-        objectives: 'Quest Hall is ready',
+        name: 'Build the Quest Hall',
+        description: 'Welcome to your base camp! Walk to the Quest Hall plot and build it — it\'s free! This is your command centre.',
+        objectives: 'Build the Quest Hall',
         autoClaim: true,
         noRewardPopup: true,
-        nextQuest: 'firstRunDeath',
+        nextQuest: 'quest_harvester',
         rewardGold: 0,
         rewardSkillPoints: 0,
-        conditions: ['quest_findingAida']
+        conditions: []
       },
 
       // === QUEST 2: The Awakening — Complete your first run ===
@@ -1845,7 +1847,7 @@
         conditions: ['quest_findingAida']
       },
 
-      // === STEP 3: The Harvester — Reach Level 3 ===
+      // === QUEST 2: The Harvester — Reach Level 3 ===
       quest_harvester: {
         id: 'quest_harvester',
         name: 'The Harvester',
@@ -1859,7 +1861,7 @@
         triggerOnDeath: true,
         message: "🔨 <b>Fabrication Node Unlocked!</b><br><br>You received:<br>&nbsp;🪵 <b>30 Wood</b> · 🪨 <b>30 Stone</b><br>&nbsp;💰 <b>50 Gold</b><br><br><i>A.I.D.A: 'Resource gathering requires tools. Build the Forge and equip yourself.'</i><br><br>🎯 <b>NEXT:</b> Build the Forge, then buy gathering tools (1 Gold each)!",
         nextQuest: 'quest_craftAllTools',
-        conditions: ['firstRunDeath']
+        conditions: []
       },
 
       // === QUEST 3: Craft ALL Gathering Tools ===
@@ -3817,10 +3819,11 @@
         saveData.tutorialQuests = { currentQuest: null, completedQuests: [], readyToClaim: [] };
       }
       const completed = saveData.tutorialQuests.completedQuests || [];
-      if (completed.includes('quest_findingAida')) return;
-      if (saveData.tutorialQuests.currentQuest) return; // already has a quest
-      // Activate Quest 1 — player can see it in Quest Hall
-      saveData.tutorialQuests.currentQuest = 'quest_findingAida';
+      // Skip if the first quest (or legacy intro quest) is already done
+      if (completed.includes('quest_buildQuesthall') || completed.includes('quest_findingAida')) return;
+      if (saveData.tutorialQuests.currentQuest) return; // already has an active quest
+      // Activate first quest: build the Quest Hall
+      saveData.tutorialQuests.currentQuest = 'quest_buildQuesthall';
       saveSaveData();
     };
     

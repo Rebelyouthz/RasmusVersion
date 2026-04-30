@@ -265,8 +265,9 @@
   }
 
   /**
-   * Returns true when the AIDA intro quest (quest_findingAida) is already resolved —
-   * i.e. the quest is queued in readyToClaim, or it/firstRunDeath is in completedQuests.
+   * Returns true when the AIDA intro quest sequence is effectively resolved —
+   * i.e. quest_findingAida is queued/claimed, or firstRunDeath/quest_buildQuesthall
+   * have been completed (new questline start).
    * Used to decide whether AIDA should go to Quest Hall position and whether the
    * "Go to Quest Hall" blocking hint should be suppressed.
    */
@@ -277,6 +278,7 @@
     const _ready     = (_tq.readyToClaim)    || [];
     return _completed.includes('quest_findingAida') ||
            _completed.includes('firstRunDeath')      ||
+           _completed.includes('quest_buildQuesthall') || // new questline: resolved once Quest Hall is built
            _ready.includes('quest_findingAida');
   }
   let _aidaRobotMesh  = null;  // broken robot Group
@@ -2328,15 +2330,9 @@
     let hint = null;
 
     // Walk down the tutorial chain and give the most relevant directive
-    if (!completed.includes('quest_findingAida')) {
-      // Give a hint appropriate to whether the chip has been picked up yet
-      if (!_aidaIntroState.chipPickedUp) {
-        hint = { text: '> A glowing chip lies north of the campfire. Pick it up.', emotion: 'smoky' };
-      } else {
-        hint = { text: '> Chip acquired. Insert it into the broken robot unit by the campfire.', emotion: 'smoky' };
-      }
-    } else if (!completed.includes('quest_buildQuesthall') && current === 'quest_buildQuesthall') {
-      hint = { text: '> Directive: construct the Command Node. Starter materials have been provided. Walk to the plot and build.', emotion: 'task' };
+    if (!completed.includes('quest_buildQuesthall')) {
+      // First quest: build the Quest Hall (also handles legacy saves where quest_findingAida was first)
+      hint = { text: '> Directive: construct the Command Node. Walk to the Quest Hall plot and build it — no materials required.', emotion: 'task' };
     } else if (!completed.includes('firstRunDeath') && current === 'firstRunDeath') {
       hint = { text: '> Directive: initiate a run and sustain a termination event. This is... required for calibration.', emotion: 'task' };
     } else if (!completed.includes('quest_dailyRoutine') && current === 'quest_dailyRoutine') {
@@ -7243,7 +7239,7 @@
             if (currentQ) {
               // Context-aware hints for the new slow-burn quest chain
               if (currentQ.id === 'quest_buildQuesthall') {
-                DS.show([{ text: 'Walk to the Quest Hall plot and build it! 🏗️ (I gave you materials)', emotion: 'task' }]);
+                DS.show([{ text: 'Walk to the Quest Hall plot and build it! 🏗️ It\'s FREE — no resources needed!', emotion: 'task' }]);
               } else if (currentQ.id === 'firstRunDeath') {
                 DS.show([{ text: 'Head out and fight! Die once so I can... calibrate. ⚔️', emotion: 'task' }]);
               } else if (currentQ.id === 'quest_dailyRoutine') {
@@ -7549,16 +7545,17 @@
     }
     var cq = tq.currentQuest;
     var storyText = '';
-    if (cq === 'quest_findingAida') {
+    if (cq === 'quest_buildQuesthall') {
+      storyText = '📜 Quest 1 — Walk to the Quest Hall and build it (it\'s free!)';
+    } else if (cq === 'quest_findingAida') {
+      // Legacy: old saves that still have this quest active
       if (!_aidaIntroState.chipPickedUp) {
-        storyText = '📜 Quest 1 — Find the glowing chip north of the campfire...';
+        storyText = '📜 Quest — Find the glowing chip north of the campfire...';
       } else if (!_aidaIntroState.chipInserted) {
-        storyText = '📜 Quest 1 — Insert the chip into the broken robot...';
+        storyText = '📜 Quest — Insert the chip into the broken robot...';
       } else {
-        storyText = '📜 Quest 1 — Go to the Quest Hall to continue...';
+        storyText = '📜 Quest — Go to the Quest Hall to continue...';
       }
-    } else if (cq === 'quest_buildQuesthall') {
-      storyText = '📜 Quest 2 — Build the Quest Hall...';
     } else if (cq === 'quest_craftAllTools') {
       storyText = '📜 Quest — Craft all tools at the Forge...';
     } else if (cq === 'quest_firstBlood') {
@@ -7704,7 +7701,7 @@
     _updateBennyNPC(dt);
     _updateIncubator(dt);
     _updateAidaIntro(dt);
-    _updateCampQuestArrow();
+    // Camp quest arrow removed
     _updatePlayerBubble(dt);
     _updateCampStorylineBar();
     _updateCodexPyramid(dt);
