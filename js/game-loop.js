@@ -763,7 +763,7 @@
       const frameStartTime = performance.now();
 
       let dt = (time - lastTime) / 1000;
-      if (window.BloodV2) window.BloodV2.update(dt);
+      if (window.BloodSimulatorV21) window.BloodSimulatorV21.update(dt);
       if (window.SlimePool) window.SlimePool.update(dt, player && player.mesh ? player.mesh.position : null);
       if (window.WaveSpawner) window.WaveSpawner.update(dt, player && player.mesh ? player.mesh.position : null);
       if (window.HitDetection) window.HitDetection.update(dt, player && player.mesh ? player.mesh.position : null);
@@ -2301,7 +2301,7 @@
                   spawnParticles(missileGroup.position, 0x222222, 6); // Smoke explosion
                   // Massive blood burst from explosion
                   if (window.BloodSystem) window.BloodSystem.emitBurst(e.mesh.position, 500, { spreadXZ: 2.5, spreadY: 1.5 });
-                  if (window.BloodV2) window.BloodV2.kill(e, 'shotgun');
+                  if (window.BloodSimulatorV21) window.BloodSimulatorV21.onEnemyDeath(e, e.mesh.position);
                   if (window.GoreSim) window.GoreSim.onKill(e, 'rocket');
                   // Homing missile: massive gore blobs + heavy blood spray
                   spawnParticles(e.mesh.position, 0x8B0000, 5);
@@ -3002,7 +3002,7 @@
 
       // Update advanced blood particle system
       if (window.BloodSystem) window.BloodSystem.update();
-      if (window.BloodV2) window.BloodV2.update(dt);
+      if (window.BloodSimulatorV21) window.BloodSimulatorV21.update(dt);
       if (window.GoreSim) window.GoreSim.update(dt);
       // Update trauma system (gore chunks, stuck arrows, wound decals)
       if (window.TraumaSystem) window.TraumaSystem.update();
