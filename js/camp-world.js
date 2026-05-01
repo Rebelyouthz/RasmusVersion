@@ -471,11 +471,9 @@
     _avatarTexture.repeat.set(1 / 8, 1 / 4);             // 8 cols × 4 rows
     _avatarTexture.offset.set(0, 1 - 1 / 4);             // frame 0 = top-left
 
-    _avatarMaterial = new THREE.SpriteMaterial({
+    _avatarMaterial = _tMat(THREE.SpriteMaterial, {
       map:         _avatarTexture,
-      transparent: true,
       depthTest:   false,
-      depthWrite:  false,
     });
 
     _profileAvatar = new THREE.Sprite(_avatarMaterial);
@@ -612,11 +610,9 @@
 
     // Embers (flat circle glow)
     const emberGeo = new THREE.CircleGeometry(0.7, 16);
-    const emberMat = new THREE.MeshBasicMaterial({
+    const emberMat = _tMat(THREE.MeshBasicMaterial, {
       color: 0xff4400,
-      transparent: true,
-      opacity: 0.7,
-      depthWrite: false
+      opacity: 0.7
     });
     const embers = new THREE.Mesh(emberGeo, emberMat);
     embers.rotation.x = -Math.PI / 2;
@@ -634,12 +630,10 @@
     flameColors.forEach((col, i) => {
       const [r, h] = flameSizes[i];
       const flameGeo = new THREE.ConeGeometry(r, h, 8, 1, true);
-      const flameMat = new THREE.MeshBasicMaterial({
+      const flameMat = _tMat(THREE.MeshBasicMaterial, {
         color: col,
-        transparent: true,
         opacity: 0.85,
-        side: THREE.DoubleSide,
-        depthWrite: false
+        side: THREE.DoubleSide
       });
       const flame = new THREE.Mesh(flameGeo, flameMat);
       flame.position.set(
@@ -653,11 +647,9 @@
 
     // A soft glow halo on ground
     const haloGeo = new THREE.CircleGeometry(4, 32);
-    const haloMat = new THREE.MeshBasicMaterial({
+    const haloMat = _tMat(THREE.MeshBasicMaterial, {
       color: 0xff6600,
-      transparent: true,
-      opacity: 0.08,
-      depthWrite: false
+      opacity: 0.08
     });
     const halo = new THREE.Mesh(haloGeo, haloMat);
     halo.rotation.x = -Math.PI / 2;
@@ -667,12 +659,10 @@
     // Enhanced ground glow rings (multiple pulsating rings)
     for (let g = 0; g < 3; g++) {
       const glowGeo = new THREE.CircleGeometry(1.5 + g * 1.2, 32);
-      const glowMat = new THREE.MeshBasicMaterial({
+      const glowMat = _tMat(THREE.MeshBasicMaterial, {
         color: g === 0 ? 0xff4400 : g === 1 ? 0xff7700 : 0xffaa00,
-        transparent: true,
         opacity: 0.06 - g * 0.015,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false
+        blending: THREE.AdditiveBlending
       });
       const glowRing = new THREE.Mesh(glowGeo, glowMat);
       glowRing.rotation.x = -Math.PI / 2;
@@ -689,13 +679,11 @@
       smokePos[s * 3] = 0; smokePos[s * 3 + 1] = -10; smokePos[s * 3 + 2] = 0;
     }
     smokeGeo.setAttribute('position', new THREE.BufferAttribute(smokePos, 3));
-    const smokeMat = new THREE.PointsMaterial({
+    const smokeMat = _tMat(THREE.PointsMaterial, {
       color: 0x888888,
       size: 0.6,
-      transparent: true,
       opacity: 0.25,
-      blending: THREE.NormalBlending,
-      depthWrite: false
+      blending: THREE.NormalBlending
     });
     _smokeSystem = new THREE.Points(smokeGeo, smokeMat);
     _campScene.add(_smokeSystem);
@@ -716,10 +704,9 @@
     const pondGeo = new THREE.EllipseCurve(0, 0, 2.5, 1.5, 0, Math.PI * 2, false, 0);
     const pondShape = new THREE.Shape(pondGeo.getPoints(40));
     const pondPlaneGeo = new THREE.ShapeGeometry(pondShape);
-    const pondMat = new THREE.MeshPhongMaterial({
-      color: 0x001a2e, emissive: 0x001833, emissiveIntensity: 0.5,
-      transparent: true, opacity: 0.82, shininess: 200, specular: 0x88ccff,
-      side: THREE.DoubleSide, depthWrite: false
+    const pondMat = _tMat(THREE.MeshPhongMaterial, {
+      color: 0x001a2e, emissive: 0x001833, emissiveIntensity: 0.5, opacity: 0.82, shininess: 200, specular: 0x88ccff,
+      side: THREE.DoubleSide
     });
     const pond = new THREE.Mesh(pondPlaneGeo, pondMat);
     pond.rotation.x = -Math.PI / 2;
@@ -763,12 +750,10 @@
       positions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
     }
     starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    const starMat = new THREE.PointsMaterial({
+    const starMat = _tMat(THREE.PointsMaterial, {
       color: 0xffffff,
       size: 0.35,
-      transparent: true,
-      opacity: 0.8,
-      depthWrite: false
+      opacity: 0.8
     });
     _starsMesh = new THREE.Points(starGeo, starMat);
     _campScene.add(_starsMesh);
@@ -781,13 +766,11 @@
     _sparkPositions = new Float32Array(SPARK_COUNT * 3);
     geo.setAttribute('position', new THREE.BufferAttribute(_sparkPositions, 3));
 
-    const mat = new THREE.PointsMaterial({
+    const mat = _tMat(THREE.PointsMaterial, {
       color: 0xffcc44,
       size: 0.18,
-      transparent: true,
       opacity: 0.9,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false
+      blending: THREE.AdditiveBlending
     });
     _sparkSystem = new THREE.Points(geo, mat);
     _campScene.add(_sparkSystem);
@@ -809,13 +792,11 @@
     _fireflyPositions = new Float32Array(FIREFLY_COUNT * 3);
     geo.setAttribute('position', new THREE.BufferAttribute(_fireflyPositions, 3));
 
-    const mat = new THREE.PointsMaterial({
+    const mat = _tMat(THREE.PointsMaterial, {
       color: 0x88ff44,  // Bright green-yellow
       size: 0.15,
-      transparent: true,
       opacity: 0.85,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false
+      blending: THREE.AdditiveBlending
     });
     _fireflySystem = new THREE.Points(geo, mat);
     _campScene.add(_fireflySystem);
@@ -845,13 +826,11 @@
     _dustPositions = new Float32Array(DUST_COUNT * 3);
     geo.setAttribute('position', new THREE.BufferAttribute(_dustPositions, 3));
 
-    const mat = new THREE.PointsMaterial({
+    const mat = _tMat(THREE.PointsMaterial, {
       color: 0xffa060,
       size: 0.09,
-      transparent: true,
       opacity: 0.35,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false
+      blending: THREE.AdditiveBlending
     });
     _dustSystem = new THREE.Points(geo, mat);
     _campScene.add(_dustSystem);
@@ -900,7 +879,7 @@
 
     const postGeo = new THREE.CylinderGeometry(0.06, 0.08, 1.6, 6);
     const postMat = new THREE.MeshStandardMaterial({ color: 0x3a2510, roughness: 0.9, metalness: 0.1 });
-    const flameMat = new THREE.MeshStandardMaterial({ color: 0xffaa33, emissive: 0xffaa33, emissiveIntensity: 1.5, transparent: true, opacity: 0.9, depthWrite: false });
+    const flameMat = _tMat(THREE.MeshStandardMaterial, { color: 0xffaa33, emissive: 0xffaa33, emissiveIntensity: 1.5, opacity: 0.9 });
     const flameGeo = new THREE.SphereGeometry(0.12, 6, 6);
 
     for (const tp of torchPositions) {
@@ -1197,14 +1176,12 @@
 
     // ─ Grass patches (pooled InstancedMesh) ─
     const bladeGeo = new THREE.PlaneGeometry(0.08, 0.35);
-    const grassMat = new THREE.MeshPhongMaterial({
+    const grassMat = _tMat(THREE.MeshPhongMaterial, {
       color: 0x2a5c18,
       emissive: 0x0a2008,
       emissiveIntensity: 0.08,
       side: THREE.DoubleSide,
-      transparent: true,
       opacity: 0.85,
-      depthWrite: false,
     });
     const GRASS_COUNT = 200;
     const grassPool = new THREE.InstancedMesh(bladeGeo, grassMat, GRASS_COUNT);
@@ -1254,15 +1231,13 @@
 
     // Large dark-blue reflective lake surface with enhanced moon reflection
     const lakeGeo = new THREE.CircleGeometry(20, 64);
-    const lakeMat = new THREE.MeshPhongMaterial({
+    const lakeMat = _tMat(THREE.MeshPhongMaterial, {
       color: 0x1a3a5c,
       emissive: 0x0d1d2e,
       emissiveIntensity: 0.18,
       shininess: 140,
       specular: 0x88aaff,
-      transparent: true,
       opacity: 0.90,
-      depthWrite: false,
     });
     _lakeMesh = new THREE.Mesh(lakeGeo, lakeMat);
     _lakeMesh.rotation.x = -Math.PI / 2;
@@ -1291,11 +1266,9 @@
 
     // Mist/fog layer hovering over lake for atmosphere and culling
     const mistGeo = new THREE.PlaneGeometry(50, 50);
-    const mistMat = new THREE.MeshBasicMaterial({
+    const mistMat = _tMat(THREE.MeshBasicMaterial, {
       color: 0x88aacc,
-      transparent: true,
       opacity: 0.12,
-      depthWrite: false,
       side: THREE.DoubleSide,
     });
     const mist = new THREE.Mesh(mistGeo, mistMat);
@@ -1322,13 +1295,11 @@
     }
     geo.setAttribute('position', new THREE.BufferAttribute(_lakeParticlePositions, 3));
 
-    const mat = new THREE.PointsMaterial({
+    const mat = _tMat(THREE.PointsMaterial, {
       color: 0xff1100,
       size: 0.22,
-      transparent: true,
       opacity: 0.0, // invisible until tier 3 corruption is applied
       blending: THREE.AdditiveBlending,
-      depthWrite: false,
     });
     _lakeParticles = new THREE.Points(geo, mat);
     _campScene.add(_lakeParticles);
@@ -1383,16 +1354,15 @@
 
     // Shiny highlight (water reflection)
     const hlGeo = new THREE.SphereGeometry(PLAYER_RADIUS * 0.28, 8, 8);
-    const hlMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, depthWrite: false });
+    const hlMat = _tMat(THREE.MeshBasicMaterial, { color: 0xffffff, opacity: 0.5 });
     const hl = new THREE.Mesh(hlGeo, hlMat);
     hl.position.set(-0.18, 0.25, 0.18);
     grp.add(hl);
 
     // Glow shell
     const glowGeo = new THREE.SphereGeometry(PLAYER_RADIUS + 0.04, 16, 12);
-    const glowMat = new THREE.MeshBasicMaterial({
-      color: 0x4FC3F7, transparent: true, opacity: 0.15, side: THREE.BackSide,
-      depthWrite: false
+    const glowMat = _tMat(THREE.MeshBasicMaterial, {
+      color: 0x4FC3F7, opacity: 0.15, side: THREE.BackSide
     });
     const glow = new THREE.Mesh(glowGeo, glowMat);
     glow.renderOrder = PLAYER_RENDER_ORDER;
@@ -1490,9 +1460,8 @@
 
     // Arms — thick and stubby with rounded fist ends matching spritesheet
     const armGeo = new THREE.CylinderGeometry(0.06, 0.10, 0.24, 8);
-    const limbMat = new THREE.MeshPhongMaterial({
-      color: 0x4FC3F7, emissive: 0x0d47a1, emissiveIntensity: 0.15,
-      transparent: true, opacity: 0.85, depthWrite: false
+    const limbMat = _tMat(THREE.MeshPhongMaterial, {
+      color: 0x4FC3F7, emissive: 0x0d47a1, emissiveIntensity: 0.15, opacity: 0.85
     });
 
     const leftArm = new THREE.Mesh(armGeo, limbMat);
@@ -1565,9 +1534,8 @@
 
     // Ground shadow disc
     const shadowGeo = new THREE.CircleGeometry(0.45, 32);
-    const shadowMat = new THREE.MeshBasicMaterial({
-      color: 0x000000, transparent: true, opacity: 0.3,
-      depthWrite: false, side: THREE.DoubleSide, alphaTest: 0.01
+    const shadowMat = _tMat(THREE.MeshBasicMaterial, {
+      color: 0x000000, opacity: 0.3, side: THREE.DoubleSide, alphaTest: 0.01
     });
     const shadowDisc = new THREE.Mesh(shadowGeo, shadowMat);
     shadowDisc.rotation.x = -Math.PI / 2;
@@ -1628,9 +1596,9 @@
 
     // Cockpit dome (cracked)
     const domeGeo = new THREE.SphereGeometry(0.7, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.55);
-    const domeMat = new THREE.MeshPhysicalMaterial({
-      color: 0x88aacc, transparent: true, opacity: 0.55,
-      metalness: 0.1, roughness: 0.05, transmission: 0.3, depthWrite: false
+    const domeMat = _tMat(THREE.MeshPhysicalMaterial, {
+      color: 0x88aacc, opacity: 0.55,
+      metalness: 0.1, roughness: 0.05, transmission: 0.3
     });
     const dome = new THREE.Mesh(domeGeo, domeMat);
     dome.position.set(-0.2, 0.55, 0);
@@ -1639,8 +1607,8 @@
 
     // Scorch marks on ground beneath crash site
     const scorchGeo = new THREE.CircleGeometry(2.4, 20);
-    const scorchMat = new THREE.MeshBasicMaterial({
-      color: 0x110808, transparent: true, opacity: 0.7, depthWrite: false
+    const scorchMat = _tMat(THREE.MeshBasicMaterial, {
+      color: 0x110808, opacity: 0.7
     });
     const scorch = new THREE.Mesh(scorchGeo, scorchMat);
     scorch.rotation.x = -Math.PI / 2;
@@ -1661,9 +1629,8 @@
 
     // Alien glowing core (exposed energy cell)
     const coreGeo = new THREE.OctahedronGeometry(0.22, 1);
-    const coreMat = new THREE.MeshStandardMaterial({
-      color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 1.2,
-      transparent: true, opacity: 0.85, depthWrite: false
+    const coreMat = _tMat(THREE.MeshStandardMaterial, {
+      color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 1.2, opacity: 0.85
     });
     const core = new THREE.Mesh(coreGeo, coreMat);
     core.position.set(0.6, 0.55, 0.2);
@@ -1692,10 +1659,10 @@
     // Pod chamber (translucent egg-shaped capsule)
     const podGeo = new THREE.SphereGeometry(0.5, 10, 14);
     podGeo.scale(0.9, 1.4, 0.9);
-    const podMat = new THREE.MeshPhysicalMaterial({
-      color: 0x33aaff, transparent: true, opacity: 0.45,
+    const podMat = _tMat(THREE.MeshPhysicalMaterial, {
+      color: 0x33aaff, opacity: 0.45,
       metalness: 0.05, roughness: 0.05, transmission: 0.5,
-      emissive: 0x003366, emissiveIntensity: 0.4, depthWrite: false
+      emissive: 0x003366, emissiveIntensity: 0.4
     });
     const pod = new THREE.Mesh(podGeo, podMat);
     pod.position.y = 0.85;
@@ -1818,7 +1785,7 @@
 
     // Small glow disc underneath
     const glowGeo = new THREE.CircleGeometry(0.28, 16);
-    const glowMat = new THREE.MeshBasicMaterial({ color: 0x00aaff, transparent: true, opacity: 0.45, depthWrite: false });
+    const glowMat = _tMat(THREE.MeshBasicMaterial, { color: 0x00aaff, opacity: 0.45 });
     const glow = new THREE.Mesh(glowGeo, glowMat);
     glow.rotation.x = -Math.PI / 2;
     glow.position.y = -0.04;
@@ -2162,15 +2129,13 @@
 
     // Screen face — glowing cyan panel
     const screenGeo = new THREE.BoxGeometry(0.18, 0.55, 0.04);
-    const screenMat = new THREE.MeshStandardMaterial({
+    const screenMat = _tMat(THREE.MeshStandardMaterial, {
       color: 0x00ffcc,
       emissive: 0x00ffcc,
       emissiveIntensity: 0.85,
       roughness: 0.1,
       metalness: 0.1,
-      transparent: true,
-      opacity: 0.92,
-      depthWrite: false
+      opacity: 0.92
     });
     const screen = new THREE.Mesh(screenGeo, screenMat);
     screen.position.set(0, 0.85, 0.11);
@@ -2178,9 +2143,8 @@
 
     // Scanline overlay (darker horizontal stripe for retro terminal look)
     const scanGeo = new THREE.BoxGeometry(0.17, 0.02, 0.045);
-    const scanMat = new THREE.MeshStandardMaterial({
-      color: 0x003322, emissive: 0x001a11, emissiveIntensity: 0.5,
-      transparent: true, opacity: 0.7, depthWrite: false
+    const scanMat = _tMat(THREE.MeshStandardMaterial, {
+      color: 0x003322, emissive: 0x001a11, emissiveIntensity: 0.5, opacity: 0.7
     });
     for (let si = 0; si < 5; si++) {
       const scan = new THREE.Mesh(scanGeo, scanMat);
@@ -2218,9 +2182,9 @@
 
     // Floor glow ring (holographic projection base)
     const ringGeo = new THREE.RingGeometry(0.32, 0.42, 32);
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: 0x00ffcc, transparent: true, opacity: 0.22,
-      side: THREE.DoubleSide, depthWrite: false
+    const ringMat = _tMat(THREE.MeshBasicMaterial, {
+      color: 0x00ffcc, opacity: 0.22,
+      side: THREE.DoubleSide
     });
     const ring = new THREE.Mesh(ringGeo, ringMat);
     ring.rotation.x = -Math.PI / 2;
@@ -2764,7 +2728,7 @@
       const rootLen = 2.5 + Math.random() * 1.5;
       const rootGeo = new THREE.CylinderGeometry(0.08, 0.22, rootLen, 5);
       const rootCol = r % 2 === 0 ? 0x0044cc : 0x6600cc;
-      const rootMat = new THREE.MeshBasicMaterial({ color: rootCol, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false });
+      const rootMat = _tMat(THREE.MeshBasicMaterial, { color: rootCol, opacity: 0.7, blending: THREE.AdditiveBlending });
       const root = _mesh(rootGeo, rootMat);
       root.position.set(Math.sin(a) * (rootLen * 0.5), 0.1, Math.cos(a) * (rootLen * 0.5));
       root.rotation.z = Math.sin(a) * 0.7;
@@ -2781,14 +2745,12 @@
       { y: 16,   r: 1.5, col: 0x00ffff, opacity: 0.85 },
     ];
     canopyData.forEach((l) => {
-      const cMat = new THREE.MeshPhongMaterial({
+      const cMat = _tMat(THREE.MeshPhongMaterial, {
         color: l.col,
         emissive: l.col,
         emissiveIntensity: 0.55,
-        transparent: true,
         opacity: l.opacity,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false
+        blending: THREE.AdditiveBlending
       });
       const cGeo = new THREE.SphereGeometry(l.r, 10, 7);
       const canopy = _mesh(cGeo, cMat);
@@ -2802,16 +2764,15 @@
       const pr = 4.5;
       const pillarGeo = new THREE.CylinderGeometry(0.1, 0.15, 3, 5);
       const pCol = i % 2 === 0 ? 0x00ffff : 0xaa00ff;
-      const pillarMat = new THREE.MeshPhongMaterial({
-        color: pCol, emissive: pCol, emissiveIntensity: 0.9,
-        transparent: true, opacity: 0.75, depthWrite: false
+      const pillarMat = _tMat(THREE.MeshPhongMaterial, {
+        color: pCol, emissive: pCol, emissiveIntensity: 0.9, opacity: 0.75
       });
       const pillar = _mesh(pillarGeo, pillarMat);
       pillar.position.set(Math.sin(a) * pr, 1.5, Math.cos(a) * pr);
       grp.add(pillar);
       // Glow cap on pillar
       const capGeo = new THREE.SphereGeometry(0.22, 6, 6);
-      const capMat = new THREE.MeshBasicMaterial({ color: pCol, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false });
+      const capMat = _tMat(THREE.MeshBasicMaterial, { color: pCol, opacity: 0.9, blending: THREE.AdditiveBlending });
       const cap = _mesh(capGeo, capMat);
       cap.position.set(Math.sin(a) * pr, 3.2, Math.cos(a) * pr);
       grp.add(cap);
@@ -2829,13 +2790,11 @@
 
     // Ground halo — flat disc of light radiating from roots
     const haloGeo = new THREE.CircleGeometry(6, 24);
-    const haloMat = new THREE.MeshBasicMaterial({
+    const haloMat = _tMat(THREE.MeshBasicMaterial, {
       color: 0x3300ff,
-      transparent: true,
       opacity: 0.12,
       blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide,
-      depthWrite: false
+      side: THREE.DoubleSide
     });
     const halo = _mesh(haloGeo, haloMat);
     halo.rotation.x = -Math.PI / 2;
@@ -2861,13 +2820,11 @@
     }
     sparkleGeo.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
     sparkleGeo.setAttribute('color',    new THREE.BufferAttribute(sCols, 3));
-    const sparkleMat = new THREE.PointsMaterial({
+    const sparkleMat = _tMat(THREE.PointsMaterial, {
       vertexColors: true,
       size: 0.18,
-      transparent: true,
       opacity: 0.9,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false
+      blending: THREE.AdditiveBlending
     });
     grp.add(new THREE.Points(sparkleGeo, sparkleMat));
 
@@ -2882,12 +2839,10 @@
       const threadLen = Math.sqrt(Math.pow(endR - startR, 2) + Math.pow(endY - startY, 2));
       const threadGeo = new THREE.CylinderGeometry(0.025, 0.025, threadLen, 4, 1);
       const tCol = threadColors[t % threadColors.length];
-      const threadMat = new THREE.MeshBasicMaterial({
+      const threadMat = _tMat(THREE.MeshBasicMaterial, {
         color: tCol,
-        transparent: true,
         opacity: 0.7,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false
+        blending: THREE.AdditiveBlending
       });
       const thread = _mesh(threadGeo, threadMat);
       const mx = (Math.sin(a) * startR + Math.sin(a) * endR) * 0.5;
@@ -2944,11 +2899,9 @@
 
     // Glowing forge interior (visible through front opening)
     const forgeGlowGeo = new THREE.BoxGeometry(2, 1.8, 0.3);
-    const forgeGlowMat = new THREE.MeshBasicMaterial({
+    const forgeGlowMat = _tMat(THREE.MeshBasicMaterial, {
       color: 0xff4400,
-      transparent: true,
-      opacity: 0.85,
-      depthWrite: false
+      opacity: 0.85
     });
     const forgeGlow = _mesh(forgeGlowGeo, forgeGlowMat);
     forgeGlow.position.set(0, 1.5, 2.85);
@@ -2981,13 +2934,11 @@
       ePos[i * 3 + 2] = 2.5 + Math.random() * 1;
     }
     embGeo.setAttribute('position', new THREE.BufferAttribute(ePos, 3));
-    const embMat = new THREE.PointsMaterial({
+    const embMat = _tMat(THREE.PointsMaterial, {
       color: 0xff6600,
       size: 0.12,
-      transparent: true,
       opacity: 0.8,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false
+      blending: THREE.AdditiveBlending
     });
     grp.add(new THREE.Points(embGeo, embMat));
 
@@ -3017,14 +2968,12 @@
 
     // Central crystal (progression symbol)
     const crystalGeo = new THREE.OctahedronGeometry(0.7, 0);
-    const crystalMat = new THREE.MeshPhongMaterial({
+    const crystalMat = _tMat(THREE.MeshPhongMaterial, {
       color: 0x00ffff,
       emissive: 0x00aaff,
       emissiveIntensity: 0.8,
       shininess: 100,
-      transparent: true,
-      opacity: 0.9,
-      depthWrite: false
+      opacity: 0.9
     });
     const crystal = _mesh(crystalGeo, crystalMat);
     crystal.position.set(0, 5.8, 0);
@@ -3048,11 +2997,9 @@
 
     // Energy orbs floating around
     const orbGeo = new THREE.SphereGeometry(0.15, 8, 8);
-    const orbMat = new THREE.MeshBasicMaterial({
+    const orbMat = _tMat(THREE.MeshBasicMaterial, {
       color: 0x00ffff,
-      transparent: true,
-      opacity: 0.8,
-      depthWrite: false
+      opacity: 0.8
     });
     for (let i = 0; i < 4; i++) {
       const orb = _mesh(orbGeo, orbMat);
@@ -3063,11 +3010,9 @@
 
     // Glowing entrance
     const entranceGlowGeo = new THREE.BoxGeometry(2.5, 3, 0.3);
-    const entranceGlowMat = new THREE.MeshBasicMaterial({
+    const entranceGlowMat = _tMat(THREE.MeshBasicMaterial, {
       color: 0x6600ff,
-      transparent: true,
-      opacity: 0.5,
-      depthWrite: false
+      opacity: 0.5
     });
     const entranceGlow = _mesh(entranceGlowGeo, entranceGlowMat);
     entranceGlow.position.set(0, 2, 2.85);
@@ -3386,9 +3331,9 @@
 
     // Inner swirling portal disc (glowing cyan/blue)
     const portalGeo = new THREE.CircleGeometry(1.5, 48);
-    const portalMat = new THREE.MeshBasicMaterial({
-      color: 0x00ccff, transparent: true, opacity: 0.35,
-      side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false
+    const portalMat = _tMat(THREE.MeshBasicMaterial, {
+      color: 0x00ccff, opacity: 0.35,
+      side: THREE.DoubleSide, blending: THREE.AdditiveBlending
     });
     const portal = new THREE.Mesh(portalGeo, portalMat);
     portal.rotation.x = -Math.PI / 2;
@@ -3398,9 +3343,9 @@
 
     // Second layer portal (slightly smaller, different phase)
     const portal2Geo = new THREE.CircleGeometry(1.1, 48);
-    const portal2Mat = new THREE.MeshBasicMaterial({
-      color: 0x8844ff, transparent: true, opacity: 0.30,
-      side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false
+    const portal2Mat = _tMat(THREE.MeshBasicMaterial, {
+      color: 0x8844ff, opacity: 0.30,
+      side: THREE.DoubleSide, blending: THREE.AdditiveBlending
     });
     const portal2 = new THREE.Mesh(portal2Geo, portal2Mat);
     portal2.rotation.x = -Math.PI / 2;
@@ -3430,9 +3375,8 @@
 
     // Central hovering energy gem
     const gemGeo = new THREE.OctahedronGeometry(0.4, 1);
-    const gemMat = new THREE.MeshPhongMaterial({
-      color: 0x44aaff, emissive: 0x0066cc, emissiveIntensity: 1.2,
-      transparent: true, opacity: 0.9, shininess: 200, depthWrite: false
+    const gemMat = _tMat(THREE.MeshPhongMaterial, {
+      color: 0x44aaff, emissive: 0x0066cc, emissiveIntensity: 1.2, opacity: 0.9, shininess: 200
     });
     const gem = new THREE.Mesh(gemGeo, gemMat);
     gem.position.set(0, 1.0, 0);
@@ -3441,7 +3385,7 @@
 
     // Wireframe overlay on gem
     const wireGeo = new THREE.OctahedronGeometry(0.43, 1);
-    const wireMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: true, transparent: true, opacity: 0.4, depthWrite: false });
+    const wireMat = _tMat(THREE.MeshBasicMaterial, { color: 0x00ffff, wireframe: true, opacity: 0.4 });
     const wire = new THREE.Mesh(wireGeo, wireMat);
     wire.position.set(0, 1.0, 0);
     wire._portalGemWire = true;
@@ -3513,15 +3457,13 @@
 
     // Main pyramid structure
     const notifGeo = new THREE.ConeGeometry(0.22, 0.38, 4);
-    const notifMat = new THREE.MeshPhongMaterial({
+    const notifMat = _tMat(THREE.MeshPhongMaterial, {
       color: 0xFFD700,        // Bright gold
       emissive: 0xFFAA00,     // Golden emissive
       emissiveIntensity: 0.95,
-      transparent: true,
       opacity: 0.95,
       shininess: 80,
-      specular: 0xFFFFAA,
-      depthWrite: false
+      specular: 0xFFFFAA
     });
     const notifPyramid = new THREE.Mesh(notifGeo, notifMat);
     notifPyramid.name = 'codex-notif-pyramid';
@@ -3536,12 +3478,10 @@
     // Eye outline (horizontal ellipse)
     const eyeOutlineGeo = new THREE.CircleGeometry(0.08, 16);
     eyeOutlineGeo.scale(1.4, 0.7, 1); // Make it elliptical
-    const eyeOutlineMat = new THREE.MeshBasicMaterial({
+    const eyeOutlineMat = _tMat(THREE.MeshBasicMaterial, {
       color: 0x000000,
       side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.9,
-      depthWrite: false
+      opacity: 0.9
     });
     const eyeOutline = new THREE.Mesh(eyeOutlineGeo, eyeOutlineMat);
     eyeGroup.add(eyeOutline);
@@ -3659,9 +3599,8 @@
 
     // Glowing energy orb in the center
     const orbGeo = new THREE.SphereGeometry(0.5, 12, 8);
-    const orbMat = new THREE.MeshPhongMaterial({
-      color: 0xff4400, emissive: 0xff2200, emissiveIntensity: 0.9,
-      transparent: true, opacity: 0.85, depthWrite: false
+    const orbMat = _tMat(THREE.MeshPhongMaterial, {
+      color: 0xff4400, emissive: 0xff2200, emissiveIntensity: 0.9, opacity: 0.85
     });
     const orb = _mesh(orbGeo, orbMat);
     orb.position.y = 2.0;
@@ -3920,9 +3859,8 @@
       const a = (i / 6) * Math.PI * 2;
       const r = 3.0;
       const pillarGeo = new THREE.CylinderGeometry(0.15, 0.22, 3.5 + (i % 2) * 1.2, 6);
-      const pillarMat = new THREE.MeshPhongMaterial({
-        color: 0x4400cc, emissive: 0x2200aa, emissiveIntensity: 0.7,
-        transparent: true, opacity: 0.88, depthWrite: false
+      const pillarMat = _tMat(THREE.MeshPhongMaterial, {
+        color: 0x4400cc, emissive: 0x2200aa, emissiveIntensity: 0.7, opacity: 0.88
       });
       const pillar = _mesh(pillarGeo, pillarMat);
       pillar.position.set(Math.sin(a) * r, 1.9, Math.cos(a) * r);
@@ -3933,11 +3871,10 @@
     const archColors = [0x6622ff, 0x2255ff];
     for (let s = -1; s <= 1; s += 2) {
       const archGeo = new THREE.ConeGeometry(0.35, 5.0, 6);
-      const archMat = new THREE.MeshPhongMaterial({
+      const archMat = _tMat(THREE.MeshPhongMaterial, {
         color: archColors[s === -1 ? 0 : 1],
         emissive: archColors[s === -1 ? 0 : 1],
-        emissiveIntensity: 0.9,
-        transparent: true, opacity: 0.85, depthWrite: false
+        emissiveIntensity: 0.9, opacity: 0.85
       });
       const arch = _mesh(archGeo, archMat);
       arch.position.set(s * 1.4, 2.6, 0);
@@ -3947,9 +3884,8 @@
 
     // Hovering central vortex gem
     const vortexGeo = new THREE.OctahedronGeometry(0.65, 1);
-    const vortexMat = new THREE.MeshPhongMaterial({
-      color: 0x8844ff, emissive: 0x5522ff, emissiveIntensity: 1.5,
-      transparent: true, opacity: 0.92, wireframe: false, depthWrite: false
+    const vortexMat = _tMat(THREE.MeshPhongMaterial, {
+      color: 0x8844ff, emissive: 0x5522ff, emissiveIntensity: 1.5, opacity: 0.92, wireframe: false
     });
     const vortex = _mesh(vortexGeo, vortexMat);
     vortex.position.set(0, 3.2, 0);
@@ -3957,7 +3893,7 @@
 
     // Wireframe overlay on gem for alien look
     const wireGeo = new THREE.OctahedronGeometry(0.68, 1);
-    const wireMat = new THREE.MeshBasicMaterial({ color: 0x00ccff, wireframe: true, transparent: true, opacity: 0.55, depthWrite: false });
+    const wireMat = _tMat(THREE.MeshBasicMaterial, { color: 0x00ccff, wireframe: true, opacity: 0.55 });
     const wireMesh = new THREE.Mesh(wireGeo, wireMat);
     wireMesh.position.set(0, 3.2, 0);
     grp.add(wireMesh);
@@ -3986,7 +3922,7 @@
     }
     const glowTex = _canvasToDataTexture(THREE, glowC, 64, 64) || _blankDataTexture64(THREE);
     glowTex.needsUpdate = true;
-    const glowMat = new THREE.SpriteMaterial({ map: glowTex, color: 0x8844ff, transparent: true, blending: THREE.AdditiveBlending, opacity: 0.7, depthWrite: false });
+    const glowMat = _tMat(THREE.SpriteMaterial, { map: glowTex, color: 0x8844ff, blending: THREE.AdditiveBlending, opacity: 0.7 });
     const glow = new THREE.Sprite(glowMat);
     glow.position.set(0, 3.2, 0);
     glow.scale.set(10, 10, 1);
@@ -4025,9 +3961,8 @@
 
     // Central large crystal — main spire
     const spireGeo = new THREE.ConeGeometry(0.7, 5.5, 6);
-    const spireMat = new THREE.MeshPhongMaterial({
-      color: 0xcc88ff, emissive: 0x9900ff, emissiveIntensity: 0.9,
-      transparent: true, opacity: 0.88, depthWrite: false
+    const spireMat = _tMat(THREE.MeshPhongMaterial, {
+      color: 0xcc88ff, emissive: 0x9900ff, emissiveIntensity: 0.9, opacity: 0.88
     });
     const spire = _mesh(spireGeo, spireMat);
     spire.position.y = 3.15;
@@ -4051,9 +3986,8 @@
       const angle = (i / 4) * Math.PI * 2;
       const r = 2.2;
       const crystalGeo = new THREE.ConeGeometry(0.28, 1.6, 4);
-      const crystalMat = new THREE.MeshPhongMaterial({
-        color: c.color, emissive: c.emissive, emissiveIntensity: c.eInt,
-        transparent: true, opacity: 0.85, depthWrite: false
+      const crystalMat = _tMat(THREE.MeshPhongMaterial, {
+        color: c.color, emissive: c.emissive, emissiveIntensity: c.eInt, opacity: 0.85
       });
       const crystal = _mesh(crystalGeo, crystalMat);
       crystal.position.set(Math.sin(angle) * r, 1.8, Math.cos(angle) * r);
@@ -4092,9 +4026,8 @@
     }
     const glowTex = _canvasToDataTexture(THREE, _glowCanvas, 64, 64) || _blankDataTexture64(THREE);
     glowTex.needsUpdate = true;
-    const glowSpriteMat = new THREE.SpriteMaterial({
-      map: glowTex, color: 0xcc88ff, transparent: true,
-      blending: THREE.AdditiveBlending, opacity: 0.75, depthWrite: false
+    const glowSpriteMat = _tMat(THREE.SpriteMaterial, {
+      map: glowTex, color: 0xcc88ff, blending: THREE.AdditiveBlending, opacity: 0.75
     });
     const glowSprite = new THREE.Sprite(glowSpriteMat);
     glowSprite.position.set(0, 4, 0);
@@ -4102,9 +4035,8 @@
     grp.add(glowSprite);
 
     // Smaller accent glow near base
-    const accentSpriteMat = new THREE.SpriteMaterial({
-      map: glowTex, color: 0xff88ff, transparent: true,
-      blending: THREE.AdditiveBlending, opacity: 0.4, depthWrite: false
+    const accentSpriteMat = _tMat(THREE.SpriteMaterial, {
+      map: glowTex, color: 0xff88ff, blending: THREE.AdditiveBlending, opacity: 0.4
     });
     const accentSprite = new THREE.Sprite(accentSpriteMat);
     accentSprite.position.set(1.5, 2, 1.5);
@@ -4167,9 +4099,8 @@
 
     // Artifact crystal orb on pedestal (the focal point)
     const orbGeo = new THREE.IcosahedronGeometry(0.5, 2);
-    const orbMat = new THREE.MeshPhongMaterial({
-      color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 0.8,
-      transparent: true, opacity: 0.75, shininess: 200, depthWrite: false
+    const orbMat = _tMat(THREE.MeshPhongMaterial, {
+      color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 0.8, opacity: 0.75, shininess: 200
     });
     const orb = _mesh(orbGeo, orbMat);
     orb.position.set(0, 2.5, 0);
@@ -4216,9 +4147,8 @@
     }
     const shrineGlowTex = _canvasToDataTexture(THREE, _glowC, 64, 64) || _blankDataTexture64(THREE);
     shrineGlowTex.needsUpdate = true;
-    const shrineGlowMat = new THREE.SpriteMaterial({
-      map: shrineGlowTex, color: 0x00ffff, transparent: true,
-      blending: THREE.AdditiveBlending, opacity: 0.7, depthWrite: false
+    const shrineGlowMat = _tMat(THREE.SpriteMaterial, {
+      map: shrineGlowTex, color: 0x00ffff, blending: THREE.AdditiveBlending, opacity: 0.7
     });
     const shrineGlow = new THREE.Sprite(shrineGlowMat);
     shrineGlow.position.set(0, 2.5, 0);
@@ -4226,9 +4156,8 @@
     grp.add(shrineGlow);
 
     // Gold accent glow
-    const goldGlowMat = new THREE.SpriteMaterial({
-      map: shrineGlowTex, color: 0xC9A227, transparent: true,
-      blending: THREE.AdditiveBlending, opacity: 0.4, depthWrite: false
+    const goldGlowMat = _tMat(THREE.SpriteMaterial, {
+      map: shrineGlowTex, color: 0xC9A227, blending: THREE.AdditiveBlending, opacity: 0.4
     });
     const goldGlow = new THREE.Sprite(goldGlowMat);
     goldGlow.position.set(0, 1.0, 0);
@@ -4286,9 +4215,8 @@
 
     // Large glowing waterdrop orb (focal point)
     const dropGeo = new THREE.SphereGeometry(0.6, 16, 16);
-    const dropMat = new THREE.MeshPhongMaterial({
-      color: 0x00ccff, emissive: 0x00aaff, emissiveIntensity: 1.5,
-      transparent: true, opacity: 0.85, depthWrite: false
+    const dropMat = _tMat(THREE.MeshPhongMaterial, {
+      color: 0x00ccff, emissive: 0x00aaff, emissiveIntensity: 1.5, opacity: 0.85
     });
     const dropOrb = _mesh(dropGeo, dropMat);
     dropOrb.position.set(0, 2.4, 1.2);
@@ -4346,9 +4274,8 @@
 
     // Central glowing gem
     const gemGeo = new THREE.OctahedronGeometry(0.7, 0);
-    const gemMat = new THREE.MeshPhongMaterial({
-      color: 0xcc88ff, emissive: 0x8800ff, emissiveIntensity: 1.2,
-      transparent: true, opacity: 0.9, depthWrite: false
+    const gemMat = _tMat(THREE.MeshPhongMaterial, {
+      color: 0xcc88ff, emissive: 0x8800ff, emissiveIntensity: 1.2, opacity: 0.9
     });
     const gem = _mesh(gemGeo, gemMat);
     gem.position.y = 2.0;
@@ -4455,11 +4382,9 @@
     const tex = _canvasToDataTexture(THREE, canvas, W, H);
     if (!tex) return; // context unavailable — skip sign rather than crash
     const signGeo = new THREE.PlaneGeometry(2.6, 0.65);
-    const signMat = new THREE.MeshBasicMaterial({
+    const signMat = _tMat(THREE.MeshBasicMaterial, {
       map: tex,
-      transparent: true,
-      side: THREE.DoubleSide,
-      depthWrite: false
+      side: THREE.DoubleSide
     });
     const sign = new THREE.Mesh(signGeo, signMat);
     sign.position.set(x, y, z);
@@ -5872,13 +5797,11 @@
 
     // ═══ 1. Ground foundation glow that appears first ═══
     const foundationGeo = new THREE.CircleGeometry(3.5, 32);
-    const foundationMat = new THREE.MeshBasicMaterial({
+    const foundationMat = _tMat(THREE.MeshBasicMaterial, {
       color: 0xFFD700,
-      transparent: true,
       opacity: 0,
       side: THREE.DoubleSide,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false
+      blending: THREE.AdditiveBlending
     });
     const foundation = new THREE.Mesh(foundationGeo, foundationMat);
     foundation.rotation.x = -Math.PI / 2;
@@ -5950,12 +5873,10 @@
       for (let i = 0; i < BEAM_COUNT; i++) {
         const angle = (i / BEAM_COUNT) * Math.PI * 2;
         const beamGeo = new THREE.CylinderGeometry(0.15, 0.05, 8, 8);
-        const beamMat = new THREE.MeshBasicMaterial({
+        const beamMat = _tMat(THREE.MeshBasicMaterial, {
           color: 0xFFD700,
-          transparent: true,
           opacity: 0.7,
           blending: THREE.AdditiveBlending,
-          depthWrite: false,
           side: THREE.DoubleSide
         });
         const beam = new THREE.Mesh(beamGeo, beamMat);
@@ -6032,13 +5953,11 @@
       burstGeo.setAttribute('position', new THREE.BufferAttribute(burstPos, 3));
       burstGeo.setAttribute('color', new THREE.BufferAttribute(burstColors, 3));
 
-      const burstMat = new THREE.PointsMaterial({
+      const burstMat = _tMat(THREE.PointsMaterial, {
         size: 0.35,
-        transparent: true,
         opacity: 1.0,
         vertexColors: true,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false
+        blending: THREE.AdditiveBlending
       });
       const burstParticles = new THREE.Points(burstGeo, burstMat);
       _campScene.add(burstParticles);
@@ -6065,13 +5984,11 @@
       }
 
       sparkleGeo.setAttribute('position', new THREE.BufferAttribute(sparklePos, 3));
-      const sparkleMat = new THREE.PointsMaterial({
+      const sparkleMat = _tMat(THREE.PointsMaterial, {
         color: 0xFFFFAA,
         size: 0.2,
-        transparent: true,
         opacity: 1.0,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false
+        blending: THREE.AdditiveBlending
       });
       const sparkleParticles = new THREE.Points(sparkleGeo, sparkleMat);
       _campScene.add(sparkleParticles);
@@ -6097,12 +6014,10 @@
       }
 
       dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
-      const dustMat = new THREE.PointsMaterial({
+      const dustMat = _tMat(THREE.PointsMaterial, {
         color: 0x8B7355,
         size: 0.4,
-        transparent: true,
-        opacity: 0.7,
-        depthWrite: false
+        opacity: 0.7
       });
       const dustParticles = new THREE.Points(dustGeo, dustMat);
       _campScene.add(dustParticles);
