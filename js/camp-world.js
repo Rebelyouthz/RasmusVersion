@@ -1856,65 +1856,86 @@
   function _updateRobotBubble() { /* disabled — no floating bubbles */ }
 
   // Per-frame update for Aida intro props (chip glow + proximity prompts)
+  // STATE MACHINE — all position writes are NaN-guarded and use only Math.sin/cos.
+  // State 1: _robotLapActive  — A.I.D.A orbits the campfire
+  // State 2: _robotWalkToQuestHall — A.I.D.A walks to Quest Hall
   function _updateAidaIntro(dt) {
     if (!_campScene) return;
 
-    // Robot lap animation around the campfire (after chip inserted)
+    // ── STATE 1: Orbit fire ──────────────────────────────────────────────────
+    // Timer-based orbit using Math.sin/Math.cos only — no division, no vectors.
     if (_robotLapActive && _robotMesh) {
       _robotLapT += dt;
-      const lapDuration = 6.0;
-      const lapProgress = Math.min(_robotLapT / lapDuration, 1.0);
-      const angle = lapProgress * Math.PI * 2;
-      const lapRadius = 4.5;
-      _robotMesh.position.x = Math.sin(angle) * lapRadius;
-      _robotMesh.position.z = Math.cos(angle) * lapRadius;
-      _robotMesh.rotation.y = -angle + Math.PI * 0.5;
-      if (lapProgress >= 1.0) {
+      const _lapDuration = 6.0;
+      const _lapProgress = Math.min(_robotLapT / _lapDuration, 1.0);
+      // Full circle driven by the safe timer, clamped to [0,1]
+      const _angle = _lapProgress * Math.PI * 2;
+      const _lapRadius = 4.5;
+      const _nx = Math.sin(_angle) * _lapRadius;
+      const _nz = Math.cos(_angle) * _lapRadius;
+      // Guard: never write NaN into the mesh
+      _robotMesh.position.x = isFinite(_nx) ? _nx : 0;
+      _robotMesh.position.y = 0;
+      _robotMesh.position.z = isFinite(_nz) ? _nz : 0;
+      _robotMesh.rotation.y = -_angle + Math.PI * 0.5;
+      if (_lapProgress >= 1.0) {
         _robotLapActive = false;
-        // Start smooth walk to Quest Hall instead of snapping
+        // Transition to State 2: record current (safe) position as walk origin
         _robotWalkToQuestHall = true;
         _robotWalkT = 0;
-        _robotWalkFromX = _robotMesh.position.x;
-        _robotWalkFromZ = _robotMesh.position.z;
+        _robotWalkFromX = isFinite(_robotMesh.position.x) ? _robotMesh.position.x : 0;
+        _robotWalkFromZ = isFinite(_robotMesh.position.z) ? _robotMesh.position.z : 0;
       }
     }
 
-    // Robot walk-to-quest-hall animation (smooth glide after campfire lap)
+    // ── STATE 2: Walk to Quest Hall ─────────────────────────────────────────
+    // Simple lerp — no division, origin already sanitised above.
     if (_robotWalkToQuestHall && _robotMesh) {
       _robotWalkT += dt;
-      const walkDuration = 4.0;
-      const walkProgress = Math.min(_robotWalkT / walkDuration, 1.0);
-      // Smooth ease-out
-      const t = 1 - Math.pow(1 - walkProgress, 3);
-      const tx = AIDA_QUEST_HALL_POS.x;
-      const tz = AIDA_QUEST_HALL_POS.z;
-      _robotMesh.position.x = _robotWalkFromX + (tx - _robotWalkFromX) * t;
-      _robotMesh.position.z = _robotWalkFromZ + (tz - _robotWalkFromZ) * t;
-      // Face the direction of travel
-      const dx = tx - _robotWalkFromX;
-      const dz = tz - _robotWalkFromZ;
-      if (Math.abs(dx) > 0.01 || Math.abs(dz) > 0.01) {
-        _robotMesh.rotation.y = Math.atan2(dx, dz);
+      const _walkDuration = 4.0;
+      const _walkProgress = Math.min(_robotWalkT / _walkDuration, 1.0);
+      // Ease-out cubic — safe; _walkProgress is always in [0,1]
+      const _ease = 1 - Math.pow(1 - _walkProgress, 3);
+      const _destX = AIDA_QUEST_HALL_POS.x;
+      const _destZ = AIDA_QUEST_HALL_POS.z;
+      const _wx = _robotWalkFromX + (_destX - _robotWalkFromX) * _ease;
+      const _wz = _robotWalkFromZ + (_destZ - _robotWalkFromZ) * _ease;
+      _robotMesh.position.x = isFinite(_wx) ? _wx : _destX;
+      _robotMesh.position.y = 0;
+      _robotMesh.position.z = isFinite(_wz) ? _wz : _destZ;
+      // Rotate to face destination (only when there is meaningful travel distance)
+      const _fdx = _destX - _robotWalkFromX;
+      const _fdz = _destZ - _robotWalkFromZ;
+      if (Math.abs(_fdx) > 0.01 || Math.abs(_fdz) > 0.01) {
+        const _faceY = Math.atan2(_fdx, _fdz);
+        if (isFinite(_faceY)) _robotMesh.rotation.y = _faceY;
       }
-      if (walkProgress >= 1.0) {
+      if (_walkProgress >= 1.0) {
         _robotWalkToQuestHall = false;
-        _robotMesh.position.set(tx, 0, tz);
+        _robotMesh.position.set(_destX, 0, _destZ);
         _robotMesh.rotation.y = 0;
       }
     }
 
-    // ─ Chip float + glow animation + magnet ─
+    // ── Chip float + glow + safe magnet ─────────────────────────────────────
+    // NaN-safe player position reads guard this entire block.
     if (!_aidaIntroState.chipPickedUp && _aidaChipMesh && _aidaChipMesh.visible) {
-      const cdx = _playerPos.x - _aidaChipMesh.position.x;
-      const cdz = _playerPos.z - _aidaChipMesh.position.z;
-      const chipDist = Math.sqrt(cdx * cdx + cdz * cdz);
+      const _px = isFinite(_playerPos.x) ? _playerPos.x : 0;
+      const _pz = isFinite(_playerPos.z) ? _playerPos.z : 0;
+      const _cdx = _px - _aidaChipMesh.position.x;
+      const _cdz = _pz - _aidaChipMesh.position.z;
+      const _chipDistSq = _cdx * _cdx + _cdz * _cdz;
+      const _chipDist   = Math.sqrt(_chipDistSq);
 
-      // ── Magnet: pull chip toward player when within range ──
-      if (chipDist < AIDA_CHIP_MAGNET_RANGE && chipDist > 0.01) {
-        const pullSpeed = 6.0 * (1 + (AIDA_CHIP_MAGNET_RANGE - chipDist) / AIDA_CHIP_MAGNET_RANGE);
-        _aidaChipMesh.position.x += (cdx / chipDist) * pullSpeed * dt;
-        _aidaChipMesh.position.z += (cdz / chipDist) * pullSpeed * dt;
-        // Fast spinning when attracted
+      if (_chipDist < AIDA_CHIP_MAGNET_RANGE && _chipDist > 0.05) {
+        // Safe normalised pull: multiply by (1 / dist) with explicit finite guard
+        const _invDist = 1 / _chipDist;
+        if (isFinite(_invDist)) {
+          // Pull speed is a fixed safe value — no complex division
+          const _pull = 6.0 * dt;
+          _aidaChipMesh.position.x += _cdx * _invDist * _pull;
+          _aidaChipMesh.position.z += _cdz * _invDist * _pull;
+        }
         _aidaChipMesh.rotation.y += dt * 5.0;
         _aidaChipMesh.position.y = 0.3 + Math.sin(_campTime * 6.0) * 0.1;
         _aidaChipMesh.traverse(function (child) {
@@ -1923,9 +1944,9 @@
           }
         });
       } else {
-        // Normal float + glow
-        _aidaChipMesh.position.y = 0.06 + Math.sin(_campTime * 2.8) * 0.08;
+        // Normal float + glow (no movement)
         _aidaChipMesh.rotation.y += dt * 1.2;
+        _aidaChipMesh.position.y = 0.06 + Math.sin(_campTime * 2.8) * 0.08;
         _aidaChipMesh.traverse(function (child) {
           if (child._aidaChipBody && child.material) {
             child.material.emissiveIntensity = 0.9 + Math.abs(Math.sin(_campTime * 3.0)) * 0.8;
@@ -1933,8 +1954,8 @@
         });
       }
 
-      // ── Auto-pickup: suck chip into hand at very close range ──
-      if (chipDist <= AIDA_CHIP_AUTO_PICKUP) {
+      // Auto-pickup at close range
+      if (_chipDist <= AIDA_CHIP_AUTO_PICKUP) {
         _pickUpAidaChip();
       }
     }
@@ -1942,11 +1963,13 @@
     if (_menuOpen) return; // don't show prompts while a menu is open
     if (!_promptEl) return;
 
-    // ─ Chip proximity prompt — use chip's live position (it moves via magnet) ─
+    // ─ Chip proximity prompt — use chip's live position ─
     if (!_aidaIntroState.chipPickedUp && _aidaChipMesh && _aidaChipMesh.visible) {
-      const cdx = _playerPos.x - _aidaChipMesh.position.x;
-      const cdz = _playerPos.z - _aidaChipMesh.position.z;
-      if (Math.sqrt(cdx * cdx + cdz * cdz) < AIDA_INTRO_RADIUS) {
+      const _ppx = isFinite(_playerPos.x) ? _playerPos.x : 0;
+      const _ppz = isFinite(_playerPos.z) ? _playerPos.z : 0;
+      const _cdx2 = _ppx - _aidaChipMesh.position.x;
+      const _cdz2 = _ppz - _aidaChipMesh.position.z;
+      if (Math.sqrt(_cdx2 * _cdx2 + _cdz2 * _cdz2) < AIDA_INTRO_RADIUS) {
         _promptEl.textContent = '💾 A.I.D.A Chip — Press [E] to pick up';
         _promptEl.style.display = 'block';
         if (_interactBtn) {
@@ -1958,12 +1981,11 @@
     }
 
     // ─ Robot proximity prompt ─
-    // Allow chip insertion regardless of Quest Hall build state
     if (_aidaIntroState.chipPickedUp && !_aidaIntroState.chipInserted) {
       const _rp = _getAidaRobotPos();
-      const rdx = _playerPos.x - _rp.x;
-      const rdz = _playerPos.z - _rp.z;
-      if (Math.sqrt(rdx * rdx + rdz * rdz) < AIDA_INTRO_RADIUS) {
+      const _rdx = (isFinite(_playerPos.x) ? _playerPos.x : 0) - _rp.x;
+      const _rdz = (isFinite(_playerPos.z) ? _playerPos.z : 0) - _rp.z;
+      if (Math.sqrt(_rdx * _rdx + _rdz * _rdz) < AIDA_INTRO_RADIUS) {
         _promptEl.textContent = '🤖 Broken Robot — Insert chip into robot chip slot [E]';
         _promptEl.style.display = 'block';
         if (_interactBtn) {
@@ -1973,14 +1995,13 @@
         }
       }
     }
+
     // ─ Post-insertion: show hint to go to Quest Hall ─
-    // Only show this when quest_findingAida is not yet queued or claimed — once it is,
-    // the player should be able to walk straight to the Quest Hall without AIDA intercepting.
     if (_aidaIntroState.chipInserted && !_isAidaQuestResolved()) {
       const _rp = _getAidaRobotPos();
-      const rdx = _playerPos.x - _rp.x;
-      const rdz = _playerPos.z - _rp.z;
-      if (Math.sqrt(rdx * rdx + rdz * rdz) < AIDA_INTRO_RADIUS) {
+      const _rdx = (isFinite(_playerPos.x) ? _playerPos.x : 0) - _rp.x;
+      const _rdz = (isFinite(_playerPos.z) ? _playerPos.z : 0) - _rp.z;
+      if (Math.sqrt(_rdx * _rdx + _rdz * _rdz) < AIDA_INTRO_RADIUS) {
         _promptEl.textContent = '🤖 A.I.D.A — Go to Quest Hall!';
         _promptEl.style.display = 'block';
         if (_interactBtn) {
@@ -4751,8 +4772,8 @@
   const CAMP_WALK_THRESHOLD = 0.5; // speed below this = idle
 
   function _updatePlayer(dt) {
-    // Guard: clamp dt to a safe range to prevent NaN/Infinity from infecting physics
-    if (!isFinite(dt) || dt <= 0) dt = 0.016;
+    // Aggressively clamp dt — isNaN catches NaN produced upstream
+    if (isNaN(dt) || !isFinite(dt) || dt <= 0) dt = 0.016;
     dt = Math.max(0.001, Math.min(dt, 0.05));
 
     let mx = 0, mz = 0;
@@ -4871,11 +4892,14 @@
       _playerPos.z += _playerVel.z * dt;
     }
 
-    // NaN/Infinity guards: prevent corrupted velocity/position from crashing WebGL
-    if (!isFinite(_playerVel.x)) _playerVel.x = 0;
-    if (!isFinite(_playerVel.z)) _playerVel.z = 0;
-    if (!isFinite(_playerPos.x)) _playerPos.x = SPAWN_POS.x;
-    if (!isFinite(_playerPos.z)) _playerPos.z = SPAWN_POS.z;
+    // NaN/Infinity guards: aggressively sanitise velocity AND position.
+    // isNaN catches NaN; !isFinite also catches ±Infinity.
+    // If corrupted, reset to SPAWN_POS (the canonical safe spawn) so the player
+    // is teleported to a known-good location rather than world origin.
+    if (isNaN(_playerVel.x) || !isFinite(_playerVel.x)) _playerVel.x = 0;
+    if (isNaN(_playerVel.z) || !isFinite(_playerVel.z)) _playerVel.z = 0;
+    if (isNaN(_playerPos.x) || !isFinite(_playerPos.x)) _playerPos.x = SPAWN_POS.x;
+    if (isNaN(_playerPos.z) || !isFinite(_playerPos.z)) _playerPos.z = SPAWN_POS.z;
 
     // Clamp
     _playerPos.x = Math.max(-38, Math.min(38, _playerPos.x));
@@ -7600,6 +7624,10 @@
    */
   function update(dt) {
     if (!_isActive || !_campScene) return;
+    // Clamp dt FIRST so every sub-update receives a finite, safe value.
+    // This prevents NaN from propagating into _campTime, positions, or WebGL.
+    if (!isFinite(dt) || isNaN(dt) || dt <= 0) dt = 0.016;
+    dt = Math.max(0.001, Math.min(dt, 0.05));
     _updateFire(dt);
     _updateParticles(dt);
     _updateBennyNPC(dt);
