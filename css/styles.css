@@ -3306,33 +3306,34 @@
       50% { box-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 25px rgba(155,89,182,0.6); }
     }
 
-    /* ─── Card 3D flip structure ─── */
+    /* ─── Card 3D flip structure — strict non-negotiable layout ─── */
     .upgrade-card {
-      perspective: 1100px;
+      perspective: 1000px;
     }
     .card-inner {
-      /* Fill the full card area, ignoring the parent's flex padding */
-      position: absolute;
-      inset: 0;
+      position: relative;
+      width: 100%;
+      height: 100%;
       transform-style: preserve-3d;
+      transition: transform 0.6s;
       will-change: transform;
     }
     .card-face {
       position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
+      inset: 0;
       border-radius: 12px;
-      backface-visibility: hidden;
-      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden !important;
+      -webkit-backface-visibility: hidden !important;
     }
     .card-front {
       /* Front face — visible by default (stats/upgrades) */
       transform: rotateY(0deg);
-      will-change: transform;
-      background: #1a1a1a !important;
+      background-color: #111 !important;
       backface-visibility: hidden !important;
       -webkit-backface-visibility: hidden !important;
       position: absolute !important;
-      top: 0; left: 0; width: 100%; height: 100%;
+      inset: 0;
+      z-index: 2;
       /* Layout for upgrade content (mirrors original .upgrade-card layout) */
       display: flex;
       flex-direction: column;
@@ -3350,9 +3351,9 @@
       align-items: center;
       justify-content: center;
       overflow: hidden;
-      /* Must be absolute to stack over front face; rotateY(180deg) hides it initially */
+      /* Back face: rotateY(180deg) hides it initially */
       position: absolute !important;
-      top: 0; left: 0; width: 100%; height: 100%;
+      inset: 0;
       transform: rotateY(180deg);
       backface-visibility: hidden !important;
       -webkit-backface-visibility: hidden !important;
@@ -3428,9 +3429,9 @@
     .upgrade-card.card-flipped .card-inner {
       transform: rotateY(180deg);
     }
-    /* Flip-in-place settle helper */
+    /* card-flipping: override the default transition with a springy one */
     .upgrade-card.card-flipping .card-inner {
-      transition: transform 0.5s cubic-bezier(0.22, 1.8, 0.36, 1);
+      transition: transform 0.5s cubic-bezier(0.22, 1.8, 0.36, 1) !important;
     }
 
     /* Card reveal rotation - sequential one-by-one entrance */

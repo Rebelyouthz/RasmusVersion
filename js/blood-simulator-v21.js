@@ -73,6 +73,23 @@ const BloodSimulatorV21 = {
   _matrix: null,
   _color: null,
 
+  // Creates a 64×64 canvas radial gradient texture for soft circular sprites.
+  // White (opaque) centre fading to transparent at the edge — standard particle sprite.
+  _makeCircleTexture() {
+    const size = 64;
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    const cx = size / 2;
+    const grad = ctx.createRadialGradient(cx, cx, 0, cx, cx, cx);
+    grad.addColorStop(0,   'rgba(255,255,255,1)');
+    grad.addColorStop(0.45,'rgba(255,255,255,0.85)');
+    grad.addColorStop(1,   'rgba(255,255,255,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, size, size);
+    return new THREE.CanvasTexture(canvas);
+  },
+
   init(scene, terrainMesh, player) {
     this.scene = scene;
     this.terrainMesh = terrainMesh;
@@ -81,7 +98,11 @@ const BloodSimulatorV21 = {
     this._matrix = new THREE.Matrix4();
     this._color  = new THREE.Color();
 
-    // Drop pool
+    // Shared circular alpha-map sprite texture (radial gradient, no hard edges)
+    const _circleTex = this._makeCircleTexture();
+
+    // Drop pool — use CircleGeometry laid flat (horizontal) for top-down view.
+    // The radial-gradient alphaMap makes each drop appear as a soft circle.
     this._pool = new Array(this.MAX_DROPS);
     for (let i = 0; i < this.MAX_DROPS; i++) {
       this._pool[i] = { alive:false, px:0, py:0, pz:0, vx:0, vy:0, vz:0,
@@ -89,8 +110,13 @@ const BloodSimulatorV21 = {
     }
     this._head = 0;
 
-    const dropGeo = new THREE.SphereGeometry(0.012, 8, 6);
-    const dropMat = new THREE.MeshBasicMaterial({ vertexColors: true });
+    // CircleGeometry lies in XY plane; rotateX(-PI/2) lays it flat in XZ (horizontal).
+    const dropGeo = new THREE.CircleGeometry(1.0, 8);
+    dropGeo.rotateX(-Math.PI / 2);
+    const dropMat = new THREE.MeshBasicMaterial({
+      map: _circleTex, transparent: true, alphaTest: 0.01,
+      depthWrite: false, vertexColors: true
+    });
     this.dropIM = new THREE.InstancedMesh(dropGeo, dropMat, this.MAX_DROPS);
     this.dropIM.count = 0;
     this.dropIM.frustumCulled = false;
@@ -99,7 +125,7 @@ const BloodSimulatorV21 = {
     this.dropIM.setColorAt(0, new THREE.Color(0x8B0000));
     scene.add(this.dropIM);
 
-    // Mist pool
+    // Mist pool — same CircleGeometry + radial-gradient texture for soft circular puffs.
     this._mistPool = new Array(this.MAX_MIST);
     for (let i = 0; i < this.MAX_MIST; i++) {
       this._mistPool[i] = { alive:false, px:0, py:0, pz:0, vx:0, vy:0, vz:0,
@@ -107,9 +133,10 @@ const BloodSimulatorV21 = {
     }
     this._mistHead = 0;
 
-    const mistGeo = new THREE.SphereGeometry(1.0, 6, 4);
+    const mistGeo = new THREE.CircleGeometry(1.0, 12);
+    mistGeo.rotateX(-Math.PI / 2);
     const mistMat = new THREE.MeshBasicMaterial({
-      transparent:true, opacity:0.45, depthWrite:false,
+      map: _circleTex, transparent:true, opacity:0.45, depthWrite:false, alphaTest: 0.01,
       vertexColors:true, blending:THREE.AdditiveBlending
     });
     this.mistIM = new THREE.InstancedMesh(mistGeo, mistMat, this.MAX_MIST);
@@ -259,7 +286,9 @@ const BloodSimulatorV21 = {
         if (dx*dx + dz*dz < 1.8 && d.py > 0.1) { d.vx += dx*6*dt; d.vz += dz*6*dt; }
       }
       if (activeDrops >= this.MAX_DROPS) continue;
-      matrix.makeScale(d.radius*2, d.radius*2, d.radius*2);
+      // Horizontal circle: uniform scale so the flat disc looks circular from top-down
+      const _ds = d.radius * 2;
+      matrix.makeScale(_ds, _ds, _ds);
       matrix.setPosition(d.px, d.py, d.pz);
       this.dropIM.setMatrixAt(activeDrops, matrix);
       color.setHex(d.color);
@@ -285,7 +314,8 @@ const BloodSimulatorV21 = {
         const t = 1 - m.life / m.maxLife;
         const r = m.radius + (m.maxRadius - m.radius) * t;
         const fade = Math.min(1, (m.life / m.maxLife) * 3);
-        matrix.makeScale(r, r*0.6, r);
+        // Horizontal circle: uniform XZ scale (Y dimension has no visible effect on flat circle)
+        matrix.makeScale(r, r, r);
         matrix.setPosition(m.px, m.py, m.pz);
         this.mistIM.setMatrixAt(activeMist, matrix);
         color.setHex(m.color);

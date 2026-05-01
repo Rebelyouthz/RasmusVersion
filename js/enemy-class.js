@@ -2950,8 +2950,10 @@
           }
         }
 
-        // ─── TRAUMA SYSTEM INTEGRATION ───────────────────────────────────────────────
-        // Weapon-specific wound decals and gore reactions
+        // ─── TRAUMA SYSTEM INTEGRATION — DISABLED ───────────────────────────────────
+        // TraumaSystem calls commented out; BloodSimulatorV21 is the sole blood system.
+        // All wound decals, chunk tearoffs, and arrow sticking below are inactive.
+        /* DISABLED_TRAUMA_START
         if (window.TraumaSystem && hitPoint) {
           // Get weapon level for intensity scaling
           const wl = (typeof weapons !== 'undefined' && weapons) || {};
@@ -2963,65 +2965,37 @@
           else if (damageType === 'bow') weaponLevel = (wl.bow && wl.bow.level) || 1;
           else if (damageType === 'iceSpear') weaponLevel = (wl.iceSpear && wl.iceSpear.level) || 1;
 
-          // Check if hit is near existing wound (aggravation system)
           const nearbyWound = TraumaSystem.findNearbyWound(this, hitPoint);
-
           if (nearbyWound) {
-            // Aggravate existing wound — V21 burst instead of chunk tearoff
             if (window.BloodSimulatorV21) {
               window.BloodSimulatorV21.addWoundPulse(hitPoint.x, hitPoint.y, hitPoint.z, 0xCC1100, 2.5);
             }
           } else {
-            // Create new wound decal
             TraumaSystem.addWoundDecal(this, hitPoint, damageType);
           }
-
-          // Weapon-specific hit effects
           const SHOTGUN_TYPES = ['shotgun', 'doubleBarrel', 'pumpShotgun', 'autoShotgun'];
           const SWORD_TYPES = ['sword', 'samuraiSword', 'teslaSaber', 'whip'];
           const BOW_TYPES = ['bow', 'iceSpear'];
           const GUN_TYPES = ['gun', 'physical', 'uzi', 'minigun', 'sniperRifle', 'drone'];
-
-          // ── GUN/TURRET: Bullet holes, exit wounds, pierce-through ──────────────────
           if (GUN_TYPES.includes(damageType)) {
-            // Add small circular bullet hole wound decal
             TraumaSystem.addWoundDecal(this, hitPoint, 'bullethole');
-
-            // High-level weapons (10+): Exit wound on opposite side
             if (weaponLevel >= 10 && hitDir) {
               const exitPos = hitPoint.clone();
-              // Calculate exit wound position on opposite side of enemy
-              const enemyRadius = 0.4; // Approximate enemy radius
+              const enemyRadius = 0.4;
               exitPos.x += (hitDir.vx || 0) * enemyRadius * 2;
               exitPos.y += (hitDir.vy || 0) * enemyRadius * 2;
               exitPos.z += (hitDir.vz || 0) * enemyRadius * 2;
-              // Larger wound for exit
               TraumaSystem.addWoundDecal(this, exitPos, 'exitwound');
-
-              // Blood spray from exit wound — V21 only
               if (window.BloodSimulatorV21) {
                 window.BloodSimulatorV21.rawBurst(exitPos.x, exitPos.y, exitPos.z, 20, { spreadXZ: 12, spreadY: 8, viscosity: 0.6 });
               }
             }
-
-            // Very high-level weapons (20+): Pierce through multiple enemies
-            // (This will be handled in the weapon projectile logic, not here)
-            if (weaponLevel >= 20) {
-              // Flag this hit for pierce-through (weapon system will use this)
-              this._lastHitCanPierce = true;
-            }
-
-            // Track bullet hole locations for corpse blood pump
+            if (weaponLevel >= 20) { this._lastHitCanPierce = true; }
             if (!this._bulletHoles) this._bulletHoles = [];
-            this._bulletHoles.push({
-              pos: hitPoint.clone(),
-              dir: hitDir ? { x: hitDir.vx || 0, y: 0, z: hitDir.vz || 0 } : { x: 0, y: 0, z: 1 }
-            });
+            this._bulletHoles.push({ pos: hitPoint.clone(), dir: hitDir ? { x: hitDir.vx || 0, y: 0, z: hitDir.vz || 0 } : { x: 0, y: 0, z: 1 } });
           }
-
-          // Shotgun: Multiple scattered wounds
           if (SHOTGUN_TYPES.includes(damageType)) {
-            const woundCount = 3 + Math.floor(Math.random() * 5); // 3-8 wounds
+            const woundCount = 3 + Math.floor(Math.random() * 5);
             for (let i = 0; i < woundCount; i++) {
               const scatterPos = hitPoint.clone();
               scatterPos.x += (Math.random() - 0.5) * 0.4;
@@ -3030,24 +3004,17 @@
               TraumaSystem.addWoundDecal(this, scatterPos, damageType);
             }
           }
-
-          // ── MELEE/SWORD: Diagonal slash decals ─────────────────────────────────────
           if (SWORD_TYPES.includes(damageType)) {
-            // Add elongated slash wound decal
             TraumaSystem.addWoundDecal(this, hitPoint, 'slash');
-
-            // Blood spray along slash arc — V21 only
             if (window.BloodSimulatorV21) {
               window.BloodSimulatorV21.rawBurst(hitPoint.x, hitPoint.y, hitPoint.z, 25 + weaponLevel * 5, { spreadXZ: 12, spreadY: 6, viscosity: 0.55 });
             }
-
-            // High-level melee (10+): Deep slash with multiple wound decals along the cut line
             if (weaponLevel >= 10 && hitDir) {
               const slashLength = 0.6;
               const slashSegments = 3;
               for (let i = 1; i <= slashSegments; i++) {
                 const segmentPos = hitPoint.clone();
-                const perpX = -(hitDir.vz || 0); // Perpendicular to hit direction
+                const perpX = -(hitDir.vz || 0);
                 const perpZ = (hitDir.vx || 0);
                 const offset = (i / slashSegments - 0.5) * slashLength;
                 segmentPos.x += perpX * offset;
@@ -3056,65 +3023,37 @@
                 TraumaSystem.addWoundDecal(this, segmentPos, 'slash');
               }
             }
-
-            // Track slash direction for kill animation
             if (!this._slashDirection && hitDir) {
               this._slashDirection = { x: hitDir.vx || 0, y: 0, z: hitDir.vz || 0 };
             }
           }
-
-          // Bow/Arrow: Stick arrow in enemy at hit location
           if (BOW_TYPES.includes(damageType) && weaponLevel >= 1) {
             const arrowDir = hitDir ? new THREE.Vector3(hitDir.vx || 0, 0, hitDir.vz || 0).normalize()
                                     : new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
-
-            // Level 10+: PIERCE-THROUGH with flesh chunk — arrow goes completely through
             if (weaponLevel >= 10) {
-              // Create flesh chunk at exit wound
               const exitPoint = hitPoint.clone();
-              exitPoint.x += arrowDir.x * 0.5; // Exit on opposite side
+              exitPoint.x += arrowDir.x * 0.5;
               exitPoint.z += arrowDir.z * 0.5;
-
               if (window.TraumaSystem && window.TraumaSystem.tearOffFleshChunk) {
                 window.TraumaSystem.tearOffFleshChunk(this, exitPoint, arrowDir, 0.12);
               }
-
-                // Extra blood spray for pierce-through — V21 only
-                if (window.BloodSimulatorV21) {
-                  window.BloodSimulatorV21.rawBurst(exitPoint.x, exitPoint.y, exitPoint.z, 30, { spreadXZ: 10, spreadY: 8, viscosity: 0.58 });
-                }
-
-                // Create entry and exit wound decals
-                TraumaSystem.addWoundDecal(this, hitPoint, 'bullethole'); // Entry wound
-                TraumaSystem.addWoundDecal(this, exitPoint, 'bullethole'); // Exit wound
-
-                // Visual feedback
-                if (typeof createFloatingText === 'function') {
-                  createFloatingText('PIERCE!', hitPoint, '#FFAA00');
-                }
+              if (window.BloodSimulatorV21) {
+                window.BloodSimulatorV21.rawBurst(exitPoint.x, exitPoint.y, exitPoint.z, 30, { spreadXZ: 10, spreadY: 8, viscosity: 0.58 });
               }
-
-              // Arrow continues through (but we still show it stuck for visual clarity)
-              TraumaSystem.stickArrowInEnemy(this, hitPoint, arrowDir, damageType);
-            } else {
-              // Normal arrow stick (levels 1-9)
-              TraumaSystem.stickArrowInEnemy(this, hitPoint, arrowDir, damageType);
+              TraumaSystem.addWoundDecal(this, hitPoint, 'bullethole');
+              TraumaSystem.addWoundDecal(this, exitPoint, 'bullethole');
+              if (typeof createFloatingText === 'function') { createFloatingText('PIERCE!', hitPoint, '#FFAA00'); }
             }
+            TraumaSystem.stickArrowInEnemy(this, hitPoint, arrowDir, damageType);
           }
-
-          // ── 180 SPIN DEATH: 15% chance on high-impact hits ─────────────────────────
-          // High-impact hits trigger a dramatic 180° spin with blood arc
           const HIGH_IMPACT_TYPES = [...SHOTGUN_TYPES, ...GUN_TYPES, 'drone', 'meteor', 'missile'];
           const isHighImpact = HIGH_IMPACT_TYPES.includes(damageType) && weaponLevel >= 5;
-
           if (isHighImpact && Math.random() < 0.15 && this.hp - finalAmount <= 0) {
-            // Flag this enemy for 180 spin death animation
             this._spinDeathTriggered = true;
             this._spinDeathDirection = hitDir ? { x: hitDir.vx || 0, y: 0, z: hitDir.vz || 0 } : null;
           }
         }
-
-        // ─────────────────────────────────────────────────────────────────────────────
+        DISABLED_TRAUMA_END */
 
         if (this.hp <= 0) {
           this.die();
@@ -5265,22 +5204,21 @@
         }
 
         // ── 30 MEAT/FLESH CHUNKS flying outward in a full cone — "Inside-Out Blowout" ──
+        // BoxGeometry disabled — only SphereGeometry to eliminate raw box artifacts.
         const bulletAngle = Math.atan2(bulletVZ, bulletVX);
         const chunkCount = 30; // Exactly 30 per spec
         const goreColors = [0x8B0000, 0x660000, 0x4A0000, 0x550011, 0xAA2200, 0xCC1100];
         const _sgChunks = [];
         for (let ci = 0; ci < chunkCount; ci++) {
           const chunkSize = 0.12 + Math.random() * 0.22; // Larger than standard chunks
-          const isBox = Math.random() >= 0.5;
+          const isBox = false; // BoxGeometry disabled — always use sphere to prevent box artifacts
           const chunkColor = goreColors[ci % goreColors.length];
           // Use global object pool to avoid per-chunk allocation / GC stutter.
           let chunkEntry;
           if (window.GameObjectPool) {
             chunkEntry = window.GameObjectPool.getChunk(isBox, chunkSize, chunkColor, deathPos);
           } else {
-            const chunkGeo = isBox
-              ? new THREE.BoxGeometry(chunkSize * 1.2, chunkSize * 0.8, chunkSize)
-              : new THREE.SphereGeometry(chunkSize, 5, 4);
+            const chunkGeo = new THREE.SphereGeometry(chunkSize, 5, 4);
             const chunkMat = new THREE.MeshBasicMaterial({ color: chunkColor, transparent: true, opacity: 0.95 });
             chunkEntry = { mesh: new THREE.Mesh(chunkGeo, chunkMat), geo: chunkGeo, mat: chunkMat };
           }
