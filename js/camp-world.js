@@ -248,7 +248,8 @@
   // After Quest Hall is built (level > 0), robot moves in front of it regardless of chip state.
   const AIDA_ROBOT_POS  = { x: 2, z: 2 };    // directly by campfire (south side)
   const AIDA_CHIP_POS   = { x: 0, z: -5 };   // north of fire — clearly visible open area
-  const AIDA_QUEST_HALL_POS = { x: 0, z: 11.5 }; // in front of Quest Hall (z:13) once built
+  const _questHallDef = BUILDING_DEFS.find(b => b.id === 'questMission');
+  const AIDA_QUEST_HALL_POS = { x: _questHallDef.x, z: _questHallDef.z - 1.5 }; // 1.5 units in front of Quest Hall
   const AIDA_INTRO_RADIUS      = 5.0;   // Generous radius so the interaction is easy to trigger
   const AIDA_CHIP_MAGNET_RANGE = 2.0;   // Distance at which chip starts flying toward player
   const AIDA_CHIP_AUTO_PICKUP  = 0.4;   // Auto-pickup distance — sucks chip into hand
