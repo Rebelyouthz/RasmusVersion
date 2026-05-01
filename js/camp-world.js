@@ -31,7 +31,7 @@
     { id: 'codex',               x:  4,    z:   4,  label: 'Codex',               icon: '📖' },
 
     // ── CENTERPIECE: Quest Hall + flanks (north hub) ────────
-    { id: 'questMission',        x:  0,    z:  13,  label: 'Quest Hall',          icon: '📜' },
+    { id: 'questMission',        x: -8,    z:  15,  label: 'Quest Hall',          icon: '📜' },
     { id: 'armory',              x: -12,   z:  13,  label: 'Armory',              icon: '⚔️'  },
     { id: 'progressionHouse',    x:  12,   z:  13,  label: 'Progression House',   icon: '💪' },
 
@@ -4788,8 +4788,8 @@
 
     // Internal touch movement (own camp touch system, avoids interference with game joystick)
     if (_touch.active) {
-      mx += _touch.x;
-      mz += _touch.y;
+      mx += Number(_touch.x) || 0;
+      mz += Number(_touch.y) || 0;
     }
 
     // Normalize diagonal
@@ -4894,6 +4894,12 @@
       _playerPos.z += _playerVel.z * dt;
     }
 
+    // NaN/Infinity guards: prevent corrupted velocity/position from crashing WebGL
+    if (!isFinite(_playerVel.x)) _playerVel.x = 0;
+    if (!isFinite(_playerVel.z)) _playerVel.z = 0;
+    if (!isFinite(_playerPos.x)) _playerPos.x = SPAWN_POS.x;
+    if (!isFinite(_playerPos.z)) _playerPos.z = SPAWN_POS.z;
+
     // Clamp
     _playerPos.x = Math.max(-38, Math.min(38, _playerPos.x));
     _playerPos.z = Math.max(-38, Math.min(38, _playerPos.z));
@@ -4906,8 +4912,9 @@
 
     if (!_playerMesh) return;
 
-    _playerMesh.position.x = _playerPos.x;
-    _playerMesh.position.z = _playerPos.z;
+    // Final safeguard: ensure no NaN ever reaches THREE.js mesh position
+    _playerMesh.position.x = isFinite(_playerPos.x) ? _playerPos.x : SPAWN_POS.x;
+    _playerMesh.position.z = isFinite(_playerPos.z) ? _playerPos.z : SPAWN_POS.z;
 
     // Rotation toward movement direction — crisp and responsive
     const speed = Math.sqrt(_playerVel.x * _playerVel.x + _playerVel.z * _playerVel.z);
@@ -6882,8 +6889,11 @@
       const maxDist = 60;
       const factor = Math.min(dist, maxDist) / maxDist;
       if (dist > _TOUCH_DEAD_ZONE) {
-        _touch.x = (dx / dist) * factor;
-        _touch.y = (dy / dist) * factor;
+        // Safeguard against division by zero or Infinity
+        const normalizedX = (dist > 0) ? (dx / dist) * factor : 0;
+        const normalizedY = (dist > 0) ? (dy / dist) * factor : 0;
+        _touch.x = isFinite(normalizedX) ? normalizedX : 0;
+        _touch.y = isFinite(normalizedY) ? normalizedY : 0;
       } else {
         _touch.x = 0;
         _touch.y = 0;
