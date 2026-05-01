@@ -73,8 +73,13 @@ const BloodSimulatorV21 = {
   _matrix: null,
   _color: null,
 
-  // Creates a 64×64 canvas radial gradient texture for soft circular sprites.
-  // White (opaque) centre fading to transparent at the edge — standard particle sprite.
+  /**
+   * Creates a 64×64 THREE.CanvasTexture containing a white radial gradient
+   * (opaque at centre, transparent at edge).  Used as the alphaMap/map on
+   * the drop and mist InstancedMesh materials so each sprite renders as a
+   * soft circular puff rather than a hard-edged polygon.
+   * @returns {THREE.CanvasTexture}
+   */
   _makeCircleTexture() {
     const size = 64;
     const canvas = document.createElement('canvas');

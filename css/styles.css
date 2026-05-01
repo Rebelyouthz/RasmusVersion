@@ -3429,7 +3429,7 @@
     .upgrade-card.card-flipped .card-inner {
       transform: rotateY(180deg);
     }
-    /* card-flipping: override the default transition with a springy one */
+    /* card-flipping: intentional springy overshoot (y2=1.8 is valid CSS) */
     .upgrade-card.card-flipping .card-inner {
       transition: transform 0.5s cubic-bezier(0.22, 1.8, 0.36, 1) !important;
     }
