@@ -2297,36 +2297,18 @@
                   spawnParticles(missileGroup.position, 0xFF4500, 12);
                   spawnParticles(missileGroup.position, 0xFFAA00, 8);
                   spawnParticles(missileGroup.position, 0x222222, 6); // Smoke explosion
-                  // Massive blood burst from explosion
-                  if (window.BloodSystem) window.BloodSystem.emitBurst(e.mesh.position, 500, { spreadXZ: 2.5, spreadY: 1.5 });
-                  if (window.BloodSimulatorV21 && e.mesh) window.BloodSimulatorV21.onEnemyDeath(e, e.mesh.position);
-                  if (window.GoreSim) window.GoreSim.onKill(e, 'rocket');
-                  // Homing missile: massive gore blobs + heavy blood spray
+                  // Massive blood burst from explosion — BloodSimulatorV21 only
+                  if (window.BloodSimulatorV21 && e.mesh) {
+                    window.BloodSimulatorV21.onEnemyDeath(e, e.mesh.position);
+                    window.BloodSimulatorV21.rawBurst(
+                      e.mesh.position.x, e.mesh.position.y + 0.5, e.mesh.position.z,
+                      200, { spreadXZ: 25, spreadY: 20, viscosity: 0.5 }
+                    );
+                  }
+                  // Homing missile: particle effects for gore feel
                   spawnParticles(e.mesh.position, 0x8B0000, 5);
                   spawnParticles(e.mesh.position, 0xCC0000, 4);
-                  for (let mgc = 0; mgc < 4 && bloodDrips.length < MAX_BLOOD_DRIPS; mgc++) {
-                    _ensureSharedGeo();
-                    let mgore;
-                    const _mgPool = window.meatChunkPool || null;
-                    if (_mgPool) {
-                      mgore = _mgPool.get();
-                      mgore.visible = true;
-                    } else {
-                      mgore = new THREE.Mesh(_sharedGoreGeo, _sharedGoreMats[mgc % 2]);
-                      scene.add(mgore);
-                    }
-                    const mgScale = 0.9 + Math.random() * 1.1; // vary size via scale
-                    mgore.scale.setScalar(mgScale);
-                    mgore.position.copy(e.mesh.position);
-                    bloodDrips.push({
-                      mesh: mgore,
-                      velX: (Math.random() - 0.5) * 0.55,
-                      velZ: (Math.random() - 0.5) * 0.55,
-                      velY: 0.3 + Math.random() * 0.4,
-                      life: 60 + Math.floor(Math.random() * 25),
-                      _pool: _mgPool
-                    });
-                  }
+                  // Chunk geometry disabled — BloodSimulatorV21 handles gore via particles
                   for (let gd = 0; gd < 3; gd++) {
                     spawnBloodDecal({ x: e.mesh.position.x + (Math.random()-0.5)*0.8, y: 0, z: e.mesh.position.z + (Math.random()-0.5)*0.8 });
                   }
@@ -2998,11 +2980,8 @@
         window.bulletTrails.length = _j;
       }
 
-      // Update advanced blood particle system
-      if (window.BloodSystem) window.BloodSystem.update();
-      if (window.GoreSim) window.GoreSim.update(dt);
-      // Update trauma system (gore chunks, stuck arrows, wound decals)
-      if (window.TraumaSystem) window.TraumaSystem.update();
+      // Legacy blood/gore systems are disabled to prevent artifact chunk geometry.
+      // BloodSimulatorV21 is updated once per frame at the top of the loop (line ~768).
 
       // Update managed animations (replaces individual RAF loops for death/damage effects)
       // In-place compaction — no new array allocation each frame.
