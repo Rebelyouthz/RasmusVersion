@@ -2301,7 +2301,7 @@
                   spawnParticles(missileGroup.position, 0x222222, 6); // Smoke explosion
                   // Massive blood burst from explosion
                   if (window.BloodSystem) window.BloodSystem.emitBurst(e.mesh.position, 500, { spreadXZ: 2.5, spreadY: 1.5 });
-                  if (window.BloodSimulatorV21) window.BloodSimulatorV21.onEnemyDeath(e, e.mesh.position);
+                  if (window.BloodSimulatorV21 && e.mesh) window.BloodSimulatorV21.onEnemyDeath(e, e.mesh.position);
                   if (window.GoreSim) window.GoreSim.onKill(e, 'rocket');
                   // Homing missile: massive gore blobs + heavy blood spray
                   spawnParticles(e.mesh.position, 0x8B0000, 5);
