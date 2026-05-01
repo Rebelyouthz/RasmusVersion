@@ -3328,6 +3328,9 @@
       /* Front face — revealed after flip */
       transform: rotateY(-180deg);
       will-change: transform;
+      background: linear-gradient(160deg, #1a162e 0%, #0d0a1e 60%, #080614 100%);
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
     }
 
     /* ─── Card back face: black/gold/silver Aida-style ─── */

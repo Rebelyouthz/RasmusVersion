@@ -119,11 +119,11 @@
     // Expose for use by object-pool.js when resetting pooled enemy material colors
     window._ENEMY_COLORS = _ENEMY_COLORS;
 
-    // Helper: get the base blood color for an enemy instance (reads BloodV2 table if available)
+    // Helper: get the base blood color for an enemy instance.
+    // Delegates to BloodSimulatorV21.getEnemyBloodColor — single source of truth.
     function _getEnemyBloodColor(enemy) {
-      if (enemy && enemy.enemyType && window.BloodV2 && window.BloodV2.ENEMY_BLOOD) {
-        var _eb = window.BloodV2.ENEMY_BLOOD[enemy.enemyType];
-        if (_eb) return _eb.base;
+      if (window.BloodSimulatorV21) {
+        return window.BloodSimulatorV21.getEnemyBloodColor(enemy && enemy.enemyType);
       }
       return 0xcc1100;
     }

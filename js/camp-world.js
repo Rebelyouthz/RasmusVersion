@@ -4779,6 +4779,10 @@
   const CAMP_WALK_THRESHOLD = 0.5; // speed below this = idle
 
   function _updatePlayer(dt) {
+    // Guard: clamp dt to a safe range to prevent NaN/Infinity from infecting physics
+    if (!isFinite(dt) || dt <= 0) dt = 0.016;
+    dt = Math.min(dt, 0.05);
+
     let mx = 0, mz = 0;
 
     // Keyboard
@@ -5124,19 +5128,24 @@
     // Camera offset: diagonal top-down angle similar to the main game camera
     // Main game uses an orthographic camera at (18,16,18) from player.
     // Here we mimic that with a perspective offset.
-    const targetCX = _playerPos.x + 11;
-    const targetCZ = _playerPos.z + 13;
+    const safePX = isFinite(_playerPos.x) ? _playerPos.x : SPAWN_POS.x;
+    const safePZ = isFinite(_playerPos.z) ? _playerPos.z : SPAWN_POS.z;
+    const targetCX = safePX + 11;
+    const targetCZ = safePZ + 13;
     const targetCY = 14;
 
-    if (dt === 0) {
-      // Immediate snap on init
+    if (!isFinite(dt) || dt === 0) {
+      // Immediate snap on init or invalid dt
       _campCamera.position.set(targetCX, targetCY, targetCZ);
     } else {
-      _campCamera.position.x += (targetCX - _campCamera.position.x) * 0.06;
-      _campCamera.position.y += (targetCY - _campCamera.position.y) * 0.06;
-      _campCamera.position.z += (targetCZ - _campCamera.position.z) * 0.06;
+      const nx = _campCamera.position.x + (targetCX - _campCamera.position.x) * 0.06;
+      const ny = _campCamera.position.y + (targetCY - _campCamera.position.y) * 0.06;
+      const nz = _campCamera.position.z + (targetCZ - _campCamera.position.z) * 0.06;
+      _campCamera.position.x = isFinite(nx) ? nx : targetCX;
+      _campCamera.position.y = isFinite(ny) ? ny : targetCY;
+      _campCamera.position.z = isFinite(nz) ? nz : targetCZ;
     }
-    _campCamera.lookAt(_playerPos.x, 0, _playerPos.z);
+    _campCamera.lookAt(safePX, 0, safePZ);
   }
 
   // ──────────────────────────────────────────────────────────
