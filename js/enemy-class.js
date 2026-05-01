@@ -1110,8 +1110,6 @@
           if (sl.frame % 2 === 0) {
             if (window.BloodSimulatorV21) {
               window.BloodSimulatorV21.rawBurst(this.mesh.position.x, 0.1, this.mesh.position.z, 2, { spreadXZ: 0.2, spreadY: 0.1 });
-            } else if (window.BloodSystem) {
-              window.BloodSystem.emitDragTrail(this.mesh.position, { x: sl.vx, y: 0, z: sl.vz }, 6);
             }
           }
           if (sl.frame % 3 === 0) {
@@ -1247,8 +1245,6 @@
             // Ice crack particles + water pool on ground
             if (window.BloodSimulatorV21) {
               window.BloodSimulatorV21.rawBurst(this.mesh.position.x, this.mesh.position.y, this.mesh.position.z, 30, { color: 0xAEEEFF, spreadXZ: 0.6, spreadY: 0.4, viscosity: 0.95 });
-            } else if (window.BloodSystem) {
-              window.BloodSystem.emitBurst(this.mesh.position, 30, { spreadXZ: 0.6, spreadY: 0.4, color1: 0xAEEEFF, color2: 0xFFFFFF, minSize: 0.05, maxSize: 0.14 });
             }
             // Brief shaking struggle: enemy wiggles before breaking free
             let shakeCount = 0;
@@ -1963,32 +1959,19 @@
           }
         }
         // Blood system: directional spray on heavy hits — BloodSimulatorV21 only
-        if (window.BloodSimulatorV21 && isHeavyHit) {
-          const isShotgunHit = SHOTGUN_TYPES.includes(damageType);
-          window.BloodSimulatorV21.onEnemyHit(this, this.mesh.position,
-            isShotgunHit ? 'projectile' : 'melee');
-        }
-        // Weapon-specific blood effects — handled exclusively by BloodSimulatorV21
+        // onEnemyHit internally calls rawBurst + spawnMist + addWoundPulse, so we use it
+        // for heavy hits and add a lighter wound pulse for non-heavy hits.
         if (window.BloodSimulatorV21) {
-          const bloodColor = window.BloodSimulatorV21.getEnemyBloodColor(this.enemyType);
-          // Always add a wound pulse for any hit so there's a visible blood response
-          window.BloodSimulatorV21.addWoundPulse(
-            this.mesh.position.x, this.mesh.position.y + 0.3, this.mesh.position.z,
-            bloodColor, isHeavyHit ? 3.5 : 1.5
-          );
-          // For heavy hits, also do a raw burst scaled to damage type
           if (isHeavyHit) {
-            const burstCount = SHOTGUN_TYPES.includes(damageType) ? 90 :
-              (damageType === 'sword' || damageType === 'samuraiSword' || damageType === 'teslaSaber') ? 55 :
-              (damageType === 'sniperRifle' || damageType === '50cal') ? 110 :
-              (damageType === 'homingMissile' || damageType === 'fireball') ? 130 : 45;
-            window.BloodSimulatorV21.rawBurst(
-              this.mesh.position.x, this.mesh.position.y + 0.4, this.mesh.position.z,
-              burstCount, { spreadXZ: 14, spreadY: 20, viscosity: 0.58, color: bloodColor }
-            );
-            window.BloodSimulatorV21.spawnMist(
-              this.mesh.position.x, this.mesh.position.y + 0.5, this.mesh.position.z,
-              isHeavyHit ? 8 : 3, bloodColor
+            const isShotgunHit = SHOTGUN_TYPES.includes(damageType);
+            window.BloodSimulatorV21.onEnemyHit(this, this.mesh.position,
+              isShotgunHit ? 'projectile' : 'melee');
+          } else {
+            // Light hit: just a small wound pulse
+            const bloodColor = window.BloodSimulatorV21.getEnemyBloodColor(this.enemyType);
+            window.BloodSimulatorV21.addWoundPulse(
+              this.mesh.position.x, this.mesh.position.y + 0.3, this.mesh.position.z,
+              bloodColor, 1.0
             );
           }
         }
@@ -2113,41 +2096,14 @@
         
         // Blood drip: small drops fall from wounded enemy to ground (managed in main loop)
         // More blood drips from first shot onward, increasing with damage
-        if (scene) {
-          // Blood drip: use instanced drops for zero per-drop mesh overhead
+        if (scene && window.BloodSimulatorV21) {
+          // Blood drip: use BloodSimulatorV21 particles — zero per-drop mesh overhead
           const dripCount = hpRatio < 0.25 ? 6 : (hpRatio < 0.5 ? 4 : 3);
-          if (window.BloodSystem && window.BloodSystem.emitDrop) {
-            for (let d = 0; d < dripCount; d++) {
-              window.BloodSystem.emitDrop(
-                this.mesh.position.x + (Math.random() - 0.5) * 0.5,
-                this.mesh.position.y + (Math.random() - 0.5) * 0.3,
-                this.mesh.position.z + (Math.random() - 0.5) * 0.5,
-                (Math.random() - 0.5) * 0.06,
-                0.02 + Math.random() * 0.06,
-                (Math.random() - 0.5) * 0.06,
-                0.03 + Math.random() * 0.05
-              );
-            }
-          } else if (bloodDrips.length < MAX_BLOOD_DRIPS) {
-            if (!_sharedBloodDripGeo && typeof THREE !== 'undefined') {
-              _sharedBloodDripGeo = new THREE.SphereGeometry(1, 4, 4);
-            }
-            for (let d = 0; d < dripCount && bloodDrips.length < MAX_BLOOD_DRIPS; d++) {
-              const dripSize = 0.03 + Math.random() * 0.05;
-              const drip = new THREE.Mesh(
-                _sharedBloodDripGeo,
-                new THREE.MeshBasicMaterial({ color: 0x8B0000 })
-              );
-              drip.scale.setScalar(dripSize);
-              drip.position.set(
-                this.mesh.position.x + (Math.random() - 0.5) * 0.5,
-                this.mesh.position.y + (Math.random() - 0.5) * 0.3,
-                this.mesh.position.z + (Math.random() - 0.5) * 0.5
-              );
-              scene.add(drip);
-              bloodDrips.push({ mesh: drip, velY: 0, life: 30 + Math.floor(Math.random() * 20), _sharedGeo: true });
-            }
-          }
+          const bloodColor = window.BloodSimulatorV21.getEnemyBloodColor(this.enemyType);
+          window.BloodSimulatorV21.rawBurst(
+            this.mesh.position.x, this.mesh.position.y + 0.2, this.mesh.position.z,
+            dripCount, { spreadXZ: 0.5, spreadY: 0.3, viscosity: 0.9, color: bloodColor }
+          );
         }
         
         // Bullet-hole decal that sticks to enemy surface (visible bloody wound)
@@ -2204,47 +2160,13 @@
         } // end canSpawnMeshes throttle
         
         // Airborne blood splatter - throttled alongside other mesh creation
-        if (canSpawnMeshes) {
+        if (canSpawnMeshes && window.BloodSimulatorV21) {
           const burstCount = isCrit ? 5 : 3;
-          if (window.BloodSystem && window.BloodSystem.emitDrop) {
-            for (let b = 0; b < burstCount; b++) {
-              window.BloodSystem.emitDrop(
-                this.mesh.position.x + (Math.random() - 0.5) * 0.4,
-                this.mesh.position.y + 0.1,
-                this.mesh.position.z + (Math.random() - 0.5) * 0.4,
-                (Math.random() - 0.5) * 0.08,
-                0.12 + Math.random() * 0.22,
-                (Math.random() - 0.5) * 0.08,
-                0.03 + Math.random() * 0.05
-              );
-            }
-          } else {
-            for (let b = 0; b < burstCount && bloodDrips.length < MAX_BLOOD_DRIPS; b++) {
-              const bSize = 0.03 + Math.random() * 0.05;
-              if (!_sharedBloodDripGeo && typeof THREE !== 'undefined') {
-                _sharedBloodDripGeo = new THREE.SphereGeometry(1, 4, 4);
-              }
-              const p = new THREE.Mesh(
-                _sharedBloodDripGeo,
-                new THREE.MeshBasicMaterial({ color: 0xAA0000 })
-              );
-              p.scale.setScalar(bSize);
-              p.position.set(
-                this.mesh.position.x + (Math.random() - 0.5) * 0.4,
-                this.mesh.position.y + 0.1,
-                this.mesh.position.z + (Math.random() - 0.5) * 0.4
-              );
-              scene.add(p);
-              bloodDrips.push({
-                mesh: p,
-                velX: (Math.random() - 0.5) * 0.08,
-                velZ: (Math.random() - 0.5) * 0.08,
-                velY: 0.12 + Math.random() * 0.22,
-                life: 35 + Math.floor(Math.random() * 15),
-                _sharedGeo: true
-              });
-            }
-          }
+          const bloodColor = window.BloodSimulatorV21.getEnemyBloodColor(this.enemyType);
+          window.BloodSimulatorV21.rawBurst(
+            this.mesh.position.x, this.mesh.position.y + 0.1, this.mesh.position.z,
+            burstCount, { spreadXZ: 0.4, spreadY: 0.6, viscosity: 0.75, color: bloodColor }
+          );
         } // end airborne blood throttle
         
         // Phase 3: Apply armor reduction for MiniBoss/FlyingBoss — delegated to GameCombat
@@ -2689,9 +2611,9 @@
               }
               break;
             case 4: // Extreme arterial spurt — force an immediate spurt regardless of HP
-              if (window.BloodSystem && window.BloodSystem.emitArterialSpurt) {
-                const aDir = { x: Math.cos(Math.random() * Math.PI * 2), y: 0, z: Math.sin(Math.random() * Math.PI * 2) };
-                window.BloodSystem.emitArterialSpurt(this.mesh.position, aDir, { pulses: 4, perPulse: 60, interval: 120, intensity: 1.0, coneAngle: 0.5 });
+              if (window.BloodSimulatorV21) {
+                window.BloodSimulatorV21.rawBurst(this.mesh.position.x, this.mesh.position.y + 0.5, this.mesh.position.z, 60, { spreadXZ: 18, spreadY: 22, viscosity: 0.5 });
+                window.BloodSimulatorV21.spawnMist(this.mesh.position.x, this.mesh.position.y + 0.6, this.mesh.position.z, 6);
               } else {
                 // Fallback: lots of blood particles
                 spawnParticles(this.mesh.position, 0xFF0000, 20);
@@ -3045,10 +2967,9 @@
           const nearbyWound = TraumaSystem.findNearbyWound(this, hitPoint);
 
           if (nearbyWound) {
-            // Aggravate existing wound
-            const chunkTornOff = TraumaSystem.aggravateWound(nearbyWound, hitPoint, weaponLevel);
-            if (chunkTornOff && typeof createFloatingText === 'function') {
-              createFloatingText('CHUNK TORN!', hitPoint, '#FF0000');
+            // Aggravate existing wound — V21 burst instead of chunk tearoff
+            if (window.BloodSimulatorV21) {
+              window.BloodSimulatorV21.addWoundPulse(hitPoint.x, hitPoint.y, hitPoint.z, 0xCC1100, 2.5);
             }
           } else {
             // Create new wound decal
@@ -3077,13 +2998,9 @@
               // Larger wound for exit
               TraumaSystem.addWoundDecal(this, exitPos, 'exitwound');
 
-              // Blood spray from exit wound
-              if (window.BloodSystem && window.BloodSystem.emitBurst) {
-                window.BloodSystem.emitBurst(exitPos, 20, {
-                  spreadXZ: 0.8,
-                  spreadY: 0.4,
-                  direction: { x: hitDir.vx || 0, y: 0, z: hitDir.vz || 0 }
-                });
+              // Blood spray from exit wound — V21 only
+              if (window.BloodSimulatorV21) {
+                window.BloodSimulatorV21.rawBurst(exitPos.x, exitPos.y, exitPos.z, 20, { spreadXZ: 12, spreadY: 8, viscosity: 0.6 });
               }
             }
 
@@ -3119,13 +3036,9 @@
             // Add elongated slash wound decal
             TraumaSystem.addWoundDecal(this, hitPoint, 'slash');
 
-            // Blood spray along slash arc
-            if (window.BloodSystem && window.BloodSystem.emitBurst) {
-              window.BloodSystem.emitBurst(hitPoint, 25 + weaponLevel * 5, {
-                spreadXZ: 0.6,
-                spreadY: 0.2,
-                direction: hitDir ? { x: hitDir.vx || 0, y: 0, z: hitDir.vz || 0 } : null
-              });
+            // Blood spray along slash arc — V21 only
+            if (window.BloodSimulatorV21) {
+              window.BloodSimulatorV21.rawBurst(hitPoint.x, hitPoint.y, hitPoint.z, 25 + weaponLevel * 5, { spreadXZ: 12, spreadY: 6, viscosity: 0.55 });
             }
 
             // High-level melee (10+): Deep slash with multiple wound decals along the cut line
@@ -3164,14 +3077,11 @@
 
               if (window.TraumaSystem && window.TraumaSystem.tearOffFleshChunk) {
                 window.TraumaSystem.tearOffFleshChunk(this, exitPoint, arrowDir, 0.12);
+              }
 
-                // Extra blood spray for pierce-through
-                if (window.BloodSystem && window.BloodSystem.emitBurst) {
-                  window.BloodSystem.emitBurst(exitPoint, 30, {
-                    spreadXZ: 0.5,
-                    spreadY: 0.2,
-                    direction: { x: arrowDir.x, y: 0, z: arrowDir.z }
-                  });
+                // Extra blood spray for pierce-through — V21 only
+                if (window.BloodSimulatorV21) {
+                  window.BloodSimulatorV21.rawBurst(exitPoint.x, exitPoint.y, exitPoint.z, 30, { spreadXZ: 10, spreadY: 8, viscosity: 0.58 });
                 }
 
                 // Create entry and exit wound decals
@@ -3204,34 +3114,6 @@
           }
         }
 
-        // Weapon-specific trauma effects
-        if (window.TraumaSystem) {
-          var _eColor = _getEnemyBloodColor(this);
-          if (damageType === 'shotgun' || damageType === 'doubleBarrel' || damageType === 'pumpShotgun' || damageType === 'autoShotgun') {
-            if (hitPoint) {
-              var _blastDir = { x: 0, z: 0 };
-              if (this.mesh) {
-                var _px = hitPoint.x - this.mesh.position.x;
-                var _pz = hitPoint.z - this.mesh.position.z;
-                var EPSILON_DISTANCE = 0.001; // avoid division-by-zero when hit is exactly at enemy center
-                var _pl = Math.sqrt(_px*_px + _pz*_pz) + EPSILON_DISTANCE;
-                _blastDir.x = _px/_pl; _blastDir.z = _pz/_pl;
-              }
-              window.TraumaSystem.shotgunBlast(hitPoint, _blastDir, _eColor);
-            }
-          } else if (damageType === 'sword' || damageType === 'samuraiSword' || damageType === 'teslaSaber') {
-            if (hitPoint) {
-              var _sax = this._slashDirection ? this._slashDirection.x : 1;
-              var _saz = this._slashDirection ? this._slashDirection.z : 0;
-              window.TraumaSystem.swordCleave(hitPoint, _sax, _saz, _eColor);
-            }
-          } else if (damageType === 'meteor' || damageType === 'rocket' || damageType === 'grenade') {
-            if (this.mesh) {
-              var _gpos = this.mesh.position;
-              window.TraumaSystem.explosiveGib({ x: _gpos.x, y: _gpos.y, z: _gpos.z }, _eColor);
-            }
-          }
-        }
         // ─────────────────────────────────────────────────────────────────────────────
 
         if (this.hp <= 0) {
@@ -3496,13 +3378,10 @@
           damageType === 'doubleBarrel' ||
           damageType === 'pumpShotgun' ||
           damageType === 'autoShotgun';
-        if (window.TraumaSystem && !_shotgunDeathHandledByMethod) {
-          var _deathColor = _getEnemyBloodColor(this);
-          var _deathPos = this.mesh ? this.mesh.position : null;
-          if (_deathPos) {
-            if (damageType === 'meteor' || damageType === 'rocket' || damageType === 'grenade') {
-              window.TraumaSystem.explosiveGib({ x: _deathPos.x, y: _deathPos.y, z: _deathPos.z }, _deathColor);
-            }
+        if (!_shotgunDeathHandledByMethod) {
+          var _deathPos2 = this.mesh ? this.mesh.position : null;
+          if (_deathPos2 && window.BloodSimulatorV21 && (damageType === 'meteor' || damageType === 'rocket' || damageType === 'grenade')) {
+            window.BloodSimulatorV21.rawBurst(_deathPos2.x, _deathPos2.y + 0.5, _deathPos2.z, 120, { spreadXZ: 20, spreadY: 22, viscosity: 0.5 });
           }
         }
         
@@ -5303,49 +5182,10 @@
           z: -bulletVZ / bulletLen
         };
 
-        // ── TRAUMA SYSTEM: Spawn guts, brains, bones ─────────────────────────────
-        if (window.TraumaSystem) {
-          // Guts (intestines): 10-15 long pinkish cylinders
-          const gutCount = 10 + Math.floor(Math.random() * 6);
-          const gutVelocity = {
-            x: backwardDir.x * 0.25,
-            y: 0.3,
-            z: backwardDir.z * 0.25
-          };
-          TraumaSystem.spawnGuts(deathPos, gutCount, gutVelocity);
-
-          // Brains: 3-5 grey/pink bouncy spheres (from head)
-          const brainCount = 3 + Math.floor(Math.random() * 3);
-          const brainVelocity = {
-            x: backwardDir.x * 0.3,
-            y: 0.4,
-            z: backwardDir.z * 0.3
-          };
-          TraumaSystem.spawnBrains(deathPos, brainCount, brainVelocity);
-
-          // Bones: 8-12 white shards
-          const boneCount = 8 + Math.floor(Math.random() * 5);
-          const boneVelocity = {
-            x: backwardDir.x * 0.2,
-            y: 0.25,
-            z: backwardDir.z * 0.2
-          };
-          TraumaSystem.spawnBones(deathPos, boneCount, boneVelocity);
-
-          // Register corpse for heartbeat blood pump system
-          // Collect existing wounds from this enemy for pumping
-          const bulletHoles = [];
-          if (this._traumaWounds) {
-            this._traumaWounds.forEach(wound => {
-              if (wound.position) {
-                bulletHoles.push({
-                  pos: wound.position.clone(),
-                  dir: backwardDir
-                });
-              }
-            });
-          }
-          TraumaSystem.registerCorpse(deathPos, 'shotgun', bulletHoles);
+        // ── Gore effects: replaced by BloodSimulatorV21 (no chunk geometry) ─────────
+        if (window.BloodSimulatorV21) {
+          window.BloodSimulatorV21.rawBurst(deathPos.x, deathPos.y + 0.5, deathPos.z, 80, { spreadXZ: 16, spreadY: 18, viscosity: 0.52 });
+          window.BloodSimulatorV21.spawnMist(deathPos.x, deathPos.y + 0.6, deathPos.z, 10);
         }
 
         // ── Blast Head segment 15 units backwards ────────────────────────────────
@@ -6477,11 +6317,7 @@
           window.BloodSystem.emitBurst(deathPos, 120, { spreadXZ: 1.0, spreadY: 0.3 });
         }
 
-        // Register corpse with bullet holes for heartbeat blood pump
-        if (window.TraumaSystem) {
-          const bulletHoles = this._bulletHoles || [];
-          TraumaSystem.registerCorpse(deathPos, 'gun', bulletHoles);
-        }
+        // Register corpse bullet holes for wound pulse (V21 only — no TraumaSystem corpus)
 
         // Create stumbling body
         const bodyGeo = new THREE.SphereGeometry(0.42, 8, 8);

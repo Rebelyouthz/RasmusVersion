@@ -749,6 +749,12 @@
 
       // Initialize lastTime on first frame to prevent huge dt (PR #82 fix)
       if (lastTime === null) {
+        // Disable legacy blood/gore systems on first frame — BloodSimulatorV21 is the sole
+        // blood system. Nulling these here ensures all remaining conditional checks
+        // (window.BloodSystem, window.GoreSim) throughout enemy-class.js evaluate to false
+        // without needing to touch every call site.
+        window.BloodSystem = null;
+        window.GoreSim = null;
         lastTime = time;
         gameTime = time / 1000; // Initialize gameTime for visual effects
         // Render the initial frame before returning to avoid blank screen.
