@@ -3427,7 +3427,9 @@
       pointer-events: none;
       z-index: 4;
     }
-    /* When revealed, show the front face (stats) — inner goes from 180deg → 360deg */
+    /* When revealed, show the front face (stats).
+       360deg is intentional: the inner starts at 180deg (back visible), so the animation
+       travels 180→360deg for a smooth forward flip. 360deg = 0deg visually. */
     .upgrade-card.card-flipped .card-inner {
       transform: rotateY(360deg);
     }
