@@ -768,6 +768,8 @@
       
       // Reset advanced blood particle system
       if (window.BloodSystem) window.BloodSystem.reset();
+      // Reset BloodSimulatorV21 (V21 is the active blood system; clear particles between runs)
+      if (window.BloodSimulatorV21 && typeof window.BloodSimulatorV21.reset === 'function') window.BloodSimulatorV21.reset();
       
       // Reset lava timers
       window._lavaDamageTimer = 0;
