@@ -31,7 +31,7 @@
     { id: 'codex',               x:  4,    z:   4,  label: 'Codex',               icon: '📖' },
 
     // ── CENTERPIECE: Quest Hall + flanks (north hub) ────────
-    { id: 'questMission',        x: -8,    z:  15,  label: 'Quest Hall',          icon: '📜' },
+    { id: 'questMission',        x: -10,   z:  16,  label: 'Quest Hall',          icon: '📜' },
     { id: 'armory',              x: -12,   z:  13,  label: 'Armory',              icon: '⚔️'  },
     { id: 'progressionHouse',    x:  12,   z:  13,  label: 'Progression House',   icon: '💪' },
 
@@ -162,6 +162,11 @@
   let _robotMesh    = null;
   let _robotLapActive = false;
   let _robotLapT = 0;
+  // Robot walk-to-quest-hall animation (triggered after lap completes)
+  let _robotWalkToQuestHall = false;
+  let _robotWalkT = 0;
+  let _robotWalkFromX = 0;
+  let _robotWalkFromZ = 0;
 
   // Camp Quest Arrow
   let _campArrowEl = null;
@@ -248,7 +253,7 @@
   // After Quest Hall is built (level > 0), robot moves in front of it regardless of chip state.
   const AIDA_ROBOT_POS  = { x: 2, z: 2 };    // directly by campfire (south side)
   const AIDA_CHIP_POS   = { x: 0, z: -5 };   // north of fire — clearly visible open area
-  const _questHallDef = BUILDING_DEFS.find(b => b.id === 'questMission') || { x: -8, z: 15 };
+  const _questHallDef = BUILDING_DEFS.find(b => b.id === 'questMission') || { x: -10, z: 16 };
   const AIDA_QUEST_HALL_POS = { x: _questHallDef.x, z: _questHallDef.z - 1.5 }; // 1.5 units in front of Quest Hall
   const AIDA_INTRO_RADIUS      = 5.0;   // Generous radius so the interaction is easy to trigger
   const AIDA_CHIP_MAGNET_RANGE = 2.0;   // Distance at which chip starts flying toward player
@@ -1844,62 +1849,11 @@
     });
   }
 
-  // ── Robot floating speech bubble ─────────────────────────────
-  // Shown above the broken robot before the chip is picked up, so players know what to do.
-  function _ensureRobotBubble() {
-    if (_robotBubbleEl) return;
-    _robotBubbleEl = document.createElement('div');
-    _robotBubbleEl.id = 'camp-robot-bubble';
-    _robotBubbleEl.style.cssText = [
-      'position:fixed', 'z-index:220', 'padding:10px 18px', 'border-radius:14px',
-      'background:rgba(0,20,30,0.92)', 'border:2px solid rgba(0,204,255,0.7)',
-      'box-shadow:0 0 16px rgba(0,170,255,0.4)',
-      'font-family:"Courier New",monospace', 'font-size:13px', 'color:#00eeff',
-      'max-width:260px', 'text-align:center', 'pointer-events:none', 'display:none',
-      'transform:translate(-50%,-100%)',
-      'text-shadow:0 0 8px rgba(0,204,255,0.6)',
-      'opacity:0', 'transition:opacity 0.4s ease-out',
-    ].join(';');
-    // Glowing tail
-    const tail = document.createElement('div');
-    tail.style.cssText = [
-      'position:absolute', 'bottom:-10px', 'left:50%', 'transform:translateX(-50%)',
-      'width:0', 'height:0',
-      'border-left:8px solid transparent', 'border-right:8px solid transparent',
-      'border-top:10px solid rgba(0,204,255,0.7)',
-    ].join(';');
-    const span = document.createElement('span');
-    span.textContent = 'Help me! Find the chip north of the campfire and use it to start me up.';
-    _robotBubbleEl.appendChild(span);
-    _robotBubbleEl.appendChild(tail);
-    document.body.appendChild(_robotBubbleEl);
-  }
+  // Floating speech bubbles over heads have been removed per design update.
+  // These stubs prevent call-site errors.
+  function _ensureRobotBubble() { /* disabled — no floating bubbles */ }
 
-  function _updateRobotBubble() {
-    // Show only when chip not yet picked up and robot mesh exists and no menu open
-    const shouldShow = !_aidaIntroState.chipPickedUp && !!_aidaRobotMesh && !_menuOpen && !window._suppressAidaBubbles;
-    if (!shouldShow) {
-      if (_robotBubbleEl) { _robotBubbleEl.style.opacity = '0'; _robotBubbleEl.style.display = 'none'; }
-      return;
-    }
-    _ensureRobotBubble();
-    if (!_campCamera) { _robotBubbleEl.style.opacity = '0'; _robotBubbleEl.style.display = 'none'; return; }
-    const THREE = T();
-    if (!THREE) { _robotBubbleEl.style.opacity = '0'; _robotBubbleEl.style.display = 'none'; return; }
-    if (!_campUITmpVec) _campUITmpVec = new THREE.Vector3();
-    _campUITmpVec.copy(_aidaRobotMesh.position);
-    _campUITmpVec.y += 2.2;
-    _campUITmpVec.project(_campCamera);
-    // Only show when in front of camera
-    if (_campUITmpVec.z > 1.0) { _robotBubbleEl.style.opacity = '0'; _robotBubbleEl.style.display = 'none'; return; }
-    const sx = (_campUITmpVec.x * 0.5 + 0.5) * window.innerWidth;
-    const sy = (-_campUITmpVec.y * 0.5 + 0.5) * window.innerHeight;
-    _robotBubbleEl.style.left = sx + 'px';
-    _robotBubbleEl.style.top  = sy + 'px';
-    _robotBubbleEl.style.display = 'block';
-    // Trigger fade-in via opacity (transition:opacity 0.4s defined in cssText)
-    requestAnimationFrame(function () { if (_robotBubbleEl) _robotBubbleEl.style.opacity = '1'; });
-  }
+  function _updateRobotBubble() { /* disabled — no floating bubbles */ }
 
   // Per-frame update for Aida intro props (chip glow + proximity prompts)
   function _updateAidaIntro(dt) {
@@ -1917,13 +1871,37 @@
       _robotMesh.rotation.y = -angle + Math.PI * 0.5;
       if (lapProgress >= 1.0) {
         _robotLapActive = false;
-        _robotMesh.position.set(AIDA_ROBOT_POS.x, 0, AIDA_ROBOT_POS.z);
-        _robotMesh.rotation.y = 0;
+        // Start smooth walk to Quest Hall instead of snapping
+        _robotWalkToQuestHall = true;
+        _robotWalkT = 0;
+        _robotWalkFromX = _robotMesh.position.x;
+        _robotWalkFromZ = _robotMesh.position.z;
       }
     }
 
-    // ─ Robot speech bubble — visible before chip is picked up ─
-    _updateRobotBubble();
+    // Robot walk-to-quest-hall animation (smooth glide after campfire lap)
+    if (_robotWalkToQuestHall && _robotMesh) {
+      _robotWalkT += dt;
+      const walkDuration = 4.0;
+      const walkProgress = Math.min(_robotWalkT / walkDuration, 1.0);
+      // Smooth ease-out
+      const t = 1 - Math.pow(1 - walkProgress, 3);
+      const tx = AIDA_QUEST_HALL_POS.x;
+      const tz = AIDA_QUEST_HALL_POS.z;
+      _robotMesh.position.x = _robotWalkFromX + (tx - _robotWalkFromX) * t;
+      _robotMesh.position.z = _robotWalkFromZ + (tz - _robotWalkFromZ) * t;
+      // Face the direction of travel
+      const dx = tx - _robotWalkFromX;
+      const dz = tz - _robotWalkFromZ;
+      if (Math.abs(dx) > 0.01 || Math.abs(dz) > 0.01) {
+        _robotMesh.rotation.y = Math.atan2(dx, dz);
+      }
+      if (walkProgress >= 1.0) {
+        _robotWalkToQuestHall = false;
+        _robotMesh.position.set(tx, 0, tz);
+        _robotMesh.rotation.y = 0;
+      }
+    }
 
     // ─ Chip float + glow animation + magnet ─
     if (!_aidaIntroState.chipPickedUp && _aidaChipMesh && _aidaChipMesh.visible) {
@@ -2051,14 +2029,8 @@
       if (typeof saveSaveData === 'function') saveSaveData();
     }
 
-    // Permanently suppress the old "Help Me" bubble now that chip is inserted
     window._suppressAidaBubbles = true;
-    if (_robotBubbleEl) {
-      _robotBubbleEl.style.opacity = '0';
-      _robotBubbleEl.style.display = 'none';
-      if (_robotBubbleEl.parentNode) _robotBubbleEl.parentNode.removeChild(_robotBubbleEl);
-      _robotBubbleEl = null;
-    }
+    // (floating bubbles have been removed — nothing to clean up)
 
     _aidaRobotEyesOn(true);
 
@@ -4781,7 +4753,7 @@
   function _updatePlayer(dt) {
     // Guard: clamp dt to a safe range to prevent NaN/Infinity from infecting physics
     if (!isFinite(dt) || dt <= 0) dt = 0.016;
-    dt = Math.min(dt, 0.05);
+    dt = Math.max(0.001, Math.min(dt, 0.05));
 
     let mx = 0, mz = 0;
 
@@ -5062,8 +5034,9 @@
       }
     }
 
-    // Apply body position
-    _playerMesh.position.y = PLAYER_RADIUS + bobY;
+    // Apply body position — guard against NaN bobY
+    const safeY = PLAYER_RADIUS + (isFinite(bobY) ? bobY : 0);
+    _playerMesh.position.y = safeY;
 
     // Apply body squish to first child (body mesh)
     if (_playerMesh.children[0]) {
@@ -5102,6 +5075,7 @@
     // rotation corrupts the world-matrix and causes a WebGL TypeError in render.
     if (!isFinite(_campBankLean))    _campBankLean    = 0;
     if (!isFinite(_campForwardLean)) _campForwardLean = 0;
+    if (!isFinite(_playerMesh.rotation.y)) _playerMesh.rotation.y = 0;
     _playerMesh.rotation.x = _campForwardLean;
     _playerMesh.rotation.z = _campBankLean;
 
@@ -5471,65 +5445,13 @@
   // ════════════════════════════════════════════════════════════════════════
   // PLAYER COMIC BUBBLE — thought/speech bubble above player character
   // ════════════════════════════════════════════════════════════════════════
+  // Player floating speech bubble has been removed per design update.
+  // These stubs prevent call-site errors.
   let _playerBubbleEl = null;
   let _playerBubbleTimer = 0;
-  function _ensurePlayerBubble() {
-    if (_playerBubbleEl) return;
-    _playerBubbleEl = document.createElement('div');
-    _playerBubbleEl.id = 'camp-player-bubble';
-    _playerBubbleEl.style.cssText = [
-      'position:fixed', 'z-index:220', 'padding:8px 16px', 'border-radius:14px',
-      'background:rgba(255,255,255,0.95)', 'border:2px solid #333',
-      'box-shadow:0 3px 10px rgba(0,0,0,0.4)',
-      'font-family:"Comic Sans MS","Segoe UI",cursive', 'font-size:13px', 'color:#222',
-      'max-width:260px', 'text-align:center', 'pointer-events:none', 'display:none',
-      'transform:translate(-50%,-100%)',
-    ].join(';');
-    // Comic tail
-    var tail = document.createElement('div');
-    tail.style.cssText = [
-      'position:absolute', 'bottom:-10px', 'left:50%', 'transform:translateX(-50%)',
-      'width:0', 'height:0',
-      'border-left:8px solid transparent', 'border-right:8px solid transparent',
-      'border-top:10px solid #fff',
-    ].join(';');
-    _playerBubbleEl.appendChild(tail);
-    document.body.appendChild(_playerBubbleEl);
-  }
-  function _showPlayerBubble(text, durationMs) {
-    _ensurePlayerBubble();
-    // Set text before the tail
-    var span = _playerBubbleEl.querySelector('span');
-    if (!span) {
-      span = document.createElement('span');
-      _playerBubbleEl.insertBefore(span, _playerBubbleEl.firstChild);
-    }
-    span.textContent = text;
-    _playerBubbleEl.style.display = 'block';
-    _playerBubbleTimer = (durationMs || 3000) / 1000;
-  }
-  function _updatePlayerBubble(dt) {
-    if (!_playerBubbleEl || _playerBubbleTimer <= 0) return;
-    _playerBubbleTimer -= dt;
-    if (_playerBubbleTimer <= 0) {
-      _playerBubbleEl.style.display = 'none';
-      return;
-    }
-    // Position above the player character using screen projection
-    if (_playerMesh && _campCamera) {
-      var THREE = T();
-      if (!_campUITmpVec && THREE) _campUITmpVec = new THREE.Vector3();
-      if (_campUITmpVec) {
-        _campUITmpVec.copy(_playerMesh.position);
-        _campUITmpVec.y += 1.8;
-        _campUITmpVec.project(_campCamera);
-        var x = (_campUITmpVec.x * 0.5 + 0.5) * window.innerWidth;
-        var y = (-_campUITmpVec.y * 0.5 + 0.5) * window.innerHeight;
-        _playerBubbleEl.style.left = x + 'px';
-        _playerBubbleEl.style.top = y + 'px';
-      }
-    }
-  }
+  function _ensurePlayerBubble() { /* disabled — no floating bubbles */ }
+  function _showPlayerBubble(text, durationMs) { /* disabled — no floating bubbles */ }
+  function _updatePlayerBubble(dt) { /* disabled — no floating bubbles */ }
   window._showPlayerBubble = _showPlayerBubble;
 
   // ════════════════════════════════════════════════════════════════════════

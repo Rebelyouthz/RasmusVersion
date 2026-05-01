@@ -6652,9 +6652,9 @@
           : null;
       window.BloodSimulatorV21.init(scene, terrainMesh, player ? player.mesh : null);
     }
-    if (window.GoreSim && typeof window.GoreSim.init === 'function') {
-      window.GoreSim.init(scene, camera);
-    }
+    // GoreSim and BloodSystem are disabled — BloodSimulatorV21 is the sole blood system.
+    window.GoreSim = null;
+    window.BloodSystem = null;
     if (window.SlimePool && typeof window.SlimePool.init === 'function') {
       window.SlimePool.init(scene, 40);
     }
@@ -7580,15 +7580,15 @@
         player.update(dt, _allEnemiesScratch, _activeProjList, expGems);
       }
 
-      // Blood system tick – V2.1 is the sole blood system
+      // Blood system tick – V2.1 is the sole blood system.
+      // Legacy GoreSim and BloodSystem are disabled to prevent artifact chunk geometry.
+      window.GoreSim = null;
+      window.BloodSystem = null;
       if (window.BloodSimulatorV21 && typeof BloodSimulatorV21.update === 'function') {
         window.BloodSimulatorV21.update(dt);
       }
       // PERF FIX: Update wound decal pool (frame-driven timer, replaces setTimeout)
       if (window._updateWoundPool) window._updateWoundPool(dt);
-      if (window.GoreSim && typeof window.GoreSim.update === 'function') {
-        window.GoreSim.update(dt);
-      }
       if (window.SlimePool && typeof window.SlimePool.update === 'function') {
         window.SlimePool.update(dt, player ? player.mesh.position : null);
       }
@@ -7606,10 +7606,8 @@
         const playerPos = (player && player.mesh && player.mesh.position) ? player.mesh.position : null;
         window._engine2Instance._worldTrees.update(dt, playerPos);
       }
-      // Trauma system tick (gore chunks, stuck arrows, wound decals)
-      if (window.TraumaSystem && typeof TraumaSystem.update === 'function') {
-        TraumaSystem.update(dt);
-      }
+      // TraumaSystem.update is disabled — wound decals are kept but chunk geometry
+      // (explosiveGib, shotgunBlast, swordCleave) causes the artifact issue.
 
       // Blood stain decal fade update
       _updateBloodStains(dt);
