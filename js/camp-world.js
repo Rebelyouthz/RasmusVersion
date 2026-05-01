@@ -4894,11 +4894,12 @@
 
     // NaN/Infinity guards: aggressively sanitise velocity AND position.
     // isNaN catches NaN; !isFinite also catches ±Infinity.
-    // If corrupted, reset to safe defaults so WebGL never receives NaN.
+    // If corrupted, reset to SPAWN_POS (the canonical safe spawn) so the player
+    // is teleported to a known-good location rather than world origin.
     if (isNaN(_playerVel.x) || !isFinite(_playerVel.x)) _playerVel.x = 0;
     if (isNaN(_playerVel.z) || !isFinite(_playerVel.z)) _playerVel.z = 0;
-    if (isNaN(_playerPos.x) || !isFinite(_playerPos.x)) _playerPos.x = 0;
-    if (isNaN(_playerPos.z) || !isFinite(_playerPos.z)) _playerPos.z = 0;
+    if (isNaN(_playerPos.x) || !isFinite(_playerPos.x)) _playerPos.x = SPAWN_POS.x;
+    if (isNaN(_playerPos.z) || !isFinite(_playerPos.z)) _playerPos.z = SPAWN_POS.z;
 
     // Clamp
     _playerPos.x = Math.max(-38, Math.min(38, _playerPos.x));

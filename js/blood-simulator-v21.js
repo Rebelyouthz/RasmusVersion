@@ -78,13 +78,21 @@ const BloodSimulatorV21 = {
    * (opaque at centre, transparent at edge).  Used as the alphaMap/map on
    * the drop and mist InstancedMesh materials so each sprite renders as a
    * soft circular puff rather than a hard-edged polygon.
-   * @returns {THREE.CanvasTexture}
+   * Falls back to a 1×1 white DataTexture if a 2D canvas context is unavailable.
+   * @returns {THREE.Texture}
    */
   _makeCircleTexture() {
     const size = 64;
     const canvas = document.createElement('canvas');
     canvas.width = canvas.height = size;
     const ctx = canvas.getContext('2d');
+    // Guard: some browsers may refuse a 2D context (context limit exhaustion).
+    // Return a 1×1 opaque white DataTexture so the material still works.
+    if (!ctx) {
+      const fallback = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1, THREE.RGBAFormat);
+      fallback.needsUpdate = true;
+      return fallback;
+    }
     const cx = size / 2;
     const grad = ctx.createRadialGradient(cx, cx, 0, cx, cx, cx);
     grad.addColorStop(0,   'rgba(255,255,255,1)');
@@ -291,9 +299,8 @@ const BloodSimulatorV21 = {
         if (dx*dx + dz*dz < 1.8 && d.py > 0.1) { d.vx += dx*6*dt; d.vz += dz*6*dt; }
       }
       if (activeDrops >= this.MAX_DROPS) continue;
-      // Horizontal circle: uniform scale so the flat disc looks circular from top-down
-      const _ds = d.radius * 2;
-      matrix.makeScale(_ds, _ds, _ds);
+      // CircleGeometry has radius 1.0; scale by d.radius gives the correct world size.
+      matrix.makeScale(d.radius, d.radius, d.radius);
       matrix.setPosition(d.px, d.py, d.pz);
       this.dropIM.setMatrixAt(activeDrops, matrix);
       color.setHex(d.color);

@@ -5211,12 +5211,12 @@
         const _sgChunks = [];
         for (let ci = 0; ci < chunkCount; ci++) {
           const chunkSize = 0.12 + Math.random() * 0.22; // Larger than standard chunks
-          const isBox = false; // BoxGeometry disabled — always use sphere to prevent box artifacts
           const chunkColor = goreColors[ci % goreColors.length];
           // Use global object pool to avoid per-chunk allocation / GC stutter.
+          // BoxGeometry permanently disabled (isBox=false) — always sphere to prevent box artifacts.
           let chunkEntry;
           if (window.GameObjectPool) {
-            chunkEntry = window.GameObjectPool.getChunk(isBox, chunkSize, chunkColor, deathPos);
+            chunkEntry = window.GameObjectPool.getChunk(false, chunkSize, chunkColor, deathPos);
           } else {
             const chunkGeo = new THREE.SphereGeometry(chunkSize, 5, 4);
             const chunkMat = new THREE.MeshBasicMaterial({ color: chunkColor, transparent: true, opacity: 0.95 });
