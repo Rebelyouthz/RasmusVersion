@@ -119,15 +119,11 @@
     // Expose for use by object-pool.js when resetting pooled enemy material colors
     window._ENEMY_COLORS = _ENEMY_COLORS;
 
-    // Helper: get the base blood color for an enemy instance (reads BloodSimulatorV21 palette)
-    const _V21_BLOOD_PALETTE = {
-      slime: 0x22cc44, crawler: 0x994422, leaping_slime: 0x00bfff,
-      skinwalker: 0x220000, bug: 0xaadd00, human: 0xcc1100,
-      alien: 0x8800ff, robot: 0x88aaff
-    };
+    // Helper: get the base blood color for an enemy instance.
+    // Delegates to BloodSimulatorV21.getEnemyBloodColor — single source of truth.
     function _getEnemyBloodColor(enemy) {
-      if (enemy && enemy.enemyType && _V21_BLOOD_PALETTE[enemy.enemyType]) {
-        return _V21_BLOOD_PALETTE[enemy.enemyType];
+      if (window.BloodSimulatorV21) {
+        return window.BloodSimulatorV21.getEnemyBloodColor(enemy && enemy.enemyType);
       }
       return 0xcc1100;
     }

@@ -37,6 +37,7 @@ function init() {
 
   if (typeof window._ensureEntityPools === 'function') window._ensureEntityPools();
   if (window.BloodV2 && typeof THREE !== 'undefined') window.BloodV2.init(scene);
+  if (window.BloodSimulatorV21 && typeof THREE !== 'undefined') window.BloodSimulatorV21.init(scene, null, null);
   if (window.TraumaSystem && typeof THREE !== 'undefined') window.TraumaSystem.init(scene);
   if (window.GameObjectPool) window.GameObjectPool.prewarm();
   console.log('[Init] Scene created OK');

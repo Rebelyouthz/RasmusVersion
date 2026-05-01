@@ -763,16 +763,14 @@
       const frameStartTime = performance.now();
 
       let dt = (time - lastTime) / 1000;
+      // Sanitize dt before any system update — NaN/Infinity/negative would corrupt timers/pools
+      if (!isFinite(dt) || dt <= 0) dt = 0.016; // fallback to ~60fps frame
       if (window.BloodSimulatorV21) window.BloodSimulatorV21.update(dt);
       if (window.SlimePool) window.SlimePool.update(dt, player && player.mesh ? player.mesh.position : null);
       if (window.WaveSpawner) window.WaveSpawner.update(dt, player && player.mesh ? player.mesh.position : null);
       if (window.HitDetection) window.HitDetection.update(dt, player && player.mesh ? player.mesh.position : null);
       lastTime = time;
       gameTime = time / 1000; // Update game time in seconds
-
-      // Guard against NaN or negative dt (e.g. from tab-switch timing jitter)
-      // which could propagate NaN into physics positions and permanently break the loop.
-      if (!isFinite(dt) || dt <= 0) dt = 0.016; // fallback to ~60fps frame
 
       // Hit-stop recovery — once the freeze window expires, snap time back to normal
       if (_hitStopUntilMs > 0 && time >= _hitStopUntilMs) {
@@ -3002,7 +3000,6 @@
 
       // Update advanced blood particle system
       if (window.BloodSystem) window.BloodSystem.update();
-      if (window.BloodSimulatorV21) window.BloodSimulatorV21.update(dt);
       if (window.GoreSim) window.GoreSim.update(dt);
       // Update trauma system (gore chunks, stuck arrows, wound decals)
       if (window.TraumaSystem) window.TraumaSystem.update();

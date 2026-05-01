@@ -441,6 +441,12 @@ const BloodSimulatorV21 = {
     this.spawnMist(position.x, position.y+0.6, position.z, 16, mistColor);
     this._spawnDecal(position.x, position.z, 0.6+Math.random()*0.4, bloodColor, 40);
     this.addWoundPulse(position.x, position.y+0.5, position.z, bloodColor, 5.0);
+  },
+
+  // Returns the 3D blood hex color for a given enemy type string.
+  // Single source of truth — avoids duplicating _BSV21_BLOOD elsewhere.
+  getEnemyBloodColor(enemyType) {
+    return (enemyType && _BSV21_BLOOD[enemyType]) ? _BSV21_BLOOD[enemyType] : 0xcc1100;
   }
 };
 
