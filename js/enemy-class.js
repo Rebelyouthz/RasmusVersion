@@ -6317,7 +6317,7 @@
           window.BloodSystem.emitBurst(deathPos, 120, { spreadXZ: 1.0, spreadY: 0.3 });
         }
 
-        // Register corpse bullet holes for wound pulse (V21 only — no TraumaSystem corpus)
+        // Register corpse bullet holes for wound pulse (V21 only — no TraumaSystem corpse)
 
         // Create stumbling body
         const bodyGeo = new THREE.SphereGeometry(0.42, 8, 8);
