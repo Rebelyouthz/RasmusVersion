@@ -67,7 +67,7 @@ const BloodSimulatorV21 = {
 
   // Heartbeat pulse state
   _pulseTimer: 0,
-  _pulseInterval: 0.45,
+  _pulseInterval: 0.30,
   _pulseWounds: [],
 
   _matrix: null,
@@ -119,16 +119,17 @@ const BloodSimulatorV21 = {
     this._pool = new Array(this.MAX_DROPS);
     for (let i = 0; i < this.MAX_DROPS; i++) {
       this._pool[i] = { alive:false, px:0, py:0, pz:0, vx:0, vy:0, vz:0,
-        radius:0.012, viscosity:0.62, life:0, onGround:false, color:0x8B0000 };
+        radius:0.025, viscosity:0.62, life:0, onGround:false, color:0x8B0000 };
     }
     this._head = 0;
 
     // CircleGeometry lies in XY plane; rotateX(-PI/2) lays it flat in XZ (horizontal).
     const dropGeo = new THREE.CircleGeometry(1.0, 8);
     dropGeo.rotateX(-Math.PI / 2);
-    const dropMat = new THREE.MeshBasicMaterial({
+    const dropMat = new THREE.MeshPhongMaterial({
       map: _circleTex, transparent: true, alphaTest: 0.01,
-      depthWrite: false, vertexColors: true
+      depthWrite: false, vertexColors: true,
+      emissive: 0x440000, emissiveIntensity: 0.6, shininess: 80
     });
     this.dropIM = new THREE.InstancedMesh(dropGeo, dropMat, this.MAX_DROPS);
     this.dropIM.count = 0;
@@ -142,14 +143,14 @@ const BloodSimulatorV21 = {
     this._mistPool = new Array(this.MAX_MIST);
     for (let i = 0; i < this.MAX_MIST; i++) {
       this._mistPool[i] = { alive:false, px:0, py:0, pz:0, vx:0, vy:0, vz:0,
-        radius:0.06, maxRadius:0.18, life:0, maxLife:1.8, color:0xee2200 };
+        radius:0.14, maxRadius:0.40, life:0, maxLife:1.8, color:0xee2200 };
     }
     this._mistHead = 0;
 
     const mistGeo = new THREE.CircleGeometry(1.0, 12);
     mistGeo.rotateX(-Math.PI / 2);
     const mistMat = new THREE.MeshBasicMaterial({
-      map: _circleTex, transparent:true, opacity:0.45, depthWrite:false, alphaTest: 0.01,
+      map: _circleTex, transparent:true, opacity:0.65, depthWrite:false, alphaTest: 0.01,
       vertexColors:true, blending:THREE.AdditiveBlending
     });
     this.mistIM = new THREE.InstancedMesh(mistGeo, mistMat, this.MAX_MIST);
@@ -225,9 +226,9 @@ const BloodSimulatorV21 = {
     m.alive = true;
     m.px=x; m.py=y; m.pz=z;
     m.vx=vx; m.vy=vy; m.vz=vz;
-    m.radius    = 0.04 + Math.random() * 0.04;
-    m.maxRadius = 0.12 + Math.random() * 0.12;
-    m.maxLife   = 1.2  + Math.random() * 0.8;
+    m.radius    = 0.12 + Math.random() * 0.10;
+    m.maxRadius = 0.32 + Math.random() * 0.30;
+    m.maxLife   = 1.6  + Math.random() * 1.2;
     m.life      = m.maxLife;
     m.color     = hexColor;
   },
@@ -246,7 +247,7 @@ const BloodSimulatorV21 = {
         wnd.life -= this._pulseInterval;
         if (wnd.life <= 0) { this._pulseWounds.splice(w, 1); continue; }
         const pulseStr = Math.max(0.2, wnd.life / wnd.maxLife);
-        const cnt = Math.ceil(6 * pulseStr);
+        const cnt = Math.ceil(18 * pulseStr);
         for (let i = 0; i < cnt; i++) {
           const d = this._pool[this._head];
           this._head = (this._head + 1) % this.MAX_DROPS;
@@ -254,10 +255,10 @@ const BloodSimulatorV21 = {
           d.px = wnd.x + (Math.random() - 0.5) * 0.3;
           d.py = wnd.y;
           d.pz = wnd.z + (Math.random() - 0.5) * 0.3;
-          d.vx = (Math.random() - 0.5) * 3;
-          d.vy = 1.5 + Math.random() * 3.5;
-          d.vz = (Math.random() - 0.5) * 3;
-          d.radius = 0.006 + Math.random() * 0.007;
+          d.vx = (Math.random() - 0.5) * 4;
+          d.vy = 2.5 + Math.random() * 5.0;
+          d.vz = (Math.random() - 0.5) * 4;
+          d.radius = 0.018 + Math.random() * 0.020;
           d.viscosity = 0.72;
           d.life = 2 + Math.random() * 1.5;
           d.onGround = false;
@@ -273,7 +274,7 @@ const BloodSimulatorV21 = {
       if (!d.alive) continue;
       d.life -= dt;
       if (d.life <= 0) {
-        if (d.onGround) this._spawnDecal(d.px, d.pz, d.radius * 8 + 0.05, d.color, 22);
+        if (d.onGround) this._spawnDecal(d.px, d.pz, d.radius * 22 + 0.15, d.color, 35);
         d.alive = false;
         continue;
       }
@@ -289,7 +290,7 @@ const BloodSimulatorV21 = {
           if (d.vy < 0.15) {
             d.onGround = true;
             d.vx *= 0.3; d.vz *= 0.3;
-            this._spawnDecal(d.px, d.pz, d.radius * 6 + 0.04, d.color, 20);
+            this._spawnDecal(d.px, d.pz, d.radius * 16 + 0.10, d.color, 30);
           }
         }
       }
@@ -379,7 +380,7 @@ const BloodSimulatorV21 = {
       d.vx = (Math.random()-0.5)*spreadXZ;
       d.vy = 4 + Math.random()*spreadY;
       d.vz = (Math.random()-0.5)*spreadXZ;
-      d.radius    = 0.008 + Math.random()*0.009;
+      d.radius    = 0.022 + Math.random()*0.025;
       d.viscosity = viscosity;
       d.life      = 5 + Math.random()*3;
       d.onGround  = false;
@@ -401,26 +402,26 @@ const BloodSimulatorV21 = {
       const s  = arm === 0 ? sinA : -sinA;
       const ax = nx*cosA - nz*s;
       const az = nx*s    + nz*cosA;
-      for (let i = 0; i < 18; i++) {
+      for (let i = 0; i < 30; i++) {
         const d = this._pool[this._head];
         this._head = (this._head + 1) % this.MAX_DROPS;
-        const speed  = 8 + Math.random()*12;
+        const speed  = 20 + Math.random()*22;
         const spread = 0.18;
         d.alive = true;
         d.px = x + (Math.random()-0.5)*0.15;
         d.py = y + (Math.random()-0.5)*0.15;
         d.pz = z + (Math.random()-0.5)*0.15;
         d.vx = (ax + (Math.random()-0.5)*spread)*speed;
-        d.vy = 1.2 + Math.random()*3.5;
+        d.vy = 2.0 + Math.random()*5.0;
         d.vz = (az + (Math.random()-0.5)*spread)*speed;
-        d.radius    = 0.006 + Math.random()*0.008;
+        d.radius    = 0.018 + Math.random()*0.022;
         d.viscosity = 0.50;
         d.life      = 2.5 + Math.random()*2;
         d.onGround  = false;
         d.color     = col;
       }
     }
-    const mistCount = Math.min(8, Math.max(2, Math.floor(this.MAX_MIST / 10)));
+    const mistCount = Math.min(16, Math.max(4, Math.floor(this.MAX_MIST / 6)));
     for (let i = 0; i < mistCount; i++) {
       this._spawnMist(
         x + (Math.random()-0.5)*0.3, y + 0.2 + Math.random()*0.4, z + (Math.random()-0.5)*0.3,
@@ -430,7 +431,7 @@ const BloodSimulatorV21 = {
   },
 
   addWoundPulse(x, y, z, hexColor, duration) {
-    if (this._pulseWounds.length >= 8) return;
+    if (this._pulseWounds.length >= 12) return;
     this._pulseWounds.push({ x, y, z, color: hexColor||0xcc1100,
       maxLife: duration||4.0, life: duration||4.0 });
   },
@@ -448,23 +449,23 @@ const BloodSimulatorV21 = {
 
   onEnemyHit(enemy, hitPoint, damageType) {
     const isProjectile = (typeof damageType === 'string') && damageType !== 'melee';
-    const burstCount   = isProjectile ? 65 : 38;
+    const burstCount   = isProjectile ? 220 : 150;
     const bloodColor   = (enemy && enemy.enemyType && _BSV21_BLOOD[enemy.enemyType])
       ? _BSV21_BLOOD[enemy.enemyType] : 0x8B0000;
     const mistColor    = (enemy && enemy.enemyType && _BSV21_MIST[enemy.enemyType])
       ? _BSV21_MIST[enemy.enemyType]  : 0xee2200;
 
     this.rawBurst(hitPoint.x, hitPoint.y, hitPoint.z, burstCount, {
-      spreadXZ:11, spreadY:16,
+      spreadXZ:14, spreadY:20,
       viscosity: (enemy && enemy.bloodViscosity) ? enemy.bloodViscosity : 0.62,
       color: bloodColor
     });
-    this.spawnMist(hitPoint.x, hitPoint.y+0.3, hitPoint.z, isProjectile ? 6 : 3, mistColor);
+    this.spawnMist(hitPoint.x, hitPoint.y+0.3, hitPoint.z, isProjectile ? 16 : 8, mistColor);
     if (isProjectile || damageType === 'sword') {
       this.arterialJet(hitPoint.x, hitPoint.y+0.4, hitPoint.z,
         (Math.random()-0.5), (Math.random()-0.5), bloodColor);
     }
-    this.addWoundPulse(hitPoint.x, hitPoint.y, hitPoint.z, bloodColor, 2.5);
+    this.addWoundPulse(hitPoint.x, hitPoint.y, hitPoint.z, bloodColor, 5.0);
   },
 
   onEnemyDeath(enemy, position) {
@@ -473,16 +474,16 @@ const BloodSimulatorV21 = {
     const mistColor  = (enemy && enemy.enemyType && _BSV21_MIST[enemy.enemyType])
       ? _BSV21_MIST[enemy.enemyType]  : 0xee2200;
 
-    this.rawBurst(position.x, position.y+0.8, position.z, 120,
-      { spreadXZ:14, spreadY:22, viscosity:0.55, color:bloodColor });
+    this.rawBurst(position.x, position.y+0.8, position.z, 250,
+      { spreadXZ:18, spreadY:28, viscosity:0.55, color:bloodColor });
     for (let jet = 0; jet < 3; jet++) {
       const ang = (jet / 3) * Math.PI * 2;
       this.arterialJet(position.x, position.y+1.0, position.z,
         Math.cos(ang), Math.sin(ang), bloodColor);
     }
-    this.spawnMist(position.x, position.y+0.6, position.z, 16, mistColor);
-    this._spawnDecal(position.x, position.z, 0.6+Math.random()*0.4, bloodColor, 40);
-    this.addWoundPulse(position.x, position.y+0.5, position.z, bloodColor, 5.0);
+    this.spawnMist(position.x, position.y+0.6, position.z, 40, mistColor);
+    this._spawnDecal(position.x, position.z, 1.4+Math.random()*0.8, bloodColor, 60);
+    this.addWoundPulse(position.x, position.y+0.5, position.z, bloodColor, 9.0);
   },
 
   // Returns the 3D blood hex color for a given enemy type string.

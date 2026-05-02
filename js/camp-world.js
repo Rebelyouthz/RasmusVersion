@@ -111,7 +111,7 @@
 
   let _playerMesh  = null;
   let _playerVel   = { x: 0, z: 0 };
-  let _playerPos   = { x: SPAWN_POS.x, z: SPAWN_POS.z };
+  let _playerPos   = { x: SPAWN_POS.x, y: 0, z: SPAWN_POS.z };
 
   // Camp player limb references for animation
   let _playerLeftArm = null;
@@ -4777,6 +4777,20 @@
     if (isNaN(dt) || !isFinite(dt) || dt <= 0) dt = 0.016;
     dt = Math.max(0.001, Math.min(dt, 0.05));
 
+    // Guard first: if mesh isn't ready, nothing below can run safely.
+    // Placed here (before all early-return paths) so that every return
+    // inside this function inherits a valid mesh state.
+    if (!_playerMesh) return;
+
+    // Guarantee the player is always visible at the correct ground height.
+    // This catches frame-1 edge cases where y may have been left as 0 (underground)
+    // before the first full update loop reaches the animation section below.
+    if (_playerMesh.position &&
+        (!isFinite(_playerMesh.position.y) || _playerMesh.position.y <= 0)) {
+      _playerMesh.position.y = PLAYER_RADIUS;
+    }
+    _playerMesh.visible = true;
+
     let mx = 0, mz = 0;
 
     // Keyboard
@@ -4911,9 +4925,7 @@
       if (_campActionTimer <= 0) _campActionAnim = null;
     }
 
-    if (!_playerMesh) return;
-
-    // Final safeguard: ensure no NaN ever reaches THREE.js mesh position
+    // Apply position to mesh — NaN-guarded so no corrupt value ever reaches WebGL
     _playerMesh.position.x = isFinite(_playerPos.x) ? _playerPos.x : SPAWN_POS.x;
     _playerMesh.position.z = isFinite(_playerPos.z) ? _playerPos.z : SPAWN_POS.z;
 
@@ -7077,11 +7089,13 @@
     // failure does not block camp activation (scene is already built).
     try {
       _playerPos.x = SPAWN_POS.x;
+      _playerPos.y = 0;
       _playerPos.z = SPAWN_POS.z;
       _playerVel.x = 0;
       _playerVel.z = 0;
       if (_playerMesh) {
         _playerMesh.position.set(_playerPos.x, PLAYER_RADIUS, _playerPos.z);
+        _playerMesh.visible = true;
       }
       _updateCamera(0);
 
