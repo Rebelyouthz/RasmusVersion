@@ -2996,7 +2996,8 @@
     const _bPos4 = _reusableBloodPos;
     _bPos4.x = slot.mesh.position.x; _bPos4.y = slot.mesh.position.y + 0.4; _bPos4.z = slot.mesh.position.z;
     if (window.BloodSimulatorV21) {
-      window.BloodSimulatorV21.rawBurst(_bPos4.x, _bPos4.y, _bPos4.z, 33, { spreadXZ: 2.5, spreadY: 1.0, viscosity: 0.62 });
+      var stage4BloodColor = (slot && slot.enemyType && window._BSV21_BLOOD && window._BSV21_BLOOD[slot.enemyType]) ? window._BSV21_BLOOD[slot.enemyType] : 0x8B0000;
+      window.BloodSimulatorV21.rawBurst(_bPos4.x, _bPos4.y, _bPos4.z, 33, { spreadXZ: 2.5, spreadY: 1.0, viscosity: 0.62, color: stage4BloodColor });
     } else if (window.BloodSystem) {
       if (typeof BloodSystem.emitBurst === 'function') {
         BloodSystem.emitBurst(_bPos4, 15, { spreadXZ: 2.5, spreadY: 1.0 });
