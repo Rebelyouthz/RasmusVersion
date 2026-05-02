@@ -7669,7 +7669,7 @@
    * Per-frame logic update.  Called from main.js animate() when isActive.
    */
   function update(dt) {
-    if (!_isActive || !_campScene) return;
+    if (!_isActive || !_campScene || !_playerMesh || !_campCamera) return;
     // Clamp dt FIRST so every sub-update receives a finite, safe value.
     // This prevents NaN from propagating into _campTime, positions, or WebGL.
     if (!isFinite(dt) || isNaN(dt) || dt <= 0) dt = 0.016;

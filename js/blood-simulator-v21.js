@@ -106,6 +106,10 @@ const BloodSimulatorV21 = {
   },
 
   init(scene, terrainMesh, player) {
+    // Kill any legacy blood/gore systems that may linger from old saves or cached scripts.
+    window.BloodV2 = null;
+    window.GoreSimulator = null;
+
     this.scene = scene;
     this.terrainMesh = terrainMesh;
     this.player = player;
@@ -135,6 +139,7 @@ const BloodSimulatorV21 = {
     this.dropIM = new THREE.InstancedMesh(dropGeo, dropMat, this.MAX_DROPS);
     this.dropIM.count = 0;
     this.dropIM.frustumCulled = false;
+    this.dropIM.renderOrder = 10;
     this.dropIM.instanceColor = new THREE.InstancedBufferAttribute(
       new Float32Array(this.MAX_DROPS * 3), 3);
     this.dropIM.setColorAt(0, new THREE.Color(0x8B0000));
@@ -157,6 +162,7 @@ const BloodSimulatorV21 = {
     this.mistIM = new THREE.InstancedMesh(mistGeo, mistMat, this.MAX_MIST);
     this.mistIM.count = 0;
     this.mistIM.frustumCulled = false;
+    this.mistIM.renderOrder = 11;
     this.mistIM.instanceColor = new THREE.InstancedBufferAttribute(
       new Float32Array(this.MAX_MIST * 3), 3);
     scene.add(this.mistIM);
