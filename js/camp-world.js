@@ -1880,6 +1880,7 @@
       _robotMesh.rotation.y = -_angle + Math.PI * 0.5;
       if (_lapProgress >= 1.0) {
         _robotLapActive = false;
+        console.log('[CampWorld] AIDA robot lap complete - transitioning to Quest Hall walk');
         // Transition to State 2: record current (safe) position as walk origin
         _robotWalkToQuestHall = true;
         _robotWalkT = 0;
@@ -1914,6 +1915,7 @@
         _robotWalkToQuestHall = false;
         _robotMesh.position.set(_destX, 0, _destZ);
         _robotMesh.rotation.y = 0;
+        console.log('[CampWorld] AIDA robot arrived at Quest Hall position:', _destX, _destZ);
       }
     }
 
@@ -2059,6 +2061,7 @@
     // Start robot lap animation around the fire
     _robotLapActive = true;
     _robotLapT = 0;
+    console.log('[CampWorld] AIDA chip inserted - starting robot lap animation around campfire');
 
     const DS = window.DialogueSystem;
     if (DS) {
