@@ -496,7 +496,24 @@
       }
       saveData.storyQuests.questNotifications.questMission = false;
       saveSaveData();
-      
+
+      // Recovery guard: chip inserted + Quest Hall now open, but quest_findingAida
+      // was never queued (mid-sequence save or reload edge case) → queue it now.
+      (function _recoverFindingAida() {
+        const _ais = saveData && saveData.aidaIntroState;
+        if (!_ais || !_ais.chipInserted) return;
+        const _tq = saveData && saveData.tutorialQuests;
+        if (!_tq) return;
+        const _completed = _tq.completedQuests || [];
+        if (_completed.includes('quest_findingAida')) return;
+        const _ready = _tq.readyToClaim || [];
+        if (_ready.includes('quest_findingAida')) return;
+        if (typeof window.startAidaIntroQuest === 'function') {
+          console.log('[QuestSystem] Recovery: chip inserted at Quest Hall open — auto-queuing quest_findingAida');
+          window.startAidaIntroQuest();
+        }
+      }());
+
       // Activate new quest chain: quest_dailyRoutine after first death
       // Don't activate new quests if a building is pending construction
       if (

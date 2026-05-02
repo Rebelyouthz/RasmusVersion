@@ -1047,13 +1047,14 @@
     const THREE = T();
     const ELEV_POS = { x: 0, y: 0, z: 6 }; // near spawn point
 
-    // Main cylinder body — matte black, partially submerged
+    // Main cylinder body — near-black PBR metallic, partially submerged.
+    // MeshStandardMaterial avoids the pink/magenta fallback that MeshPhongMaterial
+    // can produce when lit by the scene's ambient-only setup.
     const bodyGeo = new THREE.CylinderGeometry(1.2, 1.2, 3.0, 24, 1, true); // open-ended
-    const bodyMat = new THREE.MeshPhongMaterial({
-      color: 0x0a0a0a,
-      emissive: 0x050505,
-      emissiveIntensity: 0.05,
-      shininess: 30,
+    const bodyMat = new THREE.MeshStandardMaterial({
+      color: 0x050505,
+      metalness: 1,
+      roughness: 0.1,
       side: THREE.DoubleSide,
     });
     const body = new THREE.Mesh(bodyGeo, bodyMat);
@@ -7136,6 +7137,24 @@
           _aidaRobotMesh.position.set(AIDA_ROBOT_POS.x, 0, AIDA_ROBOT_POS.z);
         }
       }
+
+      // Recovery guard: if the chip was inserted and Quest Hall is already built but
+      // quest_findingAida was never pushed to readyToClaim (e.g. save made mid-sequence),
+      // re-run startAidaIntroQuest so the player can claim their reward.
+      (function _recoverAidaIntroQuest() {
+        if (!_aidaIntroState.chipInserted) return;
+        const _tq = _saveData && _saveData.tutorialQuests;
+        if (!_tq) return;
+        const _completed = _tq.completedQuests || [];
+        if (_completed.includes('quest_findingAida')) return; // already done
+        const _ready = _tq.readyToClaim || [];
+        if (_ready.includes('quest_findingAida')) return;     // already queued
+        const _qmData = _saveData && _saveData.campBuildings && _saveData.campBuildings.questMission;
+        if (_qmData && _qmData.level > 0 && typeof window.startAidaIntroQuest === 'function') {
+          console.log('[CampWorld] Recovery: chip inserted + Quest Hall built — auto-queuing quest_findingAida');
+          window.startAidaIntroQuest();
+        }
+      }());
 
       // Ensure HUD elements
       _ensureHUD();

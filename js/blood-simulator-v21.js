@@ -453,40 +453,40 @@ const BloodSimulatorV21 = {
   onEnemyHit(enemy, hitPoint, damageType) {
     const isProjectile = (typeof damageType === 'string') && damageType !== 'melee';
     const burstCount   = isProjectile ? 220 : 150;
-    const bloodColor   = (enemy && enemy.enemyType && _BSV21_BLOOD[enemy.enemyType])
-      ? _BSV21_BLOOD[enemy.enemyType] : 0x8B0000;
+    // Drop particles are always dark red — this makes the spray look like blood
+    // regardless of enemy type.  Mist/chunks retain the enemy's characteristic color
+    // (green for slimes, yellow for bugs, etc.) so enemy type is still visible.
     const mistColor    = (enemy && enemy.enemyType && _BSV21_MIST[enemy.enemyType])
       ? _BSV21_MIST[enemy.enemyType]  : 0xee2200;
 
     this.rawBurst(hitPoint.x, hitPoint.y, hitPoint.z, burstCount, {
       spreadXZ:14, spreadY:20,
       viscosity: (enemy && enemy.bloodViscosity) ? enemy.bloodViscosity : 0.62,
-      color: bloodColor
+      color: 0xaa0000
     });
     this.spawnMist(hitPoint.x, hitPoint.y+0.3, hitPoint.z, isProjectile ? 16 : 8, mistColor);
     if (isProjectile || damageType === 'sword') {
       this.arterialJet(hitPoint.x, hitPoint.y+0.4, hitPoint.z,
-        (Math.random()-0.5), (Math.random()-0.5), bloodColor);
+        (Math.random()-0.5), (Math.random()-0.5), 0xaa0000);
     }
-    this.addWoundPulse(hitPoint.x, hitPoint.y, hitPoint.z, bloodColor, 5.0);
+    this.addWoundPulse(hitPoint.x, hitPoint.y, hitPoint.z, 0xaa0000, 5.0);
   },
 
   onEnemyDeath(enemy, position) {
-    const bloodColor = (enemy && enemy.enemyType && _BSV21_BLOOD[enemy.enemyType])
-      ? _BSV21_BLOOD[enemy.enemyType] : 0x8B0000;
+    // Same principle: drops are dark red, mist retains the enemy-type color.
     const mistColor  = (enemy && enemy.enemyType && _BSV21_MIST[enemy.enemyType])
       ? _BSV21_MIST[enemy.enemyType]  : 0xee2200;
 
     this.rawBurst(position.x, position.y+0.8, position.z, 250,
-      { spreadXZ:18, spreadY:28, viscosity:0.55, color:bloodColor });
+      { spreadXZ:18, spreadY:28, viscosity:0.55, color: 0xaa0000 });
     for (let jet = 0; jet < 3; jet++) {
       const ang = (jet / 3) * Math.PI * 2;
       this.arterialJet(position.x, position.y+1.0, position.z,
-        Math.cos(ang), Math.sin(ang), bloodColor);
+        Math.cos(ang), Math.sin(ang), 0xaa0000);
     }
     this.spawnMist(position.x, position.y+0.6, position.z, 40, mistColor);
-    this._spawnDecal(position.x, position.z, 1.4+Math.random()*0.8, bloodColor, 60);
-    this.addWoundPulse(position.x, position.y+0.5, position.z, bloodColor, 9.0);
+    this._spawnDecal(position.x, position.z, 1.4+Math.random()*0.8, 0xaa0000, 60);
+    this.addWoundPulse(position.x, position.y+0.5, position.z, 0xaa0000, 9.0);
   },
 
   // Returns the 3D blood hex color for a given enemy type string.
