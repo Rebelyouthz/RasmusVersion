@@ -15,6 +15,7 @@ const _BSV21_BLOOD = {
   alien:         0x8800ff,
   robot:         0x88aaff,
 };
+window._BSV21_BLOOD = _BSV21_BLOOD;
 
 // Per-enemy mist color palette
 const _BSV21_MIST = {
