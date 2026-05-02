@@ -1758,12 +1758,15 @@ window.spawnBossChest = function(x, z) {
         card.style.animation = `${_animName} ${_animDur}s cubic-bezier(0.25, 0.46, 0.45, 0.94) ${cardDelay}s both`;
 
         // After entry animation completes, flash the thud effect
+        // Store the expected animation name for this specific card to avoid firing on wrong animations
+        const _expectedAnimName = _animName;
         card.addEventListener('animationend', (e) => {
-          const _entryAnimSet = new Set(_cardEntryAnims);
-          if (e.animationName && _entryAnimSet.has(e.animationName)) {
+          // Only trigger on the specific entry animation for this card
+          if (e.animationName === _expectedAnimName) {
             card.style.animation = '';
             card.style.opacity = '1';
             card.style.transform = '';
+            card.style.pointerEvents = 'auto'; // Re-enable interaction
             // Thud flash
             card.classList.add('card-thud-flash');
             setTimeout(() => card.classList.remove('card-thud-flash'), 420);

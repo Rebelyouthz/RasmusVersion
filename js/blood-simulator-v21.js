@@ -89,6 +89,7 @@ const BloodSimulatorV21 = {
     // Guard: some browsers may refuse a 2D context (context limit exhaustion).
     // Return a 1×1 opaque white DataTexture so the material still works.
     if (!ctx) {
+      console.warn('[BloodSimulatorV21] Canvas 2D context unavailable — using fallback texture. Blood particles may appear as solid squares.');
       const fallback = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1, THREE.RGBAFormat);
       fallback.needsUpdate = true;
       return fallback;
