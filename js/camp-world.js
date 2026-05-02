@@ -1249,6 +1249,7 @@
     _lakeMesh.rotation.x = -Math.PI / 2;
     _lakeMesh.position.set(LAKE_POS.x, 0.01, LAKE_POS.z);
     _lakeMesh.receiveShadow = false;
+    _lakeMesh.renderOrder = -1; // render before player to avoid Z-fighting/clipping artifacts
     _campScene.add(_lakeMesh);
 
     // Enhanced blue lake glow
@@ -2092,11 +2093,13 @@
     sd.resources.wood  = (sd.resources.wood  || 0) + 3;
     sd.resources.stone = (sd.resources.stone || 0) + 3;
     // Ensure Quest Hall is unlocked so player can interact with it.
+    // Create the entry if it doesn't exist (fresh saves or saves without campBuildings).
     // Do NOT reset level — if the first-visit logic already built it (level=1), keep it built.
-    // Resetting to 0 would cause the Quest Hall to visually shrink/disappear after the dialogue.
-    if (sd.campBuildings && sd.campBuildings.questMission) {
+    if (!sd.campBuildings) sd.campBuildings = {};
+    if (!sd.campBuildings.questMission) {
+      sd.campBuildings.questMission = { unlocked: true, level: 0, maxLevel: 3 };
+    } else {
       sd.campBuildings.questMission.unlocked = true;
-      // Explicitly ensure level is at least 0 to trigger construction mode visibility
       if (sd.campBuildings.questMission.level === undefined) {
         sd.campBuildings.questMission.level = 0;
       }
@@ -4815,9 +4818,12 @@
 
     // Normalize diagonal
     const len = Math.sqrt(mx * mx + mz * mz);
-    if (len > 0) {
+    if (len > 0.0001) {
       mx /= len;
       mz /= len;
+    } else {
+      mx = 0;
+      mz = 0;
     }
 
     // ── Dash trigger (Shift or double-tap) ──
