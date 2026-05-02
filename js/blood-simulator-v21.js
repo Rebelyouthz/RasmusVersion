@@ -126,10 +126,9 @@ const BloodSimulatorV21 = {
     // CircleGeometry lies in XY plane; rotateX(-PI/2) lays it flat in XZ (horizontal).
     const dropGeo = new THREE.CircleGeometry(1.0, 8);
     dropGeo.rotateX(-Math.PI / 2);
-    const dropMat = new THREE.MeshPhongMaterial({
+    const dropMat = new THREE.MeshBasicMaterial({
       map: _circleTex, transparent: true, alphaTest: 0.01,
-      depthWrite: false, vertexColors: true,
-      emissive: 0x440000, emissiveIntensity: 0.6, shininess: 80
+      depthWrite: false, vertexColors: true, opacity: 0.92
     });
     this.dropIM = new THREE.InstancedMesh(dropGeo, dropMat, this.MAX_DROPS);
     this.dropIM.count = 0;
@@ -247,7 +246,10 @@ const BloodSimulatorV21 = {
         wnd.life -= this._pulseInterval;
         if (wnd.life <= 0) { this._pulseWounds.splice(w, 1); continue; }
         const pulseStr = Math.max(0.2, wnd.life / wnd.maxLife);
-        const cnt = Math.ceil(18 * pulseStr);
+        // Scale count by device tier (MAX_DROPS relative to desktop max of 1200)
+        // so lower-end devices never generate more particles than their pool supports.
+        const tierScale = Math.min(1, this.MAX_DROPS / 1200);
+        const cnt = Math.ceil(18 * pulseStr * tierScale);
         for (let i = 0; i < cnt; i++) {
           const d = this._pool[this._head];
           this._head = (this._head + 1) % this.MAX_DROPS;
@@ -274,7 +276,6 @@ const BloodSimulatorV21 = {
       if (!d.alive) continue;
       d.life -= dt;
       if (d.life <= 0) {
-        if (d.onGround) this._spawnDecal(d.px, d.pz, d.radius * 22 + 0.15, d.color, 35);
         d.alive = false;
         continue;
       }

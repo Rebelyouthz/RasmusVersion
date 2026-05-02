@@ -111,7 +111,7 @@
 
   let _playerMesh  = null;
   let _playerVel   = { x: 0, z: 0 };
-  let _playerPos   = { x: SPAWN_POS.x, y: 0, z: SPAWN_POS.z };
+  let _playerPos   = { x: SPAWN_POS.x, z: SPAWN_POS.z };
 
   // Camp player limb references for animation
   let _playerLeftArm = null;
@@ -7089,7 +7089,6 @@
     // failure does not block camp activation (scene is already built).
     try {
       _playerPos.x = SPAWN_POS.x;
-      _playerPos.y = 0;
       _playerPos.z = SPAWN_POS.z;
       _playerVel.x = 0;
       _playerVel.z = 0;
