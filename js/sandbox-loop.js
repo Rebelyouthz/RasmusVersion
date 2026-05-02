@@ -7596,8 +7596,7 @@
         player.update(dt, _allEnemiesScratch, _activeProjList, expGems);
       }
 
-      // Blood system tick – V2.1 is the sole blood system.
-      // Legacy GoreSim and BloodSystem are disabled to prevent artifact chunk geometry.
+      // Blood system tick - V2.1 is the sole blood system.
       if (window.BloodSimulatorV21 && typeof BloodSimulatorV21.update === 'function') {
         window.BloodSimulatorV21.update(dt);
       }
