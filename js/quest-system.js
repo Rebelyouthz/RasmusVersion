@@ -477,9 +477,9 @@
     function showQuestHall() {
       // Guard: Quest Hall must be built (level > 0) before it can be entered
       var _qmData = saveData.campBuildings && saveData.campBuildings.questMission;
-      if (_qmData && _qmData.level === 0) {
+      if (!_qmData || _qmData.level === 0) {
         // Building not yet built — show build overlay if available, otherwise a message
-        if (_qmData.unlocked && typeof window._campShowBuildOverlay === 'function') {
+        if (_qmData && _qmData.unlocked && typeof window._campShowBuildOverlay === 'function') {
           var _qmName = (CAMP_BUILDINGS.questMission && CAMP_BUILDINGS.questMission.name) || 'Quest Hall';
           window._campShowBuildOverlay('questMission', _qmName);
         } else if (typeof showStatusMessage === 'function') {

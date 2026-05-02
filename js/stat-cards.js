@@ -262,7 +262,33 @@
         }
 
         cardState.isAnimating = false;
-        setTimeout(() => renderCards(), 1000);
+        // Update only the changed card element and purchase UI to avoid flickering
+        // caused by a full innerHTML rebuild of the overlay.
+        _updateCardDOM(cardIndex);
+        _updatePurchaseUI();
+    }
+
+    // Update a single card element in the DOM without rebuilding the whole overlay
+    function _updateCardDOM(index) {
+        const cardEl = document.querySelector('.stat-card[data-index="' + index + '"]');
+        if (!cardEl) return;
+        const tmp = document.createElement('div');
+        tmp.innerHTML = renderCardHTML(cardState.cards[index], index).trim();
+        const newEl = tmp.firstChild;
+        if (newEl && cardEl.parentNode) cardEl.parentNode.replaceChild(newEl, cardEl);
+    }
+
+    // Update the purchase button and info values without rebuilding the overlay
+    function _updatePurchaseUI() {
+        const btn = document.querySelector('.purchase-button');
+        if (btn) {
+            btn.disabled = cardState.isAnimating;
+            btn.textContent = cardState.isAnimating ? '🎰 ROLLING...' : '🎰 Roll for ' + cardState.currentCost + ' Gold';
+        }
+        const infoValues = document.querySelectorAll('.info-value');
+        if (infoValues[0]) infoValues[0].textContent = '💰 ' + cardState.currentCost + ' Gold';
+        if (infoValues[1]) infoValues[1].textContent = '💰 ' + (window.player ? window.player.gold : 0);
+        if (infoValues[2]) infoValues[2].textContent = cardState.purchases;
     }
 
     // Highlight selected card

@@ -7128,7 +7128,7 @@
       // Explicitly reset to campfire position when quest is unresolved, in case the
       // scene was built with AIDA at the Quest Hall (e.g. _buildAidaIntroProps raced
       // with a stale save that had level > 0 but quest not yet resolved).
-      if (_aidaRobotMesh && !_robotLapActive) {
+      if (_aidaRobotMesh && !_robotLapActive && !_robotWalkToQuestHall) {
         const _qmData = _saveData && _saveData.campBuildings && _saveData.campBuildings.questMission;
         if (_qmData && _qmData.level > 0 && _isAidaQuestResolved()) {
           _aidaRobotMesh.position.set(AIDA_QUEST_HALL_POS.x, 0, AIDA_QUEST_HALL_POS.z);
@@ -7770,7 +7770,7 @@
     // Guard: do not move AIDA during the robot-lap animation.
     // Explicitly reset to campfire when quest is unresolved so AIDA cannot remain
     // parked in front of the Quest Hall from a prior scene build.
-    if (_aidaRobotMesh && !_robotLapActive) {
+    if (_aidaRobotMesh && !_robotLapActive && !_robotWalkToQuestHall) {
       const _qmBd = _saveData && _saveData.campBuildings && _saveData.campBuildings.questMission;
       if (_qmBd && _qmBd.level > 0 && _isAidaQuestResolved()) {
         _aidaRobotMesh.position.set(AIDA_QUEST_HALL_POS.x, 0, AIDA_QUEST_HALL_POS.z);
