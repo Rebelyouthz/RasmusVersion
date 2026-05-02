@@ -3088,7 +3088,8 @@
         s.mesh.material.opacity = Math.min(0.7, (s.age / s.fadeIn) * 0.7);
       } else {
         const remaining = s.fadeTimer - s.age;
-        s.mesh.material.opacity = Math.max(0, (remaining / (s.fadeTimer - s.fadeIn)) * 0.7);
+        const _stainFadeDenom = s.fadeTimer - s.fadeIn;
+        s.mesh.material.opacity = _stainFadeDenom > 0 ? Math.max(0, (remaining / _stainFadeDenom) * 0.7) : 0;
         if (remaining <= 0) {
           s.mesh.visible = false;
           s.mesh.material.opacity = 0;
@@ -3155,7 +3156,8 @@
         h.mesh.material.opacity = Math.min(0.85, (h.age / h.fadeIn) * 0.85);
       } else {
         const remaining = h.fadeTimer - h.age;
-        h.mesh.material.opacity = Math.max(0, (remaining / (h.fadeTimer - h.fadeIn)) * 0.85);
+        const _holeFadeDenom = h.fadeTimer - h.fadeIn;
+        h.mesh.material.opacity = _holeFadeDenom > 0 ? Math.max(0, (remaining / _holeFadeDenom) * 0.85) : 0;
         if (remaining <= 0) {
           h.mesh.visible = false;
           h.mesh.material.opacity = 0;

@@ -144,6 +144,7 @@ function makeRarityScaledUpgrade(u) {
 function showFocusPathPrompt(onWeapons, onPassives) {
   const modal = document.getElementById('levelup-modal');
   const list  = document.getElementById('upgrade-list');
+  if (!modal || !list) return;
   const h2    = modal.querySelector('h2');
   if (h2) { h2.innerText = 'CHOOSE YOUR PATH'; h2.style.color = '#FFD700'; h2.style.fontSize = '28px'; }
   list.innerHTML = `
@@ -491,6 +492,7 @@ window.spawnBossChest = function(x, z) {
       }
       const modal = document.getElementById('levelup-modal');
       const list = document.getElementById('upgrade-list');
+      if (!modal || !list) { levelUpPending = false; return; }
       // NOTE: Do NOT clear list.innerHTML here — cards are built off-DOM into a DocumentFragment
       // and swapped in atomically to prevent the "flicker death" (flash of empty content).
       // See list.replaceChildren(_cardFrag) below after all cards are constructed.
@@ -901,8 +903,7 @@ window.spawnBossChest = function(x, z) {
       // STRICT LEVEL GATE: only trigger at level 4+ so levels 2-3 remain passive-only.
       if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon' &&
           !WEAPON_UNLOCK_LEVELS.includes(playerStats.lvl) && playerStats.lvl >= 4) {
-        modal.querySelector('h2').innerText = 'NEW WEAPON!';
-        modal.querySelector('h2').style.fontSize = '36px';
+        if (h2) { h2.innerText = 'NEW WEAPON!'; h2.style.fontSize = '36px'; }
         const allWeaponChoicesQ8 = [
           { id: 'sword', title: 'TIDAL SLASH', desc: 'Slash enemies in front', active: () => weapons.sword.active, apply: () => { weapons.sword.active = true; weapons.sword.level = 1; showStatChange('New Weapon: Sword'); progressTutorialQuest('quest8_newWeapon', true); } },
           { id: 'aura', title: 'STORM SURGE', desc: 'Damage aura around you', active: () => weapons.aura.active, apply: () => { weapons.aura.active = true; weapons.aura.level = 1; showStatChange('New Weapon: Aura'); progressTutorialQuest('quest8_newWeapon', true); } },
@@ -924,8 +925,7 @@ window.spawnBossChest = function(x, z) {
       }
       // Levels 5, 9, 17, 23: WEAPON LVL UP LEVELS (first weapon upgrade at level 5)
       else if ([5, 9, 17, 23].includes(playerStats.lvl)) {
-        modal.querySelector('h2').innerText = 'WEAPON LVL UP!';
-        modal.querySelector('h2').style.fontSize = '36px';
+        if (h2) { h2.innerText = 'WEAPON LVL UP!'; h2.style.fontSize = '36px'; }
         
         choices = [];
         
@@ -1129,8 +1129,7 @@ window.spawnBossChest = function(x, z) {
         const countActiveWeapons = () => Object.values(weapons).filter(w => w.active).length;
         const atWeaponCap = countActiveWeapons() >= 4; // Hard cap: max 4 active weapons
 
-        modal.querySelector('h2').innerText = atWeaponCap ? 'WEAPON LVL UP!' : 'NEW WEAPON!';
-        modal.querySelector('h2').style.fontSize = '36px';
+        if (h2) { h2.innerText = atWeaponCap ? 'WEAPON LVL UP!' : 'NEW WEAPON!'; h2.style.fontSize = '36px'; }
 
         const questCheck = () => { if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); };
 
@@ -1283,8 +1282,7 @@ window.spawnBossChest = function(x, z) {
       }
       // Level 10: CLASS SELECTION - ALWAYS SHOW 6 CHOICES
       else if (playerStats.lvl === 10) {
-        modal.querySelector('h2').innerText = 'CHOOSE YOUR CLASS';
-        modal.querySelector('h2').style.fontSize = '42px';
+        if (h2) { h2.innerText = 'CHOOSE YOUR CLASS'; h2.style.fontSize = '42px'; }
         
         choices = [
           { 
@@ -1371,8 +1369,7 @@ window.spawnBossChest = function(x, z) {
       } 
       // Level 12, 18, 25: PERK UNLOCKS - ALWAYS SHOW 6 CHOICES
       else if ([12, 18, 25].includes(playerStats.lvl)) {
-        modal.querySelector('h2').innerText = 'PERK UNLOCK!';
-        modal.querySelector('h2').style.fontSize = '40px';
+        if (h2) { h2.innerText = 'PERK UNLOCK!'; h2.style.fontSize = '40px'; }
         
         // Create perk pool based on level
         const perkChoices = [
@@ -1991,9 +1988,7 @@ window.spawnBossChest = function(x, z) {
                   modal.querySelector('.modal-content').style.transform = '';
                   modal.querySelector('.modal-content').style.opacity = '';
                 }
-                modal.querySelector('h2').innerText = 'LEVEL UP!';
-                modal.querySelector('h2').style.fontSize = '24px';
-                modal.querySelector('h2').style.color = '';
+                if (h2) { h2.innerText = 'LEVEL UP!'; h2.style.fontSize = '24px'; h2.style.color = ''; }
                 const skipBtn = document.getElementById('levelup-skip-btn');
                 if (skipBtn) skipBtn.style.display = 'none';
                 clearTimeout(window.levelupSkipTimeoutId);
@@ -2117,7 +2112,7 @@ window.spawnBossChest = function(x, z) {
       // so the initial rotateY(180deg) is committed before transitions are re-enabled.
       for (let i = 0; i < cardInners.length; i++) {
         void cardInners[i].offsetHeight;
-        cardInners[i].style.transition = '';
+        cardInners[i].style.transition = 'none'; // explicit 'none' prevents CSS default transitions from re-enabling
       }
 
       } catch(cardErr) {
