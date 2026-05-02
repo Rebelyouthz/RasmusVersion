@@ -2093,15 +2093,22 @@
     // Resetting to 0 would cause the Quest Hall to visually shrink/disappear after the dialogue.
     if (sd.campBuildings && sd.campBuildings.questMission) {
       sd.campBuildings.questMission.unlocked = true;
+      // Explicitly ensure level is at least 0 to trigger construction mode visibility
+      if (sd.campBuildings.questMission.level === undefined) {
+        sd.campBuildings.questMission.level = 0;
+      }
     }
     if (typeof saveSaveData === 'function') saveSaveData();
     // Grant resources silently — no modal, no input freeze
     if (typeof showStatChange === 'function') {
       showStatChange('🎁 A.I.D.A: +3 Wood, +3 Stone', 'rare');
     }
+    // Force immediate refresh of building visibility to show Quest Hall in construction mode
     if (typeof window.CampWorld !== 'undefined' && window.CampWorld.refreshBuildings) {
       window.CampWorld.refreshBuildings(sd);
     }
+    // Additional safety: trigger a visual update by forcing a scene refresh
+    _updatePromptUI();
   }
 
   function _buildBennyNPC() {
