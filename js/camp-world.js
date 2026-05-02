@@ -2110,8 +2110,6 @@
     if (typeof window.CampWorld !== 'undefined' && window.CampWorld.refreshBuildings) {
       window.CampWorld.refreshBuildings(sd);
     }
-    // Additional safety: trigger a visual update by forcing a scene refresh
-    _updatePromptUI();
   }
 
   function _buildBennyNPC() {

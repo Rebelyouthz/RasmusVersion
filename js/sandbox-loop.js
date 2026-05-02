@@ -1949,12 +1949,6 @@
     // ── 5-PART PROGRESSIVE DAMAGE SYSTEM ──────────────────────────────────────
     // (hpPercent already declared above before blood system section)
 
-    if (window.BloodSimulatorV21) {
-      var hitBloodColor = (slot && slot.enemyType && window._BSV21_BLOOD && window._BSV21_BLOOD[slot.enemyType]) ? window._BSV21_BLOOD[slot.enemyType] : 0x8B0000;
-      window.BloodSimulatorV21.rawBurst(slot.mesh.position.x, slot.mesh.position.y + 0.4, slot.mesh.position.z, 80, { spreadXZ: 8, spreadY: 14, viscosity: 0.62, color: hitBloodColor });
-      window.BloodSimulatorV21.spawnMist(slot.mesh.position.x, slot.mesh.position.y + 0.3, slot.mesh.position.z, 6, hitBloodColor);
-      window.BloodSimulatorV21.addWoundPulse(slot.mesh.position.x, slot.mesh.position.y, slot.mesh.position.z, hitBloodColor, 4.0);
-    }
     _placeBloodStain(slot.mesh.position.x, slot.mesh.position.z, 0.15 + Math.random() * 0.25);
 
     if (hpPercent <= 0.75 && slot.damageStage === 0) {
@@ -2076,8 +2070,6 @@
     // Hollywood-style overdone slime death burst
     if (window.BloodSimulatorV21) {
       window.BloodSimulatorV21.rawBurst(x, y, z, burstCount, { spreadXZ: burstOpts.spdMax || 9, spreadY: (burstOpts.spdMax || 9) * 1.2, viscosity: burstOpts.visc || 0.62, color: burstOpts.color, enemyType: burstOpts.enemyType });
-      var killBloodCol = (slot && slot.enemyType && window._BSV21_BLOOD && window._BSV21_BLOOD[slot.enemyType]) ? window._BSV21_BLOOD[slot.enemyType] : 0x8B0000;
-      window.BloodSimulatorV21.onEnemyDeath(slot, slot.mesh.position);
     } else if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
       BloodV2.rawBurst(x, y, z, burstCount, burstOpts);
     }
@@ -2259,12 +2251,6 @@
       _killCrawler(crawler, hitForce, projectile.vx || 0, projectile.vz || 0, weaponKey);
     } else {
       _triggerProjectileExplosion(projectile, cx, cz);
-      if (window.BloodSimulatorV21) {
-        var crawlerBloodColor = (crawler && crawler.enemyType && window._BSV21_BLOOD && window._BSV21_BLOOD[crawler.enemyType]) ? window._BSV21_BLOOD[crawler.enemyType] : 0x994422;
-        window.BloodSimulatorV21.rawBurst(crawler.mesh.position.x, crawler.mesh.position.y + 0.4, crawler.mesh.position.z, 60, { spreadXZ: 7, spreadY: 12, viscosity: 0.62, color: crawlerBloodColor });
-        window.BloodSimulatorV21.spawnMist(crawler.mesh.position.x, crawler.mesh.position.y + 0.3, crawler.mesh.position.z, 6, crawlerBloodColor);
-        window.BloodSimulatorV21.addWoundPulse(crawler.mesh.position.x, crawler.mesh.position.y, crawler.mesh.position.z, crawlerBloodColor, 4.0);
-      }
       _placeBloodStain(cx, cz, 0.15 + Math.random() * 0.25);
     }
   }
@@ -2354,7 +2340,6 @@
     // Hollywood-style overdone crawler death burst
     if (window.BloodSimulatorV21) {
       window.BloodSimulatorV21.rawBurst(x, y, z, burstCount, { spreadXZ: burstOpts.spdMax || 9, spreadY: (burstOpts.spdMax || 9) * 1.2, viscosity: burstOpts.visc || 0.62, color: burstOpts.color, enemyType: burstOpts.enemyType });
-      window.BloodSimulatorV21.onEnemyDeath(crawler, crawler.mesh.position);
     } else if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
       BloodV2.rawBurst(x, y, z, burstCount, burstOpts);
     }
@@ -2553,14 +2538,6 @@
       _showDamageNumber(_tmpV3.x, _tmpV3.y + 0.5, _tmpV3.z, actualDmg, enemy.hp <= 0, false);
     }
 
-    // Light-blue blood burst (DeepSkyBlue) — use BloodSimulatorV21
-    const bx = enemy.mesh.position.x, by = enemy.mesh.position.y + enemy.size, bz = enemy.mesh.position.z;
-    if (window.BloodSimulatorV21) {
-      var leapBloodColor = (enemy && enemy.enemyType && window._BSV21_BLOOD && window._BSV21_BLOOD[enemy.enemyType]) ? window._BSV21_BLOOD[enemy.enemyType] : 0x00bfff;
-      window.BloodSimulatorV21.rawBurst(bx, by, bz, 80, { spreadXZ: 10, spreadY: 16, viscosity: 0.55, color: leapBloodColor });
-      window.BloodSimulatorV21.spawnMist(bx, by + 0.3, bz, 8, leapBloodColor);
-    }
-
     // GoreSim hit reaction
     if (window.GoreSim && typeof GoreSim.onHit === 'function') {
       GoreSim.onHit(enemy, weaponKey, _tmpV3, hitNormal);
@@ -2666,7 +2643,6 @@
     // Light-blue gore burst
     if (window.BloodSimulatorV21) {
       window.BloodSimulatorV21.rawBurst(x, y, z, burstCount, { spreadXZ: burstOpts.spdMax || 9, spreadY: (burstOpts.spdMax || 9) * 1.2, viscosity: burstOpts.visc || 0.62, color: burstOpts.color, enemyType: burstOpts.enemyType });
-      window.BloodSimulatorV21.onEnemyDeath(enemy, enemy.mesh.position);
     } else if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
       BloodV2.rawBurst(x, y, z, burstCount, burstOpts);
     } else if (window.BloodSystem) {
@@ -6670,7 +6646,7 @@
           : null;
       window.BloodSimulatorV21.init(scene, terrainMesh, player ? player.mesh : null);
     }
-    // GoreSim and BloodSystem are disabled — BloodSimulatorV21 is the sole blood system.
+    // BloodSimulatorV21 is the primary blood system; GoreSim is also active for weapon-specific gore reactions.
     if (window.SlimePool && typeof window.SlimePool.init === 'function') {
       window.SlimePool.init(scene, 40);
     }
