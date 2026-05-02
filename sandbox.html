@@ -1353,37 +1353,19 @@
   <!-- Debug helper for diagnosing initialization issues -->
   <script src="js/sandbox-debug.js"></script>
 
-  <!-- ── ENGINE 2.0 ARCHITECTURE VERIFICATION ─────────────────────────────── -->
+  <!-- ── BLOOD SYSTEM ARCHITECTURE VERIFICATION ──────────────────────────── -->
   <script>
   (function () {
     var overlay = document.getElementById('engine2-overlay');
     var status = [];
 
-    // Check BloodV2
-    if (window.BloodV2 && typeof window.BloodV2.init === 'function') {
-      status.push('BloodV2:OK');
-      console.log('!!! ENGINE 2.0 CHECK: BloodV2 LOADED !!!');
+    // Check BloodSimulatorV21 (active blood system)
+    if (window.BloodSimulatorV21 && typeof window.BloodSimulatorV21.init === 'function') {
+      status.push('BloodSimulatorV21:OK');
+      console.log('!!! BLOOD SYSTEM CHECK: BloodSimulatorV21 LOADED !!!');
     } else {
-      status.push('BloodV2:MISSING');
-      console.error('!!! ENGINE 2.0 CHECK: BloodV2 NOT FOUND !!!');
-    }
-
-    // Check GoreSim
-    if (window.GoreSim && typeof window.GoreSim.init === 'function') {
-      status.push('GoreSim:OK');
-      console.log('!!! ENGINE 2.0 CHECK: GoreSim LOADED !!!');
-    } else {
-      status.push('GoreSim:MISSING');
-      console.error('!!! ENGINE 2.0 CHECK: GoreSim NOT FOUND !!!');
-    }
-
-    // Check TraumaSystem
-    if (window.TraumaSystem && typeof window.TraumaSystem.init === 'function') {
-      status.push('Trauma:OK');
-      console.log('!!! ENGINE 2.0 CHECK: TraumaSystem LOADED !!!');
-    } else {
-      status.push('Trauma:MISSING');
-      console.error('!!! ENGINE 2.0 CHECK: TraumaSystem NOT FOUND !!!');
+      status.push('BloodSimulatorV21:MISSING');
+      console.error('!!! BLOOD SYSTEM CHECK: BloodSimulatorV21 NOT FOUND !!!');
     }
 
     // Update overlay with status
@@ -1395,7 +1377,7 @@
       overlay.appendChild(statusLine);
     }
 
-    console.log('!!! ENGINE 2.0 ARCHITECTURE VERIFICATION COMPLETE: ' + status.join(' | ') + ' !!!');
+    console.log('!!! BLOOD SYSTEM ARCHITECTURE VERIFICATION COMPLETE: ' + status.join(' | ') + ' !!!');
   })();
   </script>
 

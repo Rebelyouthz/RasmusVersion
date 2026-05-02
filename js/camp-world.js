@@ -6659,7 +6659,8 @@
 
     // Close handlers
     terminal.addEventListener('click', function(e) { if (e.target === terminal) _closeWaterBot(); });
-    document.getElementById('waterbot-close-btn').addEventListener('click', _closeWaterBot);
+    var _wcBtn = document.getElementById('waterbot-close-btn');
+    if (_wcBtn) _wcBtn.addEventListener('click', _closeWaterBot);
 
     // Chat send
     const sendBtn = document.getElementById('waterbot-chat-send');

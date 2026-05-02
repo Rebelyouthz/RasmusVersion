@@ -673,11 +673,11 @@
                 if (completed.indexOf('questForge0b_craftTools') === -1) completed.push('questForge0b_craftTools');
               }
               // Remove old quest from readyToClaim if present
-              var rtc = tq.readyToClaim || [];
-              var gatherIdx = rtc.indexOf('questGather0_materials');
+              if (!tq.readyToClaim) tq.readyToClaim = [];
+              var gatherIdx = tq.readyToClaim.indexOf('questGather0_materials');
               if (gatherIdx !== -1) {
-                rtc.splice(gatherIdx, 1);
-                if (rtc.indexOf('questForge0_unlock') === -1) rtc.push('questForge0_unlock');
+                tq.readyToClaim.splice(gatherIdx, 1);
+                if (tq.readyToClaim.indexOf('questForge0_unlock') === -1) tq.readyToClaim.push('questForge0_unlock');
               }
             }
             saveData._questMigrationForge0 = true;
@@ -706,10 +706,10 @@
                   // Safe to redirect to new chain
                   tqSb.currentQuest = 'quest_dailyRoutine';
                   // Remove old quests from readyToClaim
-                  var rtcSb = tqSb.readyToClaim || [];
+                  if (!tqSb.readyToClaim) tqSb.readyToClaim = [];
                   oldEarlyQuests.forEach(function(q) {
-                    var idx = rtcSb.indexOf(q);
-                    if (idx !== -1) rtcSb.splice(idx, 1);
+                    var idx = tqSb.readyToClaim.indexOf(q);
+                    if (idx !== -1) tqSb.readyToClaim.splice(idx, 1);
                   });
                 }
               }
