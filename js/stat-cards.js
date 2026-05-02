@@ -250,11 +250,6 @@
         }
         window.saveData.stats.statCardsUsed = (window.saveData.stats.statCardsUsed || 0) + 1;
 
-        // Visual feedback
-        highlightSelectedCard(cardIndex, rarity);
-        flipCard(cardIndex);
-        showCardReveal(selectedCard, statType, rarity, bonusValue);
-
         // Save state
         window.saveData.statCards.cards = cardState.cards;
         if (typeof window.saveGame === 'function') {
@@ -262,7 +257,48 @@
         }
 
         cardState.isAnimating = false;
-        setTimeout(() => renderCards(), 1000);
+        // Clear any lingering slot-machine highlight state, then update the card
+        // and purchase UI in-place. Visual feedback runs AFTER the DOM update so
+        // highlightSelectedCard/flipCard operate on the new flipped element.
+        _clearHighlights();
+        _updateCardDOM(cardIndex);
+        _updatePurchaseUI();
+
+        // Visual feedback — must run after _updateCardDOM so the new element exists
+        highlightSelectedCard(cardIndex, rarity);
+        flipCard(cardIndex);
+        showCardReveal(selectedCard, statType, rarity, bonusValue);
+    }
+
+    // Remove lingering .highlighted class and transform from the slot machine animation
+    function _clearHighlights() {
+        document.querySelectorAll('.stat-card.highlighted').forEach(function(el) {
+            el.classList.remove('highlighted');
+            el.style.transform = '';
+        });
+    }
+
+    // Update a single card element in the DOM without rebuilding the whole overlay
+    function _updateCardDOM(index) {
+        const cardEl = document.querySelector('.stat-card[data-index="' + index + '"]');
+        if (!cardEl) return;
+        const tmp = document.createElement('div');
+        tmp.innerHTML = renderCardHTML(cardState.cards[index], index).trim();
+        const newEl = tmp.firstChild;
+        if (newEl && cardEl.parentNode) cardEl.parentNode.replaceChild(newEl, cardEl);
+    }
+
+    // Update the purchase button and info values without rebuilding the overlay
+    function _updatePurchaseUI() {
+        const btn = document.querySelector('.purchase-button');
+        if (btn) {
+            btn.disabled = cardState.isAnimating;
+            btn.textContent = cardState.isAnimating ? '🎰 ROLLING...' : '🎰 Roll for ' + cardState.currentCost + ' Gold';
+        }
+        const infoValues = document.querySelectorAll('.info-value');
+        if (infoValues[0]) infoValues[0].textContent = '💰 ' + cardState.currentCost + ' Gold';
+        if (infoValues[1]) infoValues[1].textContent = '💰 ' + (window.player ? window.player.gold : 0);
+        if (infoValues[2]) infoValues[2].textContent = cardState.purchases;
     }
 
     // Highlight selected card

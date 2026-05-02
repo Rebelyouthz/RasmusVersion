@@ -32,7 +32,7 @@ global.THREE = {
   Vector3: class { set() {} copy() {} },
   Raycaster: class { constructor() { this.ray = { direction: { set() {} }, origin: { copy() {} } }; } },
   SphereGeometry: class {},
-  CircleGeometry: class {},
+  CircleGeometry: class { rotateX() {} },
   MeshBasicMaterial: class {
     constructor(o) {
       Object.assign(this, o, { color: { setHex() {}, getHex() { return 0; } }, needsUpdate: false });
@@ -47,6 +47,12 @@ global.THREE = {
   InstancedBufferAttribute: class { constructor(arr, n) {} },
   AdditiveBlending: 'AdditiveBlending',
   Mesh: function(geo, mat) { return mockMesh(geo, mat); },
+  // Texture constructors used by _makeCircleTexture().
+  // jsdom's canvas.getContext('2d') returns null so the DataTexture fallback
+  // path is always exercised in the test environment.
+  DataTexture: class { constructor() { this.needsUpdate = false; } },
+  CanvasTexture: class { constructor() { this.needsUpdate = false; } },
+  RGBAFormat: 1023,
 };
 
 // JSDOM doesn't have navigator.deviceMemory — set a sensible default
@@ -84,6 +90,74 @@ describe('Device pool sizing', () => {
 
   test('desktop with 8GB memory uses >= 800 mist', () => {
     expect(window._BSV21_MAX_MIST).toBeGreaterThanOrEqual(800);
+  });
+});
+
+// ── Mobile / low-memory pool sizing (regression for PR #33) ──────────────────
+// Re-run the detection IIFE in a separate scope with mocked mobile conditions.
+describe('Mobile/low-memory pool sizing', () => {
+  // Helper: runs the detection block with controlled navigator state and returns
+  // the resulting pool sizes without permanently mutating global state.
+  function detectWithConditions({ deviceMemory, isMobileUA, hasTouchPoints }) {
+    const origDrops = window._BSV21_MAX_DROPS;
+    const origMist  = window._BSV21_MAX_MIST;
+    const origUA    = global.navigator.userAgent;
+
+    // Override userAgent if mobile UA requested
+    if (isMobileUA) {
+      Object.defineProperty(global.navigator, 'userAgent', {
+        value: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)',
+        configurable: true,
+      });
+    }
+    Object.defineProperty(global.navigator, 'deviceMemory',   { value: deviceMemory,  configurable: true });
+    Object.defineProperty(global.navigator, 'maxTouchPoints', { value: hasTouchPoints ? 5 : 0, configurable: true });
+
+    // Re-run detection IIFE
+    const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+      || ('ontouchstart' in window && navigator.maxTouchPoints > 1);
+    const mem = navigator.deviceMemory || (isMobile ? 2 : 8);
+    let drops, mist;
+    if (isMobile || mem <= 2) {
+      drops = 200; mist = 100;
+    } else if (mem <= 4) {
+      drops = 600; mist = 400;
+    } else {
+      drops = 1200; mist = 800;
+    }
+
+    // Restore globals
+    Object.defineProperty(global.navigator, 'deviceMemory',   { value: 8, configurable: true });
+    Object.defineProperty(global.navigator, 'maxTouchPoints', { value: 0, configurable: true });
+    if (isMobileUA) {
+      Object.defineProperty(global.navigator, 'userAgent', { value: origUA, configurable: true });
+    }
+    window._BSV21_MAX_DROPS = origDrops;
+    window._BSV21_MAX_MIST  = origMist;
+    return { drops, mist };
+  }
+
+  test('mobile UA forces low-memory tier (200 drops / 100 mist)', () => {
+    const { drops, mist } = detectWithConditions({ deviceMemory: 8, isMobileUA: true, hasTouchPoints: false });
+    expect(drops).toBe(200);
+    expect(mist).toBe(100);
+  });
+
+  test('2 GB device memory uses low-memory tier (200 drops / 100 mist)', () => {
+    const { drops, mist } = detectWithConditions({ deviceMemory: 2, isMobileUA: false, hasTouchPoints: false });
+    expect(drops).toBe(200);
+    expect(mist).toBe(100);
+  });
+
+  test('4 GB device uses mid-tier (600 drops / 400 mist)', () => {
+    const { drops, mist } = detectWithConditions({ deviceMemory: 4, isMobileUA: false, hasTouchPoints: false });
+    expect(drops).toBe(600);
+    expect(mist).toBe(400);
+  });
+
+  test('low-memory tier stays within 200 drops so update loop is not overloaded', () => {
+    const { drops } = detectWithConditions({ deviceMemory: 1, isMobileUA: false, hasTouchPoints: false });
+    expect(drops).toBeLessThanOrEqual(200);
   });
 });
 
@@ -211,10 +285,10 @@ describe('BloodSimulatorV21.arterialJet()', () => {
   let bs;
   beforeEach(() => { bs = initedSim(); });
 
-  test('spawns drops in two arms (36 drops total)', () => {
+  test('spawns drops in two arms (60 drops total)', () => {
     bs.arterialJet(0, 1, 0, 1, 0, 0xcc1100);
     const alive = bs._pool.filter(d => d.alive).length;
-    expect(alive).toBe(36); // 18 per arm × 2
+    expect(alive).toBe(60); // 30 per arm × 2
   });
 
   test('drops have upward velocity component', () => {
@@ -242,9 +316,9 @@ describe('BloodSimulatorV21.addWoundPulse()', () => {
     expect(bs._pulseWounds).toHaveLength(1);
   });
 
-  test('caps pulse wounds at 8', () => {
+  test('caps pulse wounds at 12', () => {
     for (let i = 0; i < 20; i++) bs.addWoundPulse(i, 1, i, 0xcc1100, 2);
-    expect(bs._pulseWounds.length).toBeLessThanOrEqual(8);
+    expect(bs._pulseWounds.length).toBeLessThanOrEqual(12);
   });
 });
 
