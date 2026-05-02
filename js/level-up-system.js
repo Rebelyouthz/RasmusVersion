@@ -491,7 +491,9 @@ window.spawnBossChest = function(x, z) {
       }
       const modal = document.getElementById('levelup-modal');
       const list = document.getElementById('upgrade-list');
-      list.innerHTML = '';
+      // NOTE: Do NOT clear list.innerHTML here — cards are built off-DOM into a DocumentFragment
+      // and swapped in atomically to prevent the "flicker death" (flash of empty content).
+      // See list.replaceChildren(_cardFrag) below after all cards are constructed.
       // Reset header for two-press system
       const h2 = modal.querySelector('h2');
       if (h2) {
@@ -1593,6 +1595,11 @@ window.spawnBossChest = function(x, z) {
       // Apply rarity scaling to all choices that don't already have a rarity assigned
       choices = choices.map(u => (u._rarity ? u : makeRarityScaledUpgrade(u)));
 
+      // Build all cards off-DOM into a fragment + track cardInner refs for post-insert reflow.
+      // This prevents "flicker death": no flash of empty content between clearing and repopulating.
+      const cardFrag = document.createDocumentFragment();
+      const cardInners = [];
+
       // Shared active-hold state: only one card can be held at a time
       let activeHold = null; // { timer, card } or null
       choices.forEach((u, index) => {
@@ -2097,13 +2104,22 @@ window.spawnBossChest = function(x, z) {
         };
         card.addEventListener('pointerup', cancelHold);
         card.addEventListener('pointercancel', cancelHold);
-        list.appendChild(card);
-        // Force a reflow so the inline transform:rotateY(180deg) is applied as the initial
-        // painted state, then remove the transition:none override so the CSS transition
-        // (and later JS-driven flip animation) can use smooth transitions.
-        void cardInner.offsetHeight;
-        cardInner.style.transition = '';
+        // Append to off-DOM fragment; reflow will be triggered after atomic swap below.
+        cardFrag.appendChild(card);
+        cardInners.push(cardInner);
       });
+
+      // Atomic DOM swap: replace all existing cards in a single operation.
+      // No innerHTML = '' before this means no flash of empty content if modal was already visible.
+      list.replaceChildren(cardFrag);
+
+      // Trigger reflow on each cardInner now that cards are in the live DOM,
+      // so the initial rotateY(180deg) is committed before transitions are re-enabled.
+      for (let i = 0; i < cardInners.length; i++) {
+        void cardInners[i].offsetHeight;
+        cardInners[i].style.transition = '';
+      }
+
       } catch(cardErr) {
         console.error('[LevelUp] Card generation error:', cardErr);
         // Fallback: ensure game unpauses if card creation fails
