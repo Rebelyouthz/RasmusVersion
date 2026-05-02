@@ -5755,6 +5755,16 @@
     const grp = _buildingMeshes[buildingId];
     if (!grp) return;
 
+    // If building is already fully built, lock it at full scale and skip animation entirely.
+    // This prevents the scale from being reset to CONSTRUCTION_SCALE on a re-unlock event,
+    // which was causing the "disappearing camp" bug (especially for questMission).
+    const bd = _saveData && _saveData.campBuildings && _saveData.campBuildings[buildingId];
+    if (bd && bd.level > 0) {
+      grp.scale.set(1, 1, 1);
+      grp.visible = true;
+      return;
+    }
+
     // Show at construction scale immediately (no complex particle RAF loops that can crash)
     grp.visible = true;
     grp.scale.set(CONSTRUCTION_SCALE, CONSTRUCTION_SCALE, CONSTRUCTION_SCALE);
@@ -5766,6 +5776,15 @@
     if (!grp) return;
     const THREE = T();
     if (!THREE || !_campScene) return; // scene not ready — skip animation safely
+
+    // Skip animation if building is already built — prevents re-triggering scale animation
+    // on an already-full-scale building (e.g. questMission after save reload).
+    const bd = _saveData && _saveData.campBuildings && _saveData.campBuildings[buildingId];
+    if (bd && bd.level > 0) {
+      grp.scale.set(1, 1, 1);
+      grp.visible = true;
+      return;
+    }
 
     // Guard against NaN positions which would corrupt the WebGL scene
     if (!isFinite(grp.position.x) || !isFinite(grp.position.y) || !isFinite(grp.position.z)) {
@@ -7670,6 +7689,8 @@
    */
   function update(dt) {
     if (!_isActive || !_campScene || !_playerMesh || !_campCamera) return;
+    // Global NaN shield: if any player position coordinate is corrupted, reset to origin before any logic runs.
+    if (!Number.isFinite(_playerMesh.position.x) || !Number.isFinite(_playerMesh.position.y) || !Number.isFinite(_playerMesh.position.z)) { _playerMesh.position.set(0, 0, 0); }
     // Clamp dt FIRST so every sub-update receives a finite, safe value.
     // This prevents NaN from propagating into _campTime, positions, or WebGL.
     if (!isFinite(dt) || isNaN(dt) || dt <= 0) dt = 0.016;
