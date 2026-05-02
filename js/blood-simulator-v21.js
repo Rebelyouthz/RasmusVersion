@@ -30,7 +30,7 @@ const _BSV21_MIST = {
 };
 
 // Device capability detection — auto-scales pool sizes:
-// Low-memory/mobile (≤2GB or touch device): ≤120 drops / ≤64 mist
+// Low-memory/mobile (≤2GB or touch device): 200 drops / 100 mist
 // Mid-tier (≤4GB): 600 drops / 400 mist
 // Desktop/high-memory (>4GB): ≥1200 drops / ≥800 mist
 (function _bsv21DetectDevice() {
@@ -38,8 +38,8 @@ const _BSV21_MIST = {
     || ('ontouchstart' in window && navigator.maxTouchPoints > 1);
   const mem = (navigator.deviceMemory || (isMobile ? 2 : 8));
   if (isMobile || mem <= 2) {
-    window._BSV21_MAX_DROPS = 500;
-    window._BSV21_MAX_MIST  = 250;
+    window._BSV21_MAX_DROPS = 200;
+    window._BSV21_MAX_MIST  = 100;
   } else if (mem <= 4) {
     window._BSV21_MAX_DROPS = 600;
     window._BSV21_MAX_MIST  = 400;
@@ -166,7 +166,7 @@ const BloodSimulatorV21 = {
     this._decalHead = 0;
     const decalGeo = new THREE.CircleGeometry(1.0, 12);
     const decalMat = new THREE.MeshBasicMaterial({
-      transparent:true, opacity:0.82, depthWrite:false, alphaTest: 0.05,
+      transparent:true, opacity:0.82, depthWrite:false,
       polygonOffset:true, polygonOffsetFactor:-1, polygonOffsetUnits:-1
     });
     for (let i = 0; i < this.MAX_DECALS; i++) {

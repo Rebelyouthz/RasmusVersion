@@ -328,3 +328,65 @@ describe('Building migration v8', () => {
     expect(sd.campBuildings.accountBuilding.level).toBe(1);
   });
 });
+
+// ── showQuestHall guard — missing questMission (PR #33 regression) ────────────
+// Mirrors the guard logic at the top of showQuestHall() in quest-system.js.
+describe('showQuestHall() Quest Hall access guard', () => {
+  // Minimal inline mirror of the guard so we can unit-test without loading
+  // the full quest-system.js module.
+  function showQuestHallGuard(sd) {
+    const questMissionData = sd.campBuildings && sd.campBuildings.questMission;
+    if (!questMissionData || questMissionData.level === 0) {
+      // Would show build overlay / status message; return 'blocked' for test
+      return 'blocked';
+    }
+    return 'open';
+  }
+
+  test('blocks access when campBuildings.questMission is completely missing (legacy save)', () => {
+    expect(showQuestHallGuard({ campBuildings: {} })).toBe('blocked');
+  });
+
+  test('blocks access when campBuildings is missing entirely', () => {
+    expect(showQuestHallGuard({})).toBe('blocked');
+  });
+
+  test('blocks access when questMission.level === 0 (not yet built)', () => {
+    const sd = { campBuildings: { questMission: { level: 0, unlocked: true } } };
+    expect(showQuestHallGuard(sd)).toBe('blocked');
+  });
+
+  test('allows access when questMission.level > 0 (built)', () => {
+    const sd = { campBuildings: { questMission: { level: 1, unlocked: true } } };
+    expect(showQuestHallGuard(sd)).toBe('open');
+  });
+});
+
+// ── AIDA _robotWalkToQuestHall guard (PR #33 regression) ─────────────────────
+// Mirrors the relocation guard in CampWorld.enter() and refreshBuildings().
+describe('AIDA robot relocation guard (_robotWalkToQuestHall)', () => {
+  // Inline mirror of the combined guard condition.
+  function shouldRelocate({ robotMesh, lapActive, walkActive }) {
+    return !!(robotMesh && !lapActive && !walkActive);
+  }
+
+  test('does NOT relocate while lap is active', () => {
+    expect(shouldRelocate({ robotMesh: {}, lapActive: true, walkActive: false })).toBe(false);
+  });
+
+  test('does NOT relocate while walk-to-quest-hall is active', () => {
+    expect(shouldRelocate({ robotMesh: {}, lapActive: false, walkActive: true })).toBe(false);
+  });
+
+  test('does NOT relocate when both lap and walk are active', () => {
+    expect(shouldRelocate({ robotMesh: {}, lapActive: true, walkActive: true })).toBe(false);
+  });
+
+  test('relocates only when both states are inactive', () => {
+    expect(shouldRelocate({ robotMesh: {}, lapActive: false, walkActive: false })).toBe(true);
+  });
+
+  test('does NOT relocate when robot mesh is null (unbuilt scene)', () => {
+    expect(shouldRelocate({ robotMesh: null, lapActive: false, walkActive: false })).toBe(false);
+  });
+});

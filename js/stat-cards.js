@@ -250,11 +250,6 @@
         }
         window.saveData.stats.statCardsUsed = (window.saveData.stats.statCardsUsed || 0) + 1;
 
-        // Visual feedback
-        highlightSelectedCard(cardIndex, rarity);
-        flipCard(cardIndex);
-        showCardReveal(selectedCard, statType, rarity, bonusValue);
-
         // Save state
         window.saveData.statCards.cards = cardState.cards;
         if (typeof window.saveGame === 'function') {
@@ -262,10 +257,25 @@
         }
 
         cardState.isAnimating = false;
-        // Update only the changed card element and purchase UI to avoid flickering
-        // caused by a full innerHTML rebuild of the overlay.
+        // Clear any lingering slot-machine highlight state, then update the card
+        // and purchase UI in-place. Visual feedback runs AFTER the DOM update so
+        // highlightSelectedCard/flipCard operate on the new flipped element.
+        _clearHighlights();
         _updateCardDOM(cardIndex);
         _updatePurchaseUI();
+
+        // Visual feedback — must run after _updateCardDOM so the new element exists
+        highlightSelectedCard(cardIndex, rarity);
+        flipCard(cardIndex);
+        showCardReveal(selectedCard, statType, rarity, bonusValue);
+    }
+
+    // Remove lingering .highlighted class and transform from the slot machine animation
+    function _clearHighlights() {
+        document.querySelectorAll('.stat-card.highlighted').forEach(function(el) {
+            el.classList.remove('highlighted');
+            el.style.transform = '';
+        });
     }
 
     // Update a single card element in the DOM without rebuilding the whole overlay
