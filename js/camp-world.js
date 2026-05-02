@@ -1880,6 +1880,7 @@
       _robotMesh.rotation.y = -_angle + Math.PI * 0.5;
       if (_lapProgress >= 1.0) {
         _robotLapActive = false;
+        console.log('[CampWorld] AIDA robot lap complete - transitioning to Quest Hall walk');
         // Transition to State 2: record current (safe) position as walk origin
         _robotWalkToQuestHall = true;
         _robotWalkT = 0;
@@ -1914,6 +1915,7 @@
         _robotWalkToQuestHall = false;
         _robotMesh.position.set(_destX, 0, _destZ);
         _robotMesh.rotation.y = 0;
+        console.log('[CampWorld] AIDA robot arrived at Quest Hall position:', _destX, _destZ);
       }
     }
 
@@ -2059,6 +2061,7 @@
     // Start robot lap animation around the fire
     _robotLapActive = true;
     _robotLapT = 0;
+    console.log('[CampWorld] AIDA chip inserted - starting robot lap animation around campfire');
 
     const DS = window.DialogueSystem;
     if (DS) {
@@ -2093,12 +2096,17 @@
     // Resetting to 0 would cause the Quest Hall to visually shrink/disappear after the dialogue.
     if (sd.campBuildings && sd.campBuildings.questMission) {
       sd.campBuildings.questMission.unlocked = true;
+      // Explicitly ensure level is at least 0 to trigger construction mode visibility
+      if (sd.campBuildings.questMission.level === undefined) {
+        sd.campBuildings.questMission.level = 0;
+      }
     }
     if (typeof saveSaveData === 'function') saveSaveData();
     // Grant resources silently — no modal, no input freeze
     if (typeof showStatChange === 'function') {
       showStatChange('🎁 A.I.D.A: +3 Wood, +3 Stone', 'rare');
     }
+    // Force immediate refresh of building visibility to show Quest Hall in construction mode
     if (typeof window.CampWorld !== 'undefined' && window.CampWorld.refreshBuildings) {
       window.CampWorld.refreshBuildings(sd);
     }

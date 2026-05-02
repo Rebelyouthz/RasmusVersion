@@ -2538,16 +2538,6 @@
       _showDamageNumber(_tmpV3.x, _tmpV3.y + 0.5, _tmpV3.z, actualDmg, enemy.hp <= 0, false);
     }
 
-    // Light-blue blood burst (DeepSkyBlue) — use BloodSimulatorV21
-    const bx = enemy.mesh.position.x, by = enemy.mesh.position.y + enemy.size, bz = enemy.mesh.position.z;
-    if (window.BloodSimulatorV21) {
-      window.BloodSimulatorV21.rawBurst(bx, by, bz, 6, { spreadXZ: 1.0, spreadY: 0.4 });
-    } else if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
-      BloodV2.rawBurst(bx, by, bz, 6, { enemyType: 'leaping_slime' });
-    } else if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
-      BloodSystem.emitBurst({ x: bx, y: by, z: bz }, 5, { spreadXZ: 1.0, spreadY: 0.4 });
-    }
-
     // GoreSim hit reaction
     if (window.GoreSim && typeof GoreSim.onHit === 'function') {
       GoreSim.onHit(enemy, weaponKey, _tmpV3, hitNormal);
@@ -2839,7 +2829,8 @@
     const _bPos1 = _reusableBloodPos;
     _bPos1.x = slot.mesh.position.x; _bPos1.y = slot.mesh.position.y + 0.4; _bPos1.z = slot.mesh.position.z;
     if (window.BloodSimulatorV21) {
-      window.BloodSimulatorV21.rawBurst(_bPos1.x, _bPos1.y, _bPos1.z, 10, { spreadXZ: 0.8, spreadY: 0.4, viscosity: 0.62 });
+      var stageBloodColor = (slot && slot.enemyType && window._BSV21_BLOOD && window._BSV21_BLOOD[slot.enemyType]) ? window._BSV21_BLOOD[slot.enemyType] : 0x8B0000;
+      window.BloodSimulatorV21.rawBurst(_bPos1.x, _bPos1.y, _bPos1.z, 10, { spreadXZ: 0.8, spreadY: 0.4, viscosity: 0.62, color: stageBloodColor });
     } else if (window.BloodSystem) {
       // Increased from 8 to 10 to match old map realism
       if (typeof BloodSystem.emitBurst === 'function') {
@@ -2885,7 +2876,8 @@
     const _bPos2 = _reusableBloodPos;
     _bPos2.x = slot.mesh.position.x; _bPos2.y = slot.mesh.position.y + 0.4; _bPos2.z = slot.mesh.position.z;
     if (window.BloodSimulatorV21) {
-      window.BloodSimulatorV21.rawBurst(_bPos2.x, _bPos2.y, _bPos2.z, 18, { spreadXZ: 1.5, spreadY: 0.6, viscosity: 0.62 });
+      var stageBloodColor = (slot && slot.enemyType && window._BSV21_BLOOD && window._BSV21_BLOOD[slot.enemyType]) ? window._BSV21_BLOOD[slot.enemyType] : 0x8B0000;
+      window.BloodSimulatorV21.rawBurst(_bPos2.x, _bPos2.y, _bPos2.z, 18, { spreadXZ: 1.5, spreadY: 0.6, viscosity: 0.62, color: stageBloodColor });
     } else if (window.BloodSystem) {
       // Tuned burst count to 18 to match old map impact
       if (typeof BloodSystem.emitBurst === 'function') {
@@ -2925,7 +2917,8 @@
     const _bPos3 = _reusableBloodPos;
     _bPos3.x = slot.mesh.position.x; _bPos3.y = slot.mesh.position.y + 0.4; _bPos3.z = slot.mesh.position.z;
     if (window.BloodSimulatorV21) {
-      window.BloodSimulatorV21.rawBurst(_bPos3.x, _bPos3.y, _bPos3.z, 25, { spreadXZ: 2.0, spreadY: 0.8, viscosity: 0.62 });
+      var stageBloodColor = (slot && slot.enemyType && window._BSV21_BLOOD && window._BSV21_BLOOD[slot.enemyType]) ? window._BSV21_BLOOD[slot.enemyType] : 0x8B0000;
+      window.BloodSimulatorV21.rawBurst(_bPos3.x, _bPos3.y, _bPos3.z, 25, { spreadXZ: 2.0, spreadY: 0.8, viscosity: 0.62, color: stageBloodColor });
     } else if (window.BloodSystem) {
       // Burst count tuned to 25 to approximate old map's sniper hit intensity
       if (typeof BloodSystem.emitBurst === 'function') {
@@ -2979,7 +2972,8 @@
     const _bPos4 = _reusableBloodPos;
     _bPos4.x = slot.mesh.position.x; _bPos4.y = slot.mesh.position.y + 0.4; _bPos4.z = slot.mesh.position.z;
     if (window.BloodSimulatorV21) {
-      window.BloodSimulatorV21.rawBurst(_bPos4.x, _bPos4.y, _bPos4.z, 33, { spreadXZ: 2.5, spreadY: 1.0, viscosity: 0.62 });
+      var stage4BloodColor = (slot && slot.enemyType && window._BSV21_BLOOD && window._BSV21_BLOOD[slot.enemyType]) ? window._BSV21_BLOOD[slot.enemyType] : 0x8B0000;
+      window.BloodSimulatorV21.rawBurst(_bPos4.x, _bPos4.y, _bPos4.z, 33, { spreadXZ: 2.5, spreadY: 1.0, viscosity: 0.62, color: stage4BloodColor });
     } else if (window.BloodSystem) {
       if (typeof BloodSystem.emitBurst === 'function') {
         BloodSystem.emitBurst(_bPos4, 15, { spreadXZ: 2.5, spreadY: 1.0 });
@@ -6652,9 +6646,7 @@
           : null;
       window.BloodSimulatorV21.init(scene, terrainMesh, player ? player.mesh : null);
     }
-    // GoreSim and BloodSystem are disabled — BloodSimulatorV21 is the sole blood system.
-    window.GoreSim = null;
-    window.BloodSystem = null;
+    // BloodSimulatorV21 is the primary blood system; GoreSim is also active for weapon-specific gore reactions.
     if (window.SlimePool && typeof window.SlimePool.init === 'function') {
       window.SlimePool.init(scene, 40);
     }
@@ -7580,10 +7572,7 @@
         player.update(dt, _allEnemiesScratch, _activeProjList, expGems);
       }
 
-      // Blood system tick – V2.1 is the sole blood system.
-      // Legacy GoreSim and BloodSystem are disabled to prevent artifact chunk geometry.
-      window.GoreSim = null;
-      window.BloodSystem = null;
+      // Blood system tick - V2.1 is the sole blood system.
       if (window.BloodSimulatorV21 && typeof BloodSimulatorV21.update === 'function') {
         window.BloodSimulatorV21.update(dt);
       }
