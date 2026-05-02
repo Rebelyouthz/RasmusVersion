@@ -129,7 +129,7 @@ const BloodSimulatorV21 = {
     const dropGeo = new THREE.CircleGeometry(1.0, 8);
     dropGeo.rotateX(-Math.PI / 2);
     const dropMat = new THREE.MeshBasicMaterial({
-      map: _circleTex, transparent: true, alphaTest: 0.01,
+      map: _circleTex, transparent: true, alphaTest: 0.05,
       depthWrite: false, vertexColors: true, opacity: 0.92
     });
     this.dropIM = new THREE.InstancedMesh(dropGeo, dropMat, this.MAX_DROPS);
@@ -151,7 +151,7 @@ const BloodSimulatorV21 = {
     const mistGeo = new THREE.CircleGeometry(1.0, 12);
     mistGeo.rotateX(-Math.PI / 2);
     const mistMat = new THREE.MeshBasicMaterial({
-      map: _circleTex, transparent:true, opacity:0.65, depthWrite:false, alphaTest: 0.01,
+      map: _circleTex, transparent:true, opacity:0.65, depthWrite:false, alphaTest: 0.05,
       vertexColors:true, blending:THREE.AdditiveBlending
     });
     this.mistIM = new THREE.InstancedMesh(mistGeo, mistMat, this.MAX_MIST);
@@ -262,7 +262,7 @@ const BloodSimulatorV21 = {
           d.vx = (Math.random() - 0.5) * 4;
           d.vy = 2.5 + Math.random() * 5.0;
           d.vz = (Math.random() - 0.5) * 4;
-          d.radius = 0.018 + Math.random() * 0.020;
+          d.radius = 0.038 + Math.random() * 0.040; // increased for visibility
           d.viscosity = 0.72;
           d.life = 2 + Math.random() * 1.5;
           d.onGround = false;
@@ -383,7 +383,7 @@ const BloodSimulatorV21 = {
       d.vx = (Math.random()-0.5)*spreadXZ;
       d.vy = 4 + Math.random()*spreadY;
       d.vz = (Math.random()-0.5)*spreadXZ;
-      d.radius    = 0.022 + Math.random()*0.025;
+      d.radius    = 0.045 + Math.random()*0.055; // increased for visibility
       d.viscosity = viscosity;
       d.life      = 5 + Math.random()*3;
       d.onGround  = false;
@@ -417,7 +417,7 @@ const BloodSimulatorV21 = {
         d.vx = (ax + (Math.random()-0.5)*spread)*speed;
         d.vy = 2.0 + Math.random()*5.0;
         d.vz = (az + (Math.random()-0.5)*spread)*speed;
-        d.radius    = 0.018 + Math.random()*0.022;
+        d.radius    = 0.038 + Math.random()*0.045; // increased for visibility
         d.viscosity = 0.50;
         d.life      = 2.5 + Math.random()*2;
         d.onGround  = false;

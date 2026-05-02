@@ -1657,6 +1657,12 @@ window.spawnBossChest = function(x, z) {
         // ── Card 3D flip structure: back face + front face ──
         const cardInner = document.createElement('div');
         cardInner.className = 'card-inner';
+        // Set initial transform as inline style BEFORE appending to DOM.
+        // The inline style ensures the back face is the initial painted state,
+        // preventing the browser from showing the front face (0deg) for one frame
+        // before CSS transitions take effect — the "pre-render flicker" fix.
+        cardInner.style.transform = 'rotateY(180deg)';
+        cardInner.style.transition = 'none';
 
         // Set rarity colour CSS variable on the card for the back-face glow bleed
         card.style.setProperty('--rarity-color', cardColor);
@@ -2092,6 +2098,11 @@ window.spawnBossChest = function(x, z) {
         card.addEventListener('pointerup', cancelHold);
         card.addEventListener('pointercancel', cancelHold);
         list.appendChild(card);
+        // Force a reflow so the inline transform:rotateY(180deg) is applied as the initial
+        // painted state, then remove the transition:none override so the CSS transition
+        // (and later JS-driven flip animation) can use smooth transitions.
+        void cardInner.offsetHeight;
+        cardInner.style.transition = '';
       });
       } catch(cardErr) {
         console.error('[LevelUp] Card generation error:', cardErr);
