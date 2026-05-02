@@ -1920,87 +1920,47 @@ window.spawnBossChest = function(x, z) {
                 card.style.pointerEvents = 'none';
               }, 80);
 
-              // Wait 0.2s after shards, then close everything with black-hole whirlpool
+              // Wait 0.2s after shards, then close everything with black-hole effect
               setTimeout(() => {
-                // ── Black hole whirlpool — spin → expand → suck → collapse → vanish ──
+                // ── Black Hole: dark disc expands from centre, swallowing the screen ──
+                // No techno rings — just a pure gravitational lensing collapse to black.
                 try {
-                  // Outer wrapper: positions at screen center, spins+expands during suck phase
+                  // Full-viewport wrapper (overflow:hidden clips the disc at screen edge)
                   const bhWrap = document.createElement('div');
                   bhWrap.style.cssText = [
-                    'position:fixed','top:50%','left:50%',
-                    'width:0px','height:0px',
-                    'transform:translate(-50%,-50%)',
-                    'z-index:99999','pointer-events:none',
+                    'position:fixed','top:0','left:0',
+                    'width:100vw','height:100vh',
+                    'pointer-events:none',
+                    'z-index:99999',
+                    'overflow:hidden',
                   ].join(';');
 
-                  // Dark core — grows to swallow screen
-                  const bhCore = document.createElement('div');
-                  bhCore.style.cssText = [
-                    'position:absolute','border-radius:50%',
-                    'width:6px','height:6px',
+                  // Dark disc — starts tiny at the centre, expands to consume the screen.
+                  // Size is computed at runtime from the viewport diagonal so all corners
+                  // are covered even on ultrawide/4K displays (e.g. 3840×2160 diagonal ≈ 4405px).
+                  const _bhDiag = Math.ceil(Math.sqrt(
+                    window.innerWidth * window.innerWidth + window.innerHeight * window.innerHeight
+                  ));
+                  const _bhSize = Math.max(_bhDiag * 2 + 20, 300); // full-diagonal diameter + margin
+                  const bhDisc = document.createElement('div');
+                  bhDisc.style.cssText = [
+                    'position:absolute',
                     'top:50%','left:50%',
-                    'transform:translate(-50%,-50%)',
-                    'background:radial-gradient(circle,#000 35%,#05000a 65%,transparent 100%)',
-                    'animation:bhWhirlExpand 0.9s cubic-bezier(0.55,0,1,0.45) forwards',
-                    'will-change:transform',
+                    `width:${_bhSize}px`,`height:${_bhSize}px`,
+                    'border-radius:50%',
+                    'transform:translate(-50%,-50%) scale(0)',
+                    'background:radial-gradient(circle,#000000 40%,#04000d 68%,#0a0020 85%,transparent 100%)',
+                    'animation:lvlBHExpand 1.0s cubic-bezier(0.55,0,0.85,0.5) forwards',
+                    'will-change:transform,opacity',
                   ].join(';');
 
-                  // Spinning rings (whirlpool visual)
-                  const bhRingDefs = [
-                    // [size, borderWidth, color, spinDuration, direction]
-                    ['90px',  '3px', 'rgba(255,255,255,0.55)', '0.35s', 'bhRingSpin'],
-                    ['160px', '2px', 'rgba(180,120,255,0.4)',  '0.50s', 'bhRingSpinRev'],
-                    ['250px', '2px', 'rgba(100,180,255,0.3)',  '0.70s', 'bhRingSpin'],
-                    ['380px', '1px', 'rgba(255,200,80,0.2)',   '1.00s', 'bhRingSpinRev'],
-                    ['550px', '1px', 'rgba(255,255,255,0.12)', '1.40s', 'bhRingSpin'],
-                  ];
-                  const bhRings = [];
-                  bhRingDefs.forEach(([sz, bw, col, sd, anim]) => {
-                    const r = document.createElement('div');
-                    r.style.cssText = [
-                      'position:absolute','border-radius:50%',
-                      `width:${sz}`,`height:${sz}`,
-                      'top:50%','left:50%',
-                      'transform:translate(-50%,-50%) scale(0)',
-                      `border:${bw} solid ${col}`,
-                      `animation:${anim} ${sd} linear infinite`,
-                      'opacity:0','will-change:transform,opacity',
-                    ].join(';');
-                    bhWrap.appendChild(r);
-                    bhRings.push(r);
-                  });
-
-                  bhWrap.appendChild(bhCore);
+                  bhWrap.appendChild(bhDisc);
                   document.body.appendChild(bhWrap);
 
-                  // Step 1 (10ms): rings appear and grow while core expands
-                  setTimeout(() => {
-                    bhRings.forEach((r, _ri) => {
-                      setTimeout(() => {
-                        r.style.transition = `transform 0.6s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s ease-out`;
-                        r.style.transform = 'translate(-50%,-50%) scale(1)';
-                        r.style.opacity = '1';
-                      }, _ri * 80);
-                    });
-                  }, 10);
-
-                  // Step 2 (900ms): core has expanded — hold a moment so the whirlpool is visible
-                  // then collapse everything back to nothing
-                  setTimeout(() => {
-                    bhCore.style.animation = 'bhWhirlContract 0.6s cubic-bezier(0.55,0,1,0.45) forwards';
-                    bhRings.forEach((r, _ri) => {
-                      setTimeout(() => {
-                        r.style.transition = 'transform 0.5s ease-in, opacity 0.4s ease-in';
-                        r.style.transform = 'translate(-50%,-50%) scale(0)';
-                        r.style.opacity = '0';
-                      }, _ri * 60);
-                    });
-                  }, 900);
-
-                  // Step 3 (1550ms): remove DOM node
+                  // Remove DOM node after animation completes
                   setTimeout(() => {
                     if (bhWrap.parentNode) bhWrap.parentNode.removeChild(bhWrap);
-                  }, 1550);
+                  }, 1400);
                 } catch (_bhe) { /* non-critical visual — ignore */ }
 
                 // PERF FIX: Clean up DOM elements and event listeners to prevent memory leaks
@@ -2171,24 +2131,24 @@ window.spawnBossChest = function(x, z) {
                 const _ci = _c.querySelector('.card-inner');
                 if (!_ci) return;
 
-                // Phase 1 — Lift toward camera (scales up, translateZ forward)
+                // Phase 1 — Lift toward camera (maintain back face shown)
                 _ci.style.transition = 'transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1)';
-                _ci.style.transform = 'scale(1.18) translateZ(55px)';
+                _ci.style.transform = 'scale(1.18) translateZ(55px) rotateY(180deg)';
 
                 setTimeout(function() {
-                  // Phase 2 — Flip fast (Y-axis 180°, card face comes into view)
+                  // Phase 2 — Flip fast (Y-axis 360°, front face comes into view)
                   _ci.style.transition = 'transform 0.32s cubic-bezier(0.55, 0, 0.45, 1)';
-                  _ci.style.transform = 'scale(1.14) translateZ(40px) rotateY(180deg)';
+                  _ci.style.transform = 'scale(1.14) translateZ(40px) rotateY(360deg)';
 
                   setTimeout(function() {
                     // Phase 3 — Smack hard back to resting position (squash on impact)
                     _ci.style.transition = 'transform 0.16s ease-in';
-                    _ci.style.transform = 'scaleX(1.1) scaleY(0.9) rotateY(180deg)';
+                    _ci.style.transform = 'scaleX(1.1) scaleY(0.9) rotateY(360deg)';
 
                     setTimeout(function() {
-                      // Phase 4 — Bounce settle
+                      // Phase 4 — Bounce settle (front face visible)
                       _ci.style.transition = 'transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)';
-                      _ci.style.transform = 'rotateY(180deg)';
+                      _ci.style.transform = 'rotateY(360deg)';
                       _c.classList.add('card-flipped');
 
                       // Screen shake on smack

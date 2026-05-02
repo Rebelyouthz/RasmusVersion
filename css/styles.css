@@ -3317,6 +3317,8 @@
       transform-style: preserve-3d;
       transition: transform 0.6s;
       will-change: transform;
+      /* Start showing the BACK face (Eye of Horus) — flip to rotateY(360deg) reveals the front */
+      transform: rotateY(180deg);
     }
     .card-face {
       position: absolute;
@@ -3326,7 +3328,8 @@
       -webkit-backface-visibility: hidden !important;
     }
     .card-front {
-      /* Front face — visible by default (stats/upgrades) */
+      /* Front face — hidden on initial display (card-inner starts at rotateY(180deg) showing the back).
+         Becomes visible once the flip animation reaches rotateY(360deg). */
       transform: rotateY(0deg);
       background-color: #111 !important;
       backface-visibility: hidden !important;
@@ -3425,9 +3428,11 @@
       pointer-events: none;
       z-index: 4;
     }
-    /* When flipped, reveal the back face (Eye of Horus) */
+    /* When revealed, show the front face (stats).
+       360deg is intentional: the inner starts at 180deg (back visible), so the animation
+       travels 180→360deg for a smooth forward flip. 360deg = 0deg visually. */
     .upgrade-card.card-flipped .card-inner {
-      transform: rotateY(180deg);
+      transform: rotateY(360deg);
     }
     /* card-flipping: intentional springy overshoot (y2=1.8 is valid CSS) */
     .upgrade-card.card-flipping .card-inner {
@@ -12021,4 +12026,14 @@
 @keyframes bhRingSpinRev {
   from { transform: rotate(0deg); }
   to   { transform: rotate(-360deg); }
+}
+
+/* ─── Level-up black hole close: dark disc expands from centre to swallow screen ─── */
+/* The disc element is sized to the viewport diagonal at runtime (JS), so scale(1) = full cover. */
+@keyframes lvlBHExpand {
+  0%   { transform: translate(-50%,-50%) scale(0)    rotate(0deg);    opacity: 0; }
+  8%   { opacity: 1; }
+  55%  { transform: translate(-50%,-50%) scale(0.55) rotate(-180deg); opacity: 1; }
+  80%  { transform: translate(-50%,-50%) scale(0.82) rotate(-360deg); opacity: 1; }
+  100% { transform: translate(-50%,-50%) scale(1)    rotate(-540deg); opacity: 0; }
 }

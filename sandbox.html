@@ -1223,11 +1223,9 @@
     <!-- 11-v21. Blood Simulator V2.1 — terrain-aware, 120fps, fantasy-realism gore -->
   <script src="js/blood-simulator-v21.js"></script>
 
-  <!-- 11a. Gore simulator: advanced gore chunks, splatter, mesh deformation -->
-  <script src="js/gore-simulator.js"></script>
-
-  <!-- 11b. Trauma system: wound decals, gore chunks, stuck arrows, corpse blood pump -->
-  <script src="js/trauma-system.js"></script>
+  <!-- 11a/11b. gore-simulator.js and trauma-system.js are DISABLED.
+       BloodSimulatorV21 is the sole active blood/gore system. Loading legacy systems
+       alongside it causes Z-fighting artifacts and duplicate geometry. -->
 
   <!-- 11c. Slime enemy and wave spawning system -->
   <script src="js/wave-system.js"></script>

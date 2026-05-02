@@ -1925,7 +1925,8 @@
       const _cdx = _px - _aidaChipMesh.position.x;
       const _cdz = _pz - _aidaChipMesh.position.z;
       const _chipDistSq = _cdx * _cdx + _cdz * _cdz;
-      const _chipDist   = Math.sqrt(_chipDistSq);
+      let _chipDist     = Math.sqrt(_chipDistSq);
+      if (_chipDist < 0.0001) _chipDist = 0.0001; // strict guard: prevent division by zero / NaN
 
       if (_chipDist < AIDA_CHIP_MAGNET_RANGE && _chipDist > 0.05) {
         // Safe normalised pull: multiply by (1 / dist) with explicit finite guard
@@ -4892,14 +4893,13 @@
       _playerPos.z += _playerVel.z * dt;
     }
 
-    // NaN/Infinity guards: aggressively sanitise velocity AND position.
-    // isNaN catches NaN; !isFinite also catches ±Infinity.
+    // Number.isFinite catches NaN, +Infinity, and -Infinity in one call.
     // If corrupted, reset to SPAWN_POS (the canonical safe spawn) so the player
     // is teleported to a known-good location rather than world origin.
-    if (isNaN(_playerVel.x) || !isFinite(_playerVel.x)) _playerVel.x = 0;
-    if (isNaN(_playerVel.z) || !isFinite(_playerVel.z)) _playerVel.z = 0;
-    if (isNaN(_playerPos.x) || !isFinite(_playerPos.x)) _playerPos.x = SPAWN_POS.x;
-    if (isNaN(_playerPos.z) || !isFinite(_playerPos.z)) _playerPos.z = SPAWN_POS.z;
+    if (!Number.isFinite(_playerVel.x)) _playerVel.x = 0;
+    if (!Number.isFinite(_playerVel.z)) _playerVel.z = 0;
+    if (!Number.isFinite(_playerPos.x)) _playerPos.x = SPAWN_POS.x;
+    if (!Number.isFinite(_playerPos.z)) _playerPos.z = SPAWN_POS.z;
 
     // Clamp
     _playerPos.x = Math.max(-38, Math.min(38, _playerPos.x));

@@ -639,6 +639,23 @@
             saveData._buildingMigrationV7 = true;
           }
 
+          // ── Building migration v8 ──
+          // Migration v5 auto-built the inventory building for all existing saves.
+          // This broke the questline for players who hadn't yet inserted the AIDA chip.
+          // Reset inventory and accountBuilding to locked/unbuilt for saves that
+          // haven't progressed past the chip-insertion step.
+          if (!saveData._buildingMigrationV8) {
+            var aisV8 = saveData.aidaIntroState;
+            var chipInsertedV8 = !!(aisV8 && aisV8.chipInserted); // strict boolean — guards against "false" string in older saves
+            if (!chipInsertedV8 && saveData.campBuildings) {
+              var bldInvV8 = saveData.campBuildings.inventory;
+              if (bldInvV8) { bldInvV8.level = 0; bldInvV8.unlocked = false; }
+              var bldAccV8 = saveData.campBuildings.accountBuilding;
+              if (bldAccV8) { bldAccV8.level = 0; bldAccV8.unlocked = false; }
+            }
+            saveData._buildingMigrationV8 = true;
+          }
+
           // ── Quest migration: questGather0_materials → questForge0_unlock ──
           // Old quest required gathering resources before tools existed.
           // Replace with forge unlock quest in existing saves.
