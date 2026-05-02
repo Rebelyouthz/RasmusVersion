@@ -646,7 +646,7 @@
           // haven't progressed past the chip-insertion step.
           if (!saveData._buildingMigrationV8) {
             var aisV8 = saveData.aidaIntroState;
-            var chipInsertedV8 = aisV8 && aisV8.chipInserted;
+            var chipInsertedV8 = !!(aisV8 && aisV8.chipInserted); // strict boolean — guards against "false" string in older saves
             if (!chipInsertedV8 && saveData.campBuildings) {
               var bldInvV8 = saveData.campBuildings.inventory;
               if (bldInvV8) { bldInvV8.level = 0; bldInvV8.unlocked = false; }

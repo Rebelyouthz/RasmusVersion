@@ -3328,7 +3328,8 @@
       -webkit-backface-visibility: hidden !important;
     }
     .card-front {
-      /* Front face — visible by default (stats/upgrades) */
+      /* Front face — hidden on initial display (card-inner starts at rotateY(180deg) showing the back).
+         Becomes visible once the flip animation reaches rotateY(360deg). */
       transform: rotateY(0deg);
       background-color: #111 !important;
       backface-visibility: hidden !important;
@@ -12028,10 +12029,11 @@
 }
 
 /* ─── Level-up black hole close: dark disc expands from centre to swallow screen ─── */
+/* The disc element is sized to the viewport diagonal at runtime (JS), so scale(1) = full cover. */
 @keyframes lvlBHExpand {
-  0%   { transform: translate(-50%,-50%) scale(0)   rotate(0deg);    opacity: 0; }
+  0%   { transform: translate(-50%,-50%) scale(0)    rotate(0deg);    opacity: 0; }
   8%   { opacity: 1; }
-  55%  { transform: translate(-50%,-50%) scale(120) rotate(-180deg); opacity: 1; }
-  80%  { transform: translate(-50%,-50%) scale(280) rotate(-360deg); opacity: 1; }
-  100% { transform: translate(-50%,-50%) scale(350) rotate(-540deg); opacity: 0; }
+  55%  { transform: translate(-50%,-50%) scale(0.55) rotate(-180deg); opacity: 1; }
+  80%  { transform: translate(-50%,-50%) scale(0.82) rotate(-360deg); opacity: 1; }
+  100% { transform: translate(-50%,-50%) scale(1)    rotate(-540deg); opacity: 0; }
 }

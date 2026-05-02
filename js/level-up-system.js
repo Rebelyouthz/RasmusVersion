@@ -1936,12 +1936,17 @@ window.spawnBossChest = function(x, z) {
                   ].join(';');
 
                   // Dark disc — starts tiny at the centre, expands to consume the screen.
-                  // scale(350) on a 10 px element ≈ 3 500 px, covering any viewport.
+                  // Size is computed at runtime from the viewport diagonal so all corners
+                  // are covered even on ultrawide/4K displays (e.g. 3840×2160 diagonal ≈ 4405px).
+                  const _bhDiag = Math.ceil(Math.sqrt(
+                    window.innerWidth * window.innerWidth + window.innerHeight * window.innerHeight
+                  ));
+                  const _bhSize = Math.max(_bhDiag * 2 + 20, 300); // full-diagonal diameter + margin
                   const bhDisc = document.createElement('div');
                   bhDisc.style.cssText = [
                     'position:absolute',
                     'top:50%','left:50%',
-                    'width:10px','height:10px',
+                    `width:${_bhSize}px`,`height:${_bhSize}px`,
                     'border-radius:50%',
                     'transform:translate(-50%,-50%) scale(0)',
                     'background:radial-gradient(circle,#000000 40%,#04000d 68%,#0a0020 85%,transparent 100%)',

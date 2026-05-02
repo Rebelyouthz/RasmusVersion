@@ -232,3 +232,99 @@ describe('hasVisitedCamp first-visit gate', () => {
     expect(isLikelyNewSave(sd)).toBe(false);
   });
 });
+
+// ── Building migration v8 — inventory/accountBuilding reset ──────────────────
+// Mirrors the migration v8 block in save-system.js loadSaveData().
+function applyMigrationV8(sd) {
+  if (sd._buildingMigrationV8) return;
+  const aisV8 = sd.aidaIntroState;
+  const chipInsertedV8 = !!(aisV8 && aisV8.chipInserted);
+  if (!chipInsertedV8 && sd.campBuildings) {
+    const bldInvV8 = sd.campBuildings.inventory;
+    if (bldInvV8) { bldInvV8.level = 0; bldInvV8.unlocked = false; }
+    const bldAccV8 = sd.campBuildings.accountBuilding;
+    if (bldAccV8) { bldAccV8.level = 0; bldAccV8.unlocked = false; }
+  }
+  sd._buildingMigrationV8 = true;
+}
+
+describe('Building migration v8', () => {
+  function makeSave(chipInserted, invLevel, accLevel) {
+    return {
+      aidaIntroState: { chipPickedUp: chipInserted, chipInserted },
+      campBuildings: {
+        inventory:       { level: invLevel, unlocked: invLevel > 0 },
+        accountBuilding: { level: accLevel, unlocked: accLevel > 0 },
+      },
+    };
+  }
+
+  test('resets inventory when chip NOT yet inserted (pre-chip save)', () => {
+    const sd = makeSave(false, 1, 0);
+    applyMigrationV8(sd);
+    expect(sd.campBuildings.inventory.level).toBe(0);
+    expect(sd.campBuildings.inventory.unlocked).toBe(false);
+  });
+
+  test('resets accountBuilding when chip NOT yet inserted', () => {
+    const sd = makeSave(false, 1, 1);
+    applyMigrationV8(sd);
+    expect(sd.campBuildings.accountBuilding.level).toBe(0);
+    expect(sd.campBuildings.accountBuilding.unlocked).toBe(false);
+  });
+
+  test('leaves inventory intact when chip IS inserted (post-chip save)', () => {
+    const sd = makeSave(true, 1, 1);
+    applyMigrationV8(sd);
+    expect(sd.campBuildings.inventory.level).toBe(1);
+    expect(sd.campBuildings.inventory.unlocked).toBe(true);
+  });
+
+  test('leaves accountBuilding intact when chip IS inserted', () => {
+    const sd = makeSave(true, 1, 1);
+    applyMigrationV8(sd);
+    expect(sd.campBuildings.accountBuilding.level).toBe(1);
+    expect(sd.campBuildings.accountBuilding.unlocked).toBe(true);
+  });
+
+  test('sets _buildingMigrationV8 flag after running', () => {
+    const sd = makeSave(false, 1, 0);
+    applyMigrationV8(sd);
+    expect(sd._buildingMigrationV8).toBe(true);
+  });
+
+  test('does not run again once flag is set (idempotent)', () => {
+    const sd = makeSave(false, 1, 0);
+    applyMigrationV8(sd); // first run — resets to 0
+    sd.campBuildings.inventory.level = 1; // simulate rebuild
+    applyMigrationV8(sd); // second call — should be no-op
+    expect(sd.campBuildings.inventory.level).toBe(1); // unchanged
+  });
+
+  test('handles saves where aidaIntroState is missing (legacy null-safety)', () => {
+    const sd = {
+      campBuildings: {
+        inventory:       { level: 1, unlocked: true },
+        accountBuilding: { level: 1, unlocked: true },
+      },
+    };
+    expect(() => applyMigrationV8(sd)).not.toThrow();
+    // No aidaIntroState → chipInserted = false → buildings reset
+    expect(sd.campBuildings.inventory.level).toBe(0);
+  });
+
+  test('treats truthy non-boolean chipInserted as inserted (strict cast)', () => {
+    // Simulate a corrupt save where chipInserted was stored as a truthy string
+    const sd = {
+      aidaIntroState: { chipInserted: 'yes' }, // truthy non-boolean
+      campBuildings: {
+        inventory:       { level: 1, unlocked: true },
+        accountBuilding: { level: 1, unlocked: true },
+      },
+    };
+    applyMigrationV8(sd);
+    // !!('yes') → true → chip is "inserted" → buildings must NOT be reset
+    expect(sd.campBuildings.inventory.level).toBe(1);
+    expect(sd.campBuildings.accountBuilding.level).toBe(1);
+  });
+});
