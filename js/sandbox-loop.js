@@ -6212,7 +6212,7 @@
     const platGeo = new THREE.CylinderGeometry(2.2, 2.4, 0.2, 24);
     const platMat = new THREE.MeshStandardMaterial({
       color: 0x3A3A3A, roughness: 0.3, metalness: 0.85,
-      emissive: 0x111122, emissiveIntensity: 0.3,
+      emissive: 0x000000, emissiveIntensity: 0,
     });
     _elevatorPlatform = new THREE.Mesh(platGeo, platMat);
     _elevatorPlatform.position.set(0, SPAWN_SHAFT_DEPTH, 0);
@@ -6290,11 +6290,23 @@
     // Only render door if it's appeared
     if (doorAppear > 0.01) {
       _updateSpiralDoorGeometry(doorOpen, spin);
-      // Fade segment opacity in during appearance
+      // Fade segment opacity during the appear phase only.
+      // Once fully opaque, disable transparency so segments are rendered in the
+      // opaque pass — this prevents them from compositing against the pinkish
+      // sunrise sky background that THREE.js uses for the transparent pass,
+      // which was the root cause of the pink/light-blue colour artefacts.
       for (let i = 0; i < _spiralDoorParts.length; i++) {
         const mat = _spiralDoorParts[i].mesh.material;
-        if (!mat.transparent) mat.transparent = true;
-        mat.opacity = _clamp(doorAppear, 0, 1);
+        if (doorAppear < 0.99) {
+          // Still fading in: enable transparency so opacity can blend
+          if (!mat.transparent) mat.transparent = true;
+          mat.opacity = _clamp(doorAppear, 0, 1);
+        } else {
+          // Fully visible: lock to opaque so the fragment ends up in the
+          // opaque render pass (no sky-colour bleed, no pink artefact)
+          mat.transparent = false;
+          mat.opacity = 1;
+        }
       }
     }
 
