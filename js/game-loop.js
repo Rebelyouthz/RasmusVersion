@@ -749,12 +749,9 @@
 
       // Initialize lastTime on first frame to prevent huge dt (PR #82 fix)
       if (lastTime === null) {
-        // Disable legacy blood/gore systems on first frame — BloodSimulatorV21 is the sole
-        // blood system. Nulling these here ensures all remaining conditional checks
-        // (window.BloodSystem, window.GoreSim) throughout enemy-class.js evaluate to false
-        // without needing to touch every call site.
+        // Disable legacy BloodSystem shim on first frame — BloodV2, GoreSim, and TraumaSystem
+        // are the active blood/gore systems.
         window.BloodSystem = null;
-        window.GoreSim = null;
         lastTime = time;
         gameTime = time / 1000; // Initialize gameTime for visual effects
         // Render the initial frame before returning to avoid blank screen.
@@ -771,7 +768,8 @@
       let dt = (time - lastTime) / 1000;
       // Sanitize dt before any system update — NaN/Infinity/negative would corrupt timers/pools
       if (!isFinite(dt) || dt <= 0) dt = 0.016; // fallback to ~60fps frame
-      if (window.BloodSimulatorV21) window.BloodSimulatorV21.update(dt);
+      if (window.BloodV2) window.BloodV2.update(dt);
+      if (window.GoreSim && typeof window.GoreSim.update === 'function') window.GoreSim.update(dt);
       if (window.SlimePool) window.SlimePool.update(dt, player && player.mesh ? player.mesh.position : null);
       if (window.WaveSpawner) window.WaveSpawner.update(dt, player && player.mesh ? player.mesh.position : null);
       if (window.HitDetection) window.HitDetection.update(dt, player && player.mesh ? player.mesh.position : null);
@@ -2303,18 +2301,21 @@
                   spawnParticles(missileGroup.position, 0xFF4500, 12);
                   spawnParticles(missileGroup.position, 0xFFAA00, 8);
                   spawnParticles(missileGroup.position, 0x222222, 6); // Smoke explosion
-                  // Massive blood burst from explosion — BloodSimulatorV21 only
-                  if (window.BloodSimulatorV21 && e.mesh) {
-                    window.BloodSimulatorV21.onEnemyDeath(e, e.mesh.position);
-                    window.BloodSimulatorV21.rawBurst(
-                      e.mesh.position.x, e.mesh.position.y + 0.5, e.mesh.position.z,
-                      200, { spreadXZ: 25, spreadY: 20, viscosity: 0.5 }
-                    );
+                  // Massive blood burst from explosion — BloodV2 + GoreSim
+                  if (e.mesh) {
+                    if (window.GoreSim && typeof window.GoreSim.onKill === 'function') {
+                      window.GoreSim.onKill(e, 'rocket', 0, 0);
+                    } else if (window.BloodV2) {
+                      window.BloodV2.rawBurst(
+                        e.mesh.position.x, e.mesh.position.y + 0.5, e.mesh.position.z,
+                        200, { spdMin: 10, spdMax: 25, visc: 0.5 }
+                      );
+                    }
                   }
                   // Homing missile: particle effects for gore feel
                   spawnParticles(e.mesh.position, 0x8B0000, 5);
                   spawnParticles(e.mesh.position, 0xCC0000, 4);
-                  // Chunk geometry disabled — BloodSimulatorV21 handles gore via particles
+                  // Chunk geometry: GoreSim handles flesh chunks via particles
                   for (let gd = 0; gd < 3; gd++) {
                     spawnBloodDecal({ x: e.mesh.position.x + (Math.random()-0.5)*0.8, y: 0, z: e.mesh.position.z + (Math.random()-0.5)*0.8 });
                   }
@@ -2986,8 +2987,7 @@
         window.bulletTrails.length = _j;
       }
 
-      // Legacy blood/gore systems are disabled to prevent artifact chunk geometry.
-      // BloodSimulatorV21 is updated once per frame at the top of the loop (line ~768).
+      // BloodV2, GoreSim, and TraumaSystem are updated once per frame at the top of the loop.
 
       // Update managed animations (replaces individual RAF loops for death/damage effects)
       // In-place compaction — no new array allocation each frame.

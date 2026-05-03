@@ -178,18 +178,6 @@
   if (typeof playSound === 'undefined') {
     window.playSound = function () {};
   }
-  // ── RunEndScreen navigation stubs ─────────────────────────────────────────────
-  // run-end-screen.js calls showCamp() for "Go to Camp" and resetGame() for "New Run".
-  // Neither exists in sandbox, so we wire them here.
-  if (typeof showCamp === 'undefined') {
-    window.showCamp = function () { window.location.href = 'index.html'; };
-  }
-  if (typeof showCampScreen === 'undefined') {
-    window.showCampScreen = function () { window.location.href = 'index.html'; };
-  }
-  if (typeof resetGame === 'undefined') {
-    window.resetGame = function () { location.reload(); };
-  }
   // ── Player Status Effect API ──────────────────────────────────────────────────
   // window.setPlayerStatusEffect(type, duration) — call from any damage system.
   // type: 'fire' | 'poison' | 'ice' | 'shock'
@@ -256,12 +244,6 @@
       if (!pos) return;
       if (window.BloodSystem && typeof BloodSystem.emitWaterBurst === 'function') {
         BloodSystem.emitWaterBurst({ x: pos.x, y: pos.y, z: pos.z }, 1, { spreadXZ: 0.3, spreadY: 0.2 });
-      } else if (window.BloodSimulatorV21) {
-        window.BloodSimulatorV21.rawBurst(pos.x, pos.y, pos.z, 1, {
-          spreadXZ: 0.3,
-          spreadY: 0.2,
-          color: 0x00bfff
-        });
       }
     };
   }
@@ -272,31 +254,25 @@
     window.gameOver = function () {
       // Evaluate run quests before showing death screen (CHANGE 3) — pass endOfRun=true
       if (typeof _checkSandboxRunQuestProgress === 'function') _checkSandboxRunQuestProgress(true);
-      if (typeof _checkSandboxAchievements === 'function') _checkSandboxAchievements();
-
-      // Track survival time
+      // Track survival time and run bonus XP
       var _elapsedSec = _sandboxRunStartTime ? (Date.now() - _sandboxRunStartTime) / 1000 : 0;
       if (saveData && saveData.stats) saveData.stats.longestSurvivalTime = Math.max(saveData.stats.longestSurvivalTime || 0, _elapsedSec);
       var _runKills = playerStats ? (playerStats.kills || 0) : 0;
+      var _runBonus = Math.min(50, Math.floor(_runKills * (1 + _elapsedSec / 60)));
+      if (window.GameAccount && typeof window.GameAccount.addXP === 'function') window.GameAccount.addXP(_runBonus, 'Run End Bonus', saveData);
+      if (typeof _checkSandboxAchievements === 'function') _checkSandboxAchievements();
 
-      // Award kill XP + survival bonus via addAccountXP so it lands in saveData.accountXP
-      // and currentRunStats.xpAccumulated (both read by RunEndScreen).
-      var _killXP = _runKills * 2;
-      var _survivalBonus = Math.min(50, Math.floor(_runKills * (1 + _elapsedSec / 60)));
-      if (typeof addAccountXP === 'function') addAccountXP(_killXP + _survivalBonus);
-      // FIX: Also route end-of-run XP to GameAccount so both systems stay in sync
-      if (window.GameAccount && typeof window.GameAccount.addXP === 'function') {
-        var _gaResult = window.GameAccount.addXP(_killXP + _survivalBonus, 'Run Complete', saveData);
-        // Store level-up info for camp arrival notification
-        if (_gaResult && _gaResult.leveledUp) {
-          window._pendingAccountLevelUp = _gaResult;
-        }
+      // Show YOU DIED banner with stats FIRST so player can read them
+      if (typeof showYouDiedBanner === 'function') {
+        showYouDiedBanner(GAME_OVER_RELOAD_DELAY_MS);
+      } else {
+        const b = document.getElementById('you-died-banner');
+        if (b) b.style.display = 'block';
       }
 
       // Reset blood/gore systems after a short delay so the death scene stays visible briefly
       setTimeout(function () {
         if (window.BloodV2 && typeof window.BloodV2.reset === 'function') window.BloodV2.reset();
-        if (window.BloodSimulatorV21 && typeof window.BloodSimulatorV21.reset === 'function') window.BloodSimulatorV21.reset();
         if (window.GoreSim && typeof window.GoreSim.reset === 'function') window.GoreSim.reset();
         if (window.SlimePool && typeof window.SlimePool.reset === 'function') window.SlimePool.reset();
         if (window.WaveSpawner && typeof window.WaveSpawner.reset === 'function') window.WaveSpawner.reset();
@@ -313,33 +289,8 @@
         }
       }, 800); // brief delay so blood/gore stays visible for dramatic effect
 
-      // Show cinematic RunEndScreen if available; otherwise fall back to you-died-banner + reload
-      if (window.RunEndScreen) {
-        // Hide the YOU DIED banner — RunEndScreen has its own header
-        var _ydb = document.getElementById('you-died-banner');
-        if (_ydb) _ydb.style.display = 'none';
-        var _runStats = window.currentRunStats || {};
-        // Set globals that RunEndScreen's loot and quest/button sections read directly
-        window._resGoldEarned = Math.max(0, ((window.saveData && window.saveData.gold) || 0) - _sbStartGold);
-        var _endStats = {
-          kills:         _runKills,
-          eliteKills:    _runStats.eliteKills || 0,
-          timeSurvived:  Math.floor(_elapsedSec),
-          maxCombo:      _sbMaxCombo || 0,
-          xpAccumulated: _runStats.xpAccumulated || 0
-        };
-        window._resCurrentStats = _endStats;
-        window.RunEndScreen.show(_endStats);
-      } else {
-        // Fallback: show YOU DIED banner then reload
-        if (typeof showYouDiedBanner === 'function') {
-          showYouDiedBanner(GAME_OVER_RELOAD_DELAY_MS);
-        } else {
-          var b = document.getElementById('you-died-banner');
-          if (b) b.style.display = 'block';
-        }
-        setTimeout(function () { location.reload(); }, GAME_OVER_RELOAD_DELAY_MS);
-      }
+      // Reload page after the full delay
+      setTimeout(function () { location.reload(); }, GAME_OVER_RELOAD_DELAY_MS);
     };
   }
 
@@ -482,7 +433,7 @@
   let _doubleBarrelTimer  = 0;
   let _iceSpearTimer      = 0;
   let _fireRingTimer      = 0;
-  let _fireRingAngle      = 0;   // running rotation angle used for damage position calculation
+  let _fireRingAngle      = 0;   // running rotation angle for fire-ring orbs (radians)
   let _lightningTimer     = 0;
   let _meteorTimer        = 0;
   let _teslaSaberTimer    = 0;
@@ -545,8 +496,6 @@
   // ─── Kill Combo System ───────────────────────────────────────────────────────
   let _killCombo      = 0;    // current combo count
   let _killComboTimer = 0;    // countdown before combo resets (seconds)
-  let _sbMaxCombo     = 0;    // peak combo this run (for RunEndScreen)
-  let _sbStartGold    = 0;    // saveData.gold at run start (for _resGoldEarned)
 
   // ─── Level-Up Shockwave Rings (pooled: pre-allocated once, reused) ──────────
   let _lvlUpRings = [];       // active expanding ring meshes (references into _lvlUpRingPool)
@@ -666,11 +615,11 @@
     var crown = document.createElement('div');
     crown.id = 'horus-crown';
     crown.style.cssText = [
-      'width:39px',
-      'height:39px',
+      'width:52px',
+      'height:52px',
       'background:linear-gradient(135deg,rgba(12,8,2,0.97),rgba(28,20,4,0.97))',
       'border:2px solid rgba(212,175,55,0.65)',
-      'border-radius:10px',
+      'border-radius:14px',
       'box-shadow:0 4px 16px rgba(0,0,0,0.85),0 0 10px rgba(212,175,55,0.12)',
       'display:flex',
       'align-items:center',
@@ -679,64 +628,128 @@
       'z-index:1',
     ].join(';');
 
-    // Roller-blind style eye icon (sits as one piece, horizontal slats)
+    // Eye of Horus SVG
     var svgNS = 'http://www.w3.org/2000/svg';
     var svg = document.createElementNS(svgNS, 'svg');
-    svg.setAttribute('width', '28');
-    svg.setAttribute('height', '28');
+    svg.setAttribute('width', '38');
+    svg.setAttribute('height', '38');
     svg.setAttribute('viewBox', '0 0 52 52');
 
     var defs = document.createElementNS(svgNS, 'defs');
-    var clipPath = document.createElementNS(svgNS, 'clipPath');
-    clipPath.setAttribute('id', 'horus-eye-clip');
-    var clipAlmond = document.createElementNS(svgNS, 'path');
-    clipAlmond.setAttribute('d', 'M6,26 C14,12 38,12 46,26 C38,40 14,40 6,26 Z');
-    clipPath.appendChild(clipAlmond);
-    defs.appendChild(clipPath);
+    // Radial gradient for glow
+    var radGrad = document.createElementNS(svgNS, 'radialGradient');
+    radGrad.setAttribute('id', 'horus-glow');
+    radGrad.setAttribute('cx', '50%');
+    radGrad.setAttribute('cy', '50%');
+    radGrad.setAttribute('r', '50%');
+    var stop1 = document.createElementNS(svgNS, 'stop');
+    stop1.setAttribute('offset', '0%');
+    stop1.setAttribute('stop-color', 'rgb(255,215,0)');
+    stop1.setAttribute('stop-opacity', '0.4');
+    var stop2 = document.createElementNS(svgNS, 'stop');
+    stop2.setAttribute('offset', '100%');
+    stop2.setAttribute('stop-color', 'rgb(212,130,0)');
+    stop2.setAttribute('stop-opacity', '0');
+    radGrad.appendChild(stop1);
+    radGrad.appendChild(stop2);
+    // Filter for blur
+    var filter = document.createElementNS(svgNS, 'filter');
+    filter.setAttribute('id', 'eye-filter');
+    var blur = document.createElementNS(svgNS, 'feGaussianBlur');
+    blur.setAttribute('stdDeviation', '1.2');
+    filter.appendChild(blur);
+    defs.appendChild(radGrad);
+    defs.appendChild(filter);
     svg.appendChild(defs);
 
-    // Outer almond outline
-    var eyeOutline = document.createElementNS(svgNS, 'path');
-    eyeOutline.setAttribute('d', 'M6,26 C14,12 38,12 46,26 C38,40 14,40 6,26 Z');
-    eyeOutline.setAttribute('fill', 'rgba(30,18,4,0.95)');
-    eyeOutline.setAttribute('stroke', 'rgba(212,175,55,0.9)');
-    eyeOutline.setAttribute('stroke-width', '2');
-    svg.appendChild(eyeOutline);
+    // 10. Subtle glow circle — appended right after defs so it paints behind all eye shapes
+    var glowCircle = document.createElementNS(svgNS, 'circle');
+    glowCircle.setAttribute('cx', '26');
+    glowCircle.setAttribute('cy', '26');
+    glowCircle.setAttribute('r', '18');
+    glowCircle.setAttribute('fill', 'url(#horus-glow)');
+    glowCircle.setAttribute('opacity', '0.4');
+    svg.appendChild(glowCircle);
 
-    // Roller blind slats clipped to eye almond shape
-    var slatsGroup = document.createElementNS(svgNS, 'g');
-    slatsGroup.setAttribute('clip-path', 'url(#horus-eye-clip)');
-    var slatColors = ['rgba(212,175,55,0.75)', 'rgba(180,140,30,0.5)', 'rgba(212,175,55,0.75)', 'rgba(180,140,30,0.5)', 'rgba(212,175,55,0.75)'];
-    for (var si = 0; si < 5; si++) {
-      var slat = document.createElementNS(svgNS, 'rect');
-      slat.setAttribute('x', '0');
-      slat.setAttribute('y', String(13 + si * 5.5));
-      slat.setAttribute('width', '52');
-      slat.setAttribute('height', '3.5');
-      slat.setAttribute('fill', slatColors[si]);
-      slat.setAttribute('rx', '1');
-      slatsGroup.appendChild(slat);
-    }
-    svg.appendChild(slatsGroup);
+    // 1. Gold outer almond eye shape (glow outline)
+    var outerAlmond = document.createElementNS(svgNS, 'path');
+    outerAlmond.setAttribute('d', 'M8,26 C14,14 38,14 44,26 C38,38 14,38 8,26 Z');
+    outerAlmond.setAttribute('fill', 'none');
+    outerAlmond.setAttribute('stroke', 'url(#horus-glow)');
+    outerAlmond.setAttribute('stroke-width', '1.5');
+    outerAlmond.setAttribute('opacity', '0.35');
+    svg.appendChild(outerAlmond);
 
-    // Central iris circle
+    // 2. Main eye white (filled almond)
+    var eyeWhite = document.createElementNS(svgNS, 'path');
+    eyeWhite.setAttribute('d', 'M8,26 C14,14 38,14 44,26 C38,38 14,38 8,26 Z');
+    eyeWhite.setAttribute('fill', 'rgba(255,245,220,0.08)');
+    eyeWhite.setAttribute('stroke', 'rgba(212,175,55,0.9)');
+    eyeWhite.setAttribute('stroke-width', '1.8');
+    svg.appendChild(eyeWhite);
+
+    // 3. Iris
     var iris = document.createElementNS(svgNS, 'circle');
     iris.setAttribute('cx', '26');
     iris.setAttribute('cy', '26');
-    iris.setAttribute('r', '6');
+    iris.setAttribute('r', '7.5');
     iris.setAttribute('fill', 'rgba(20,12,2,0.95)');
-    iris.setAttribute('stroke', 'rgba(212,175,55,0.8)');
+    iris.setAttribute('stroke', 'rgba(212,175,55,0.7)');
     iris.setAttribute('stroke-width', '1.5');
     svg.appendChild(iris);
 
-    // Pupil
+    // 4. Pupil (animated via CSS class)
     var pupil = document.createElementNS(svgNS, 'circle');
     pupil.setAttribute('cx', '26');
     pupil.setAttribute('cy', '26');
-    pupil.setAttribute('r', '2.5');
+    pupil.setAttribute('r', '3.5');
     pupil.setAttribute('fill', 'rgba(212,175,55,0.95)');
+    pupil.setAttribute('filter', 'url(#eye-filter)');
     pupil.setAttribute('class', 'horus-pupil');
     svg.appendChild(pupil);
+
+    // 5. Inner gold sparkle
+    var sparkle = document.createElementNS(svgNS, 'circle');
+    sparkle.setAttribute('cx', '26');
+    sparkle.setAttribute('cy', '26');
+    sparkle.setAttribute('r', '1.2');
+    sparkle.setAttribute('fill', 'white');
+    sparkle.setAttribute('opacity', '0.9');
+    svg.appendChild(sparkle);
+
+    // 6. Upper lash line
+    var lashLine = document.createElementNS(svgNS, 'path');
+    lashLine.setAttribute('d', 'M8,26 Q26,10 44,26');
+    lashLine.setAttribute('fill', 'none');
+    lashLine.setAttribute('stroke', 'rgba(212,175,55,0.6)');
+    lashLine.setAttribute('stroke-width', '1');
+    svg.appendChild(lashLine);
+
+    // 7. Lower classic Horus cheek mark
+    var cheekMark = document.createElementNS(svgNS, 'path');
+    cheekMark.setAttribute('d', 'M26,33 L18,44 C17,45 16,46 16,46');
+    cheekMark.setAttribute('fill', 'none');
+    cheekMark.setAttribute('stroke', 'rgba(212,175,55,0.8)');
+    cheekMark.setAttribute('stroke-width', '1.8');
+    cheekMark.setAttribute('stroke-linecap', 'round');
+    svg.appendChild(cheekMark);
+
+    // 8. Second cheek flourish
+    var cheekFlourish = document.createElementNS(svgNS, 'path');
+    cheekFlourish.setAttribute('d', 'M26,33 L22,42 L20,45');
+    cheekFlourish.setAttribute('fill', 'none');
+    cheekFlourish.setAttribute('stroke', 'rgba(180,140,30,0.5)');
+    cheekFlourish.setAttribute('stroke-width', '1');
+    cheekFlourish.setAttribute('stroke-linecap', 'round');
+    svg.appendChild(cheekFlourish);
+
+    // 9. Decorative dot
+    var dot = document.createElementNS(svgNS, 'circle');
+    dot.setAttribute('cx', '14');
+    dot.setAttribute('cy', '45');
+    dot.setAttribute('r', '1.2');
+    dot.setAttribute('fill', 'rgba(212,175,55,0.6)');
+    svg.appendChild(dot);
 
     crown.appendChild(svg);
     shrine.appendChild(crown);
@@ -936,7 +949,6 @@
   function _incrementKillCombo() {
     _killCombo++;
     _killComboTimer = 2.5;
-    if (_killCombo > _sbMaxCombo) _sbMaxCombo = _killCombo;
     _updateKillComboDisplay();
   }
 
@@ -1105,17 +1117,31 @@
 
   // ─── Persistent HUD elements (kill count + session timer) ────────────────────
   function _initPersistentHUD() {
-    // Kill count is now in #hud-top-right-row in sandbox.html — just initialise the text
-    var kc = document.getElementById('hud-kill-count');
-    if (kc) kc.textContent = '0';
-
+    if (!document.getElementById('hud-kill-count')) {
+      var kc = document.createElement('div');
+      kc.id = 'hud-kill-count';
+      kc.style.cssText = [
+        'position:fixed',
+        'top:14px',
+        'right:16px',
+        'color:rgba(255,215,55,0.9)',
+        'font-family:Bangers,cursive',
+        'font-size:14px',
+        'letter-spacing:1.5px',
+        'text-shadow:0 0 8px rgba(0,0,0,0.9)',
+        'z-index:9000',
+        'pointer-events:none',
+      ].join(';');
+      kc.textContent = '💀 0';
+      document.body.appendChild(kc);
+    }
     if (!document.getElementById('hud-session-timer')) {
       var st = document.createElement('div');
       st.id = 'hud-session-timer';
       st.style.cssText = [
         'position:fixed',
-        'top:58px',
-        'left:10px',
+        'top:34px',
+        'right:16px',
         'color:rgba(255,215,55,0.9)',
         'font-family:Bangers,cursive',
         'font-size:14px',
@@ -1151,15 +1177,7 @@
 
   function _updateKillCountHUD() {
     var kc = document.getElementById('hud-kill-count');
-    if (kc && playerStats) kc.textContent = (playerStats.kills || 0);
-    // Update XP mini bar in the top-right row
-    if (playerStats) {
-      var expPct = Math.min(100, ((playerStats.exp || 0) / (playerStats.expReq || 100)) * 100);
-      var fill = document.getElementById('hud-xp-mini-fill');
-      var txt  = document.getElementById('hud-xp-mini-text');
-      if (fill) fill.style.width = expPct.toFixed(1) + '%';
-      if (txt)  txt.textContent  = Math.ceil(expPct) + '%';
-    }
+    if (kc && playerStats) kc.textContent = '💀 ' + (playerStats.kills || 0);
   }
 
   // ─── Projectile pool ─────────────────────────────────────────────────────────
@@ -1657,19 +1675,7 @@
       }
 
       // Heartbeat blood pumping: sin-wave drives burst rate
-      if (window.BloodSimulatorV21) {
-        const heartRate = 3.0 * (1 - lifeRatio * 0.8); // slows from 3 Hz to 0.6 Hz
-        c.bloodTimer += dt;
-        const heartbeat = Math.sin(c.bloodTimer * heartRate * Math.PI * 2);
-        if (heartbeat > 0.85 && lifeRatio < 0.85) {
-          const pressure = (1 - lifeRatio) * 0.15;
-          window.BloodSimulatorV21.rawBurst(
-            c.x, 0.3, c.z,
-            Math.floor(2 + pressure * 4),
-            { spreadXZ: 0.4 * pressure, spreadY: 0.25 * pressure, viscosity: 0.62 }
-          );
-        }
-      } else if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
+      if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
         const heartRate = 3.0 * (1 - lifeRatio * 0.8); // slows from 3 Hz to 0.6 Hz
         c.bloodTimer += dt;
         const heartbeat = Math.sin(c.bloodTimer * heartRate * Math.PI * 2);
@@ -2016,8 +2022,10 @@
           burstCount = 160;
           burstOpts.spdMax = 22;
           extraFx = function() {
-            if (window.BloodSimulatorV21) {
-              window.BloodSimulatorV21.rawBurst(x, y + 0.1, z, 50, { spreadXZ: 11, spreadY: 14, viscosity: 0.50, enemyType: 'slime' });
+            if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
+              BloodV2.rawBurstUpward(x, y + 0.1, z, 50, {
+                enemyType: 'slime', spdMin: 6, spdMax: 14, rMin: 0.009, rMax: 0.024, life: 3.2, visc: 0.50
+              });
             }
           };
         } else if (killVariant === 2) {
@@ -2036,8 +2044,10 @@
           chunkForce = { dirX: (killVX || 0.8), dirZ: (killVZ || 0), power: 0.55, spread: 0.40 };
         } else if (killVariant === 1) {
           extraFx = function() {
-            if (window.BloodSimulatorV21) {
-              window.BloodSimulatorV21.rawBurst(x, y + 0.15, z, 35, { spreadXZ: 9, spreadY: 16, viscosity: 0.62, enemyType: 'slime' });
+            if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
+              BloodV2.rawBurstUpward(x, y + 0.15, z, 35, {
+                enemyType: 'slime', spdMin: 3, spdMax: 9, rMin: 0.007, rMax: 0.022, life: 2.4
+              });
             }
           };
         } else {
@@ -2059,8 +2069,10 @@
           burstOpts.color = 0x663000;
         } else if (killVariant === 2) {
           extraFx = function() {
-            if (window.BloodSimulatorV21) {
-              window.BloodSimulatorV21.rawBurst(x, y + 0.05, z, 30, { spreadXZ: 10, spreadY: 10, viscosity: 0.70, color: 0xff5500 });
+            if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
+              BloodV2.rawBurstUpward(x, y + 0.05, z, 30, {
+                color: 0xff5500, spdMin: 4, spdMax: 10, rMin: 0.008, rMax: 0.022, life: 2.8
+              });
             }
           };
         }
@@ -2068,9 +2080,7 @@
     }
 
     // Hollywood-style overdone slime death burst
-    if (window.BloodSimulatorV21) {
-      window.BloodSimulatorV21.rawBurst(x, y, z, burstCount, { spreadXZ: burstOpts.spdMax || 9, spreadY: (burstOpts.spdMax || 9) * 1.2, viscosity: burstOpts.visc || 0.62, color: burstOpts.color, enemyType: burstOpts.enemyType });
-    } else if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+    if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
       BloodV2.rawBurst(x, y, z, burstCount, burstOpts);
     }
     _spawnFleshChunks(slot, chunkCount, true, chunkColors, chunkForce);
@@ -2293,8 +2303,8 @@
         chunkForce = { dirX: killVX || 0, dirZ: killVZ || 0, power: 0.80, spread: 0.60 };
         if (killVariant === 1) {
           extraFx = function() {
-            if (window.BloodSimulatorV21) {
-              window.BloodSimulatorV21.rawBurst(x, y + 0.15, z, 45, { spreadXZ: 16, spreadY: 16, viscosity: 0.55 });
+            if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
+              BloodV2.rawBurstUpward(x, y + 0.15, z, 45, { enemyType: 'crawler', spdMin: 7, spdMax: 16, rMin: 0.010, rMax: 0.026, life: 3.0, visc: 0.55 });
             }
           };
         } else if (killVariant === 2) {
@@ -2311,8 +2321,8 @@
         chunkForce = { dirX: (killVX || 0.5), dirZ: (killVZ || 0), power: 0.55, spread: 0.35 };
         if (killVariant === 1) {
           extraFx = function() {
-            if (window.BloodSimulatorV21) {
-              window.BloodSimulatorV21.rawBurst(x, y + 0.1, z, 30, { spreadXZ: 10, spreadY: 16, viscosity: 0.62 });
+            if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
+              BloodV2.rawBurstUpward(x, y + 0.1, z, 30, { enemyType: 'crawler', spdMin: 4, spdMax: 10, rMin: 0.008, rMax: 0.020, life: 2.2 });
             }
           };
         } else if (killVariant === 2 && crawler.headMesh) {
@@ -2329,8 +2339,8 @@
         corpseLinger = 50;
         if (killVariant === 2) {
           extraFx = function() {
-            if (window.BloodSimulatorV21) {
-              window.BloodSimulatorV21.rawBurst(x, y + 0.08, z, 28, { spreadXZ: 9, spreadY: 14, viscosity: 0.72, color: 0xff6600 });
+            if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
+              BloodV2.rawBurstUpward(x, y + 0.08, z, 28, { color: 0xff6600, spdMin: 3, spdMax: 9, rMin: 0.008, rMax: 0.020, life: 2.4 });
             }
           };
         }
@@ -2338,9 +2348,7 @@
     }
 
     // Hollywood-style overdone crawler death burst
-    if (window.BloodSimulatorV21) {
-      window.BloodSimulatorV21.rawBurst(x, y, z, burstCount, { spreadXZ: burstOpts.spdMax || 9, spreadY: (burstOpts.spdMax || 9) * 1.2, viscosity: burstOpts.visc || 0.62, color: burstOpts.color, enemyType: burstOpts.enemyType });
-    } else if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+    if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
       BloodV2.rawBurst(x, y, z, burstCount, burstOpts);
     }
 
@@ -2538,6 +2546,14 @@
       _showDamageNumber(_tmpV3.x, _tmpV3.y + 0.5, _tmpV3.z, actualDmg, enemy.hp <= 0, false);
     }
 
+    // Light-blue blood burst (DeepSkyBlue) — use BloodV2 rawBurst if available
+    const bx = enemy.mesh.position.x, by = enemy.mesh.position.y + enemy.size, bz = enemy.mesh.position.z;
+    if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+      BloodV2.rawBurst(bx, by, bz, 6, { enemyType: 'leaping_slime' });
+    } else if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
+      BloodSystem.emitBurst({ x: bx, y: by, z: bz }, 5, { spreadXZ: 1.0, spreadY: 0.4 });
+    }
+
     // GoreSim hit reaction
     if (window.GoreSim && typeof GoreSim.onHit === 'function') {
       GoreSim.onHit(enemy, weaponKey, _tmpV3, hitNormal);
@@ -2602,8 +2618,8 @@
         chunkForce = { dirX: killVX || 0, dirZ: killVZ || 0, power: 0.70, spread: 0.55 };
         if (killVariant === 1) {
           extraFx = function() {
-            if (window.BloodSimulatorV21) {
-              window.BloodSimulatorV21.rawBurst(x, y + 0.1, z, 30, { spreadXZ: 12, spreadY: 16, viscosity: 0.62 });
+            if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
+              BloodV2.rawBurstUpward(x, y + 0.1, z, 30, { enemyType: 'leaping_slime', spdMin: 6, spdMax: 12, rMin: 0.009, rMax: 0.022, life: 2.8 });
             }
           };
         } else if (killVariant === 2) {
@@ -2632,8 +2648,8 @@
         corpseLinger = 10;
         if (killVariant === 2) {
           extraFx = function() {
-            if (window.BloodSimulatorV21) {
-              window.BloodSimulatorV21.rawBurst(x, y + 0.05, z, 26, { spreadXZ: 9, spreadY: 14, viscosity: 0.70, color: 0xff6600 });
+            if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
+              BloodV2.rawBurstUpward(x, y + 0.05, z, 26, { color: 0xff6600, spdMin: 3, spdMax: 9, rMin: 0.008, rMax: 0.021, life: 2.5 });
             }
           };
         }
@@ -2641,9 +2657,7 @@
     }
 
     // Light-blue gore burst
-    if (window.BloodSimulatorV21) {
-      window.BloodSimulatorV21.rawBurst(x, y, z, burstCount, { spreadXZ: burstOpts.spdMax || 9, spreadY: (burstOpts.spdMax || 9) * 1.2, viscosity: burstOpts.visc || 0.62, color: burstOpts.color, enemyType: burstOpts.enemyType });
-    } else if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+    if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
       BloodV2.rawBurst(x, y, z, burstCount, burstOpts);
     } else if (window.BloodSystem) {
       if (typeof BloodSystem.emitBurst === 'function') {
@@ -2828,10 +2842,7 @@
 
     const _bPos1 = _reusableBloodPos;
     _bPos1.x = slot.mesh.position.x; _bPos1.y = slot.mesh.position.y + 0.4; _bPos1.z = slot.mesh.position.z;
-    if (window.BloodSimulatorV21) {
-      var stageBloodColor = (slot && slot.enemyType && window._BSV21_BLOOD && window._BSV21_BLOOD[slot.enemyType]) ? window._BSV21_BLOOD[slot.enemyType] : 0x8B0000;
-      window.BloodSimulatorV21.rawBurst(_bPos1.x, _bPos1.y, _bPos1.z, 10, { spreadXZ: 0.8, spreadY: 0.4, viscosity: 0.62, color: stageBloodColor });
-    } else if (window.BloodSystem) {
+    if (window.BloodSystem) {
       // Increased from 8 to 10 to match old map realism
       if (typeof BloodSystem.emitBurst === 'function') {
         BloodSystem.emitBurst(_bPos1, 10, { spreadXZ: 0.8, spreadY: 0.4, minLife: 50, maxLife: 100 });
@@ -2875,10 +2886,7 @@
 
     const _bPos2 = _reusableBloodPos;
     _bPos2.x = slot.mesh.position.x; _bPos2.y = slot.mesh.position.y + 0.4; _bPos2.z = slot.mesh.position.z;
-    if (window.BloodSimulatorV21) {
-      var stageBloodColor = (slot && slot.enemyType && window._BSV21_BLOOD && window._BSV21_BLOOD[slot.enemyType]) ? window._BSV21_BLOOD[slot.enemyType] : 0x8B0000;
-      window.BloodSimulatorV21.rawBurst(_bPos2.x, _bPos2.y, _bPos2.z, 18, { spreadXZ: 1.5, spreadY: 0.6, viscosity: 0.62, color: stageBloodColor });
-    } else if (window.BloodSystem) {
+    if (window.BloodSystem) {
       // Tuned burst count to 18 to match old map impact
       if (typeof BloodSystem.emitBurst === 'function') {
         BloodSystem.emitBurst(_bPos2, 18, { spreadXZ: 1.5, spreadY: 0.6, minLife: 50, maxLife: 100 });
@@ -2916,10 +2924,7 @@
 
     const _bPos3 = _reusableBloodPos;
     _bPos3.x = slot.mesh.position.x; _bPos3.y = slot.mesh.position.y + 0.4; _bPos3.z = slot.mesh.position.z;
-    if (window.BloodSimulatorV21) {
-      var stageBloodColor = (slot && slot.enemyType && window._BSV21_BLOOD && window._BSV21_BLOOD[slot.enemyType]) ? window._BSV21_BLOOD[slot.enemyType] : 0x8B0000;
-      window.BloodSimulatorV21.rawBurst(_bPos3.x, _bPos3.y, _bPos3.z, 25, { spreadXZ: 2.0, spreadY: 0.8, viscosity: 0.62, color: stageBloodColor });
-    } else if (window.BloodSystem) {
+    if (window.BloodSystem) {
       // Burst count tuned to 25 to approximate old map's sniper hit intensity
       if (typeof BloodSystem.emitBurst === 'function') {
         BloodSystem.emitBurst(_bPos3, 25, { spreadXZ: 2.0, spreadY: 0.8, minLife: 50, maxLife: 100 });
@@ -2971,10 +2976,7 @@
 
     const _bPos4 = _reusableBloodPos;
     _bPos4.x = slot.mesh.position.x; _bPos4.y = slot.mesh.position.y + 0.4; _bPos4.z = slot.mesh.position.z;
-    if (window.BloodSimulatorV21) {
-      var stage4BloodColor = (slot && slot.enemyType && window._BSV21_BLOOD && window._BSV21_BLOOD[slot.enemyType]) ? window._BSV21_BLOOD[slot.enemyType] : 0x8B0000;
-      window.BloodSimulatorV21.rawBurst(_bPos4.x, _bPos4.y, _bPos4.z, 33, { spreadXZ: 2.5, spreadY: 1.0, viscosity: 0.62, color: stage4BloodColor });
-    } else if (window.BloodSystem) {
+    if (window.BloodSystem) {
       if (typeof BloodSystem.emitBurst === 'function') {
         BloodSystem.emitBurst(_bPos4, 15, { spreadXZ: 2.5, spreadY: 1.0 });
       }
@@ -3970,22 +3972,7 @@
 
         // ── Character level-up water/energy fountain ──
         // Multi-pulse upward fountain: primary blast → rising jet → dispersing crown
-        if (window.BloodSimulatorV21) {
-          // Primary blast: wide, powerful upward burst from ground
-          window.BloodSimulatorV21.rawBurst(px, py + 0.1, pz, 90, { color: 0x44CCFF, spreadXZ: 14, spreadY: 14, viscosity: 0.40 });
-          // Rising jet: narrower core shooting higher (80ms later)
-          setTimeout(function() {
-            if (window.BloodSimulatorV21) {
-              window.BloodSimulatorV21.rawBurst(px, py + 0.6, pz, 55, { color: 0x88EEFF, spreadXZ: 18, spreadY: 18, viscosity: 0.38 });
-            }
-          }, 80);
-          // Crown dispersal: mist of bright droplets at peak (180ms later)
-          setTimeout(function() {
-            if (window.BloodSimulatorV21) {
-              window.BloodSimulatorV21.rawBurst(px, py + 1.2, pz, 35, { color: 0xCCFFFF, spreadXZ: 9, spreadY: 9, viscosity: 0.50 });
-            }
-          }, 180);
-        } else if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
+        if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
           // Primary blast: wide, powerful upward burst from ground
           BloodV2.rawBurstUpward(px, py + 0.1, pz, 90, {
             color: 0x44CCFF, spdMin: 5, spdMax: 14, rMin: 0.014, rMax: 0.036, life: 2.8, visc: 0.40,
@@ -4055,9 +4042,7 @@
           if (distSq <= _killRSq) {
             // ── ZONE 1: < 1m — brutal instant kill ──
             // Massive blood burst
-            if (window.BloodSimulatorV21) {
-              window.BloodSimulatorV21.rawBurst(ex, ey, ez, 200, { spreadXZ: 24, spreadY: 24, viscosity: 0.25 });
-            } else if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+            if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
               BloodV2.rawBurst(ex, ey, ez, 200, {
                 spdMin: 10, spdMax: 24, rMin: 0.018, rMax: 0.055, life: 5.0, visc: 0.25,
                 enemyType: e.enemyType || 'slime',
@@ -4099,9 +4084,7 @@
               _tmpV3b.set(-kbDirX, 0, -kbDirZ);
               GoreSim.onHit(e, 'pistol', _tmpV3, _tmpV3b);
             }
-            if (window.BloodSimulatorV21) {
-              window.BloodSimulatorV21.rawBurst(ex, ey, ez, 100, { spreadXZ: 16, spreadY: 16, viscosity: 0.35 });
-            } else if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+            if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
               BloodV2.rawBurst(ex, ey, ez, 100, {
                 spdMin: 5, spdMax: 16, rMin: 0.015, rMax: 0.040, life: 4.0, visc: 0.35,
                 enemyType: e.enemyType || 'slime',
@@ -4134,9 +4117,7 @@
               _tmpV3b.set(-kbDirX, 0, -kbDirZ);
               GoreSim.onHit(e, 'pistol', _tmpV3, _tmpV3b);
             }
-            if (window.BloodSimulatorV21) {
-              window.BloodSimulatorV21.rawBurst(ex, ey, ez, 40, { spreadXZ: 9, spreadY: 9, viscosity: 0.50 });
-            } else if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+            if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
               BloodV2.rawBurst(ex, ey, ez, 40, {
                 spdMin: 2, spdMax: 9, rMin: 0.010, rMax: 0.025, life: 3.0, visc: 0.50,
                 enemyType: e.enemyType || 'slime',
@@ -4168,9 +4149,7 @@
           const ex = _swPos.x, ey = _swPos.y + 1.0, ez = _swPos.z;
 
           if (distSq <= _killRSq) {
-            if (window.BloodSimulatorV21) {
-              window.BloodSimulatorV21.rawBurst(ex, ey, ez, 200, { spreadXZ: 24, spreadY: 24, viscosity: 0.25 });
-            } else if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+            if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
               BloodV2.rawBurst(ex, ey, ez, 200, {
                 spdMin: 10, spdMax: 24, rMin: 0.018, rMax: 0.055, life: 5.0, visc: 0.25,
                 enemyType: 'skinwalker',
@@ -4186,9 +4165,7 @@
             const _swDmg = Math.max(0, (e.hp || 1) - 1);
             if (_swDmg > 0) e.takeDamage(_swDmg);
             if (e.dead) _killSkinwalker(e);
-            if (window.BloodSimulatorV21) {
-              window.BloodSimulatorV21.rawBurst(ex, ey, ez, 100, { spreadXZ: 16, spreadY: 16, viscosity: 0.35 });
-            } else if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+            if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
               BloodV2.rawBurst(ex, ey, ez, 100, {
                 spdMin: 5, spdMax: 16, rMin: 0.015, rMax: 0.040, life: 4.0, visc: 0.35,
                 enemyType: 'skinwalker',
@@ -4202,9 +4179,7 @@
             const _swDmg = Math.floor((e.hp || 1) * 0.5);
             if (_swDmg > 0) e.takeDamage(_swDmg);
             if (e.dead) _killSkinwalker(e);
-            if (window.BloodSimulatorV21) {
-              window.BloodSimulatorV21.rawBurst(ex, ey, ez, 40, { spreadXZ: 9, spreadY: 9, viscosity: 0.50 });
-            } else if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+            if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
               BloodV2.rawBurst(ex, ey, ez, 40, {
                 spdMin: 2, spdMax: 9, rMin: 0.010, rMax: 0.025, life: 3.0, visc: 0.50,
                 enemyType: 'skinwalker',
@@ -4242,18 +4217,20 @@
       } catch(e) { console.warn('[EggHunt] egg spawn failed:', e); }
     }
 
-    // ── Yellow "LEVEL UP!" text that rises from character's head ──
-    // Game stays live during this so enemies react to the explosion shockwave.
+    // ── Small "LEVEL UP!" text that rises from character's head ──
+    // Appears first (small), grows upward, then the big fire animation plays.
     _spawnSmallLevelUpText();
 
-    // ── Pause + show upgrade modal after explosion plays fully (~2 s) ──
-    // Game does NOT pause immediately; enemies keep moving so the shockwave
-    // knockback, particles and energy rings are fully visible before freeze.
+    // ── Fiery "LEVEL UP" text animation (Grind Survivors style) ──
+    // Spawns a massive burning text above the player before showing the upgrade modal.
+    setTimeout(_spawnFireLevelUpText, 0); // fire immediately with small text
+
+    // Delay before upgrade modal appears so player can enjoy the fiery text animation
+    window.isPaused = true;
     setTimeout(function () {
-      window.isPaused = true;
       if (typeof showUpgradeModal === 'function') {
         showUpgradeModal(false, null);
-        // Failsafe: unpause if modal never appeared
+        // Failsafe: if showUpgradeModal returned without showing the modal
         setTimeout(function () {
           const modal = document.getElementById('levelup-modal');
           if (window.isPaused && (!modal || modal.style.display !== 'flex')) {
@@ -4263,7 +4240,7 @@
       } else {
         window.isPaused = false;
       }
-    }, 2000); // 2 s — lets shockwave + knockback + fountain fully play
+    }, 1800); // 1.8s delay to let the fiery text play
 
     // Stats + Account XP + Codex + Achievements on level up
     if (saveData && saveData.stats) saveData.stats.highestLevel = Math.max(saveData.stats.highestLevel || 0, playerStats.lvl);
@@ -4593,9 +4570,7 @@
     const eRadius = projectile.explosionRadius;
     const dmg = projectile.weaponDmg || 0;
     _weaponAoeDamage(ix, iz, eRadius * eRadius, dmg, '#FF4400');
-    if (window.BloodSimulatorV21) {
-      window.BloodSimulatorV21.rawBurst(ix, 0.5, iz, 15, { color: 0xFF6600, spreadXZ: 5, spreadY: 9 });
-    } else if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+    if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
       BloodV2.rawBurst(ix, 0.5, iz, 15, { color: 0xFF6600, spdMin: 1, spdMax: 5 });
     }
     // Clear radius so it doesn't retrigger on the same projectile after release
@@ -4611,9 +4586,7 @@
     const ex = _weaponEnemyX(e), ez = _weaponEnemyZ(e);
     _tmpV3.set(ex, 1.5, ez);
     createFloatingText(dmg, _tmpV3, color, dmg);
-    if (window.BloodSimulatorV21) {
-      window.BloodSimulatorV21.rawBurst(ex, 0.5, ez, 4, { spreadXZ: 2, spreadY: 4 });
-    } else if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+    if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
       BloodV2.rawBurst(ex, 0.5, ez, 4, {});
     }
     if (e.parts && e.parts.root) {
@@ -4702,9 +4675,7 @@
             s.squishTime = 0.25;
             _tmpV3.set(s.mesh.position.x, 1.4, s.mesh.position.z);
             createFloatingText(dmg, _tmpV3, '#FF8800', dmg);
-            if (window.BloodSimulatorV21) {
-              window.BloodSimulatorV21.rawBurst(s.mesh.position.x, s.mesh.position.y + 0.5, s.mesh.position.z, 20, { spreadXZ: 1.0, spreadY: 0.4 });
-            } else if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
+            if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
               _reusableBloodPos.x = s.mesh.position.x;
               _reusableBloodPos.y = s.mesh.position.y + 0.5;
               _reusableBloodPos.z = s.mesh.position.z;
@@ -4841,13 +4812,10 @@
     } else { _iceSpearTimer = 0; }
 
     // ── FIRE RING: orbiting fire orbs that scorch enemies they pass over ──────
-    // Visuals (orb meshes + PointLights) are managed by player-class.js (this.fireRingOrbs).
-    // This block handles only the AoE damage tick and muzzle flash trigger.
     if (weapons.fireRing && weapons.fireRing.active) {
       const orbs = weapons.fireRing.orbs || 3;
       const fRange = weapons.fireRing.range || 4;
       _fireRingAngle += (weapons.fireRing.rotationSpeed || 2) * dt;
-
       _fireRingTimer -= dt * 1000;
       if (_fireRingTimer <= 0) {
         _fireRingTimer = weapons.fireRing.cooldown || 800;
@@ -4860,10 +4828,6 @@
           const orbX = px + Math.cos(angle) * fRange;
           const orbZ = pz + Math.sin(angle) * fRange;
           _weaponAoeDamage(orbX, orbZ, orbHitRadSq, dmg, '#FF4400');
-        }
-        if (window.spawnWeaponMuzzleFlash) {
-          _tmpV3.set(px, 0.6, pz);
-          window.spawnWeaponMuzzleFlash('fireRing', _tmpV3, null, scene);
         }
       }
     } else { _fireRingTimer = 0; }
@@ -4919,9 +4883,7 @@
         const mx = nearest ? _weaponEnemyX(nearest) : px;
         const mz = nearest ? _weaponEnemyZ(nearest) : pz;
         _weaponAoeDamage(mx, mz, mArea * mArea, dmg, '#FF6622');
-        if (window.BloodSimulatorV21) {
-          window.BloodSimulatorV21.rawBurst(mx, 0.5, mz, 30, { color: 0xFF4400, spreadXZ: 8, spreadY: 14 });
-        } else if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+        if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
           BloodV2.rawBurst(mx, 0.5, mz, 30, { color: 0xFF4400, spdMin: 2, spdMax: 8 });
         }
       }
@@ -5479,94 +5441,30 @@
     if (!player || !player.mesh) return;
     const gunGroup = new THREE.Group();
 
-    // Barrel (slightly shorter for smaller revolver)
-    const barrelGeo = new THREE.CylinderGeometry(0.035, 0.035, 0.38, 8);
-    const metalMat = new THREE.MeshStandardMaterial({ color: 0x555566, roughness: 0.35, metalness: 0.85 });
+    // Barrel (long thin cylinder)
+    const barrelGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.45, 8);
+    const metalMat = new THREE.MeshStandardMaterial({ color: 0x555566, roughness: 0.4, metalness: 0.8 });
     const barrel = new THREE.Mesh(barrelGeo, metalMat);
     barrel.rotation.z = Math.PI / 2;
-    barrel.position.set(0.19, 0, 0);
+    barrel.position.set(0.22, 0, 0);
     gunGroup.add(barrel);
 
-    // Cylinder (revolver drum) – hyper-realistic copper bullets with silver primer
-    const drumGeo = new THREE.CylinderGeometry(0.065, 0.065, 0.13, 12);
-    const drumMat = new THREE.MeshStandardMaterial({ color: 0xaa7744, roughness: 0.4, metalness: 0.75 });
+    // Cylinder (revolver drum)
+    const drumGeo = new THREE.CylinderGeometry(0.075, 0.075, 0.15, 12);
+    const drumMat = new THREE.MeshStandardMaterial({ color: 0x887766, roughness: 0.5, metalness: 0.7 });
     const drum = new THREE.Mesh(drumGeo, drumMat);
     drum.rotation.z = Math.PI / 2;
-    drum.position.set(0.04, -0.015, 0);
+    drum.position.set(0.05, -0.02, 0);
     gunGroup.add(drum);
 
-    // Copper bullet tips visible in drum chambers
-    for (let b = 0; b < 5; b++) {
-      const bAngle = (b / 5) * Math.PI * 2;
-      const bulletGeo = new THREE.CylinderGeometry(0.012, 0.015, 0.04, 6);
-      const bulletMat = new THREE.MeshStandardMaterial({ color: 0xcc8844, roughness: 0.3, metalness: 0.9 });
-      const bullet = new THREE.Mesh(bulletGeo, bulletMat);
-      bullet.rotation.z = Math.PI / 2;
-      bullet.position.set(0.09, -0.015 + Math.sin(bAngle) * 0.035, Math.cos(bAngle) * 0.035);
-      gunGroup.add(bullet);
-      // Silver primer pin on bullet base
-      const primerGeo = new THREE.CircleGeometry(0.006, 6);
-      const primerMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.2, metalness: 0.95 });
-      const primer = new THREE.Mesh(primerGeo, primerMat);
-      primer.position.set(0.068, -0.015 + Math.sin(bAngle) * 0.035, Math.cos(bAngle) * 0.035);
-      primer.rotation.y = Math.PI / 2;
-      gunGroup.add(primer);
-    }
-
-    // Eye of Horus engraving on drum side (simplified geometric representation)
-    const horusGeo = new THREE.RingGeometry(0.018, 0.024, 6);
-    const horusMat = new THREE.MeshStandardMaterial({
-      color: 0xddbb44,
-      roughness: 0.2,
-      metalness: 0.9,
-      side: THREE.DoubleSide,
-    });
-    const horus = new THREE.Mesh(horusGeo, horusMat);
-    horus.position.set(0.04, -0.015, 0.066);
-    gunGroup.add(horus);
-    // Eye pupil
-    const pupilGeo = new THREE.CircleGeometry(0.01, 6);
-    const pupil = new THREE.Mesh(pupilGeo, horusMat);
-    pupil.position.set(0.04, -0.015, 0.067);
-    gunGroup.add(pupil);
-    // Horus teardrop line
-    const tearGeo = new THREE.PlaneGeometry(0.006, 0.025);
-    const tear = new THREE.Mesh(tearGeo, horusMat);
-    tear.position.set(0.04, -0.035, 0.067);
-    gunGroup.add(tear);
-
-    // Grip/Handle (wooden, smaller)
-    const gripGeo = new THREE.BoxGeometry(0.07, 0.18, 0.05);
+    // Grip/Handle
+    const gripGeo = new THREE.BoxGeometry(0.08, 0.22, 0.06);
     const gripMat = new THREE.MeshStandardMaterial({ color: 0x4A2E1A, roughness: 0.9, metalness: 0.0 });
     const grip = new THREE.Mesh(gripGeo, gripMat);
-    grip.position.set(-0.05, -0.12, 0);
+    grip.position.set(-0.06, -0.14, 0);
     grip.rotation.z = -0.15;
     gunGroup.add(grip);
 
-    // Engraved ".W.T.S." text on grip side — baked onto a canvas texture
-    try {
-      const engCanvas = document.createElement('canvas');
-      engCanvas.width = 64; engCanvas.height = 32;
-      const engCtx = engCanvas.getContext('2d');
-      engCtx.fillStyle = '#3a200e';
-      engCtx.fillRect(0, 0, 64, 32);
-      engCtx.fillStyle = '#c8a06a';
-      engCtx.font = 'bold 12px monospace';
-      engCtx.textAlign = 'center';
-      engCtx.textBaseline = 'middle';
-      engCtx.fillText('.W.T.S.', 32, 16);
-      const engTex = new THREE.CanvasTexture(engCanvas);
-      const engGeo = new THREE.PlaneGeometry(0.055, 0.025);
-      const engMat = new THREE.MeshStandardMaterial({ map: engTex, roughness: 0.8, metalness: 0.0, transparent: true });
-      const engPlane = new THREE.Mesh(engGeo, engMat);
-      // Place on the front face of the grip, slightly above center
-      engPlane.position.set(-0.05, -0.10, 0.026);
-      engPlane.rotation.z = -0.15;
-      gunGroup.add(engPlane);
-    } catch (_engErr) { /* non-critical visual — skip if canvas unavailable */ }
-
-    // Whole revolver a bit smaller
-    gunGroup.scale.setScalar(0.85);
     gunGroup.position.set(_gunOffset.x, _gunOffset.y, _gunOffset.z);
     gunGroup.castShadow = true;
 
@@ -5754,10 +5652,8 @@
     const sun = new THREE.DirectionalLight(0xFFF5E0, 1.1); // warm daylight tone
     sun.position.set(20, 40, 20);
     sun.castShadow = true;
-    // Cap shadow map at 1024 on mobile to prevent GPU overload at high wave counts
-    const _shadowMapSize = _isMobile ? 1024 : 2048;
-    sun.shadow.mapSize.width  = _shadowMapSize;
-    sun.shadow.mapSize.height = _shadowMapSize;
+    sun.shadow.mapSize.width  = 2048;
+    sun.shadow.mapSize.height = 2048;
     sun.shadow.camera.near    = 1;
     sun.shadow.camera.far     = 200;
     sun.shadow.camera.left    = -80;
@@ -6273,69 +6169,29 @@
   const SPIRAL_RING_COUNT = 3;    // concentric rings
   const SPIRAL_SEG_COUNT  = 8;    // segments per ring
   const SPIRAL_RING_RADII = [1.0, 1.8, 2.6]; // inner to outer — clamped within hole radius 3
+  const SPIRAL_COLORS     = [0x555555, 0x444444, 0x333333]; // heavy metal grey tones
   const SPAWN_SHAFT_DEPTH = -8;   // deep underground start
 
   function _buildSpiralDoor() {
-    // Clean up any meshes from a previous run to avoid stale GPU objects in the scene
-    if (_undergroundShaft) {
-      scene.remove(_undergroundShaft);
-      _undergroundShaft.geometry.dispose();
-      _undergroundShaft.material.dispose();
-      _undergroundShaft = null;
-    }
-    // Dispose each segment's geometry and material.
-    // Segments within the same ring share a geometry and material instance, so track
-    // unique references via Sets to avoid double-dispose calls.
-    const _disposedGeo  = new Set();
-    const _disposedMat  = new Set();
-    for (let _ci = 0; _ci < _spiralDoorParts.length; _ci++) {
-      const _cp = _spiralDoorParts[_ci];
-      scene.remove(_cp.mesh);
-      if (_cp.mesh.geometry && !_disposedGeo.has(_cp.mesh.geometry)) {
-        _cp.mesh.geometry.dispose();
-        _disposedGeo.add(_cp.mesh.geometry);
-      }
-      if (_cp.mesh.material && !_disposedMat.has(_cp.mesh.material)) {
-        _cp.mesh.material.dispose();
-        _disposedMat.add(_cp.mesh.material);
-      }
-    }
-    _spiralDoorParts.length = 0;
-    if (_elevatorPlatform) {
-      scene.remove(_elevatorPlatform);
-      _elevatorPlatform.geometry.dispose();
-      _elevatorPlatform.material.dispose();
-      _elevatorPlatform = null;
-    }
-    if (_spawnLight) {
-      scene.remove(_spawnLight);
-      _spawnLight = null;
-    }
-
-    // ── Underground shaft: Black cylinder — hidden until spawn animation starts ──
+    // ── Underground shaft: black cylinder visible through the spawn hole ──
     const shaftGeo = new THREE.CylinderGeometry(2.8, 2.8, Math.abs(SPAWN_SHAFT_DEPTH) * 2, 24);
     const shaftMat = new THREE.MeshBasicMaterial({ color: 0x050505, side: THREE.DoubleSide });
     _undergroundShaft = new THREE.Mesh(shaftGeo, shaftMat);
     _undergroundShaft.position.set(0, SPAWN_SHAFT_DEPTH, 0);
-    _undergroundShaft.visible = false; // hidden until spawn animation shows it
     scene.add(_undergroundShaft);
 
-    // Segment geometry: Black-Gold heavy metal door panels
-    const segH = 0.12;
-    // Black/Gold colour scheme: outermost ring is gold-tinted, inner are near-black
-    const SPIRAL_COLORS_BG = [0x1A1400, 0x221A00, 0xB8860B]; // innermost black, then dark gold, outermost gold
+    // Segment geometry: heavy metal door panels
+    const segH = 0.12; // thicker door panels for heavy metal feel
     for (let r = 0; r < SPIRAL_RING_COUNT; r++) {
       const ringR = SPIRAL_RING_RADII[r];
       const arcLen = (2 * Math.PI * ringR) / SPIRAL_SEG_COUNT * 0.88;
       const segGeo = new THREE.BoxGeometry(arcLen, segH, 0.3);
       const segMat = new THREE.MeshStandardMaterial({
-        color: SPIRAL_COLORS_BG[r],
+        color: SPIRAL_COLORS[r],
         roughness: 0.3,
         metalness: 0.9,
-        emissive: r === SPIRAL_RING_COUNT - 1 ? 0x554400 : 0x0A0800,
-        emissiveIntensity: r === SPIRAL_RING_COUNT - 1 ? 0.4 : 0.05,
-        transparent: false,
-        opacity: 1,
+        emissive: 0x111111,
+        emissiveIntensity: 0.1,
       });
       for (let s = 0; s < SPIRAL_SEG_COUNT; s++) {
         const mesh = new THREE.Mesh(segGeo, segMat);
@@ -6352,11 +6208,11 @@
       }
     }
 
-    // Elevator platform — Black-Gold disc below the player
+    // Elevator platform — heavy disc below the player
     const platGeo = new THREE.CylinderGeometry(2.2, 2.4, 0.2, 24);
     const platMat = new THREE.MeshStandardMaterial({
-      color: 0x1A1400, roughness: 0.3, metalness: 0.9,
-      emissive: 0x443300, emissiveIntensity: 0.4,
+      color: 0x3A3A3A, roughness: 0.3, metalness: 0.85,
+      emissive: 0x111122, emissiveIntensity: 0.3,
     });
     _elevatorPlatform = new THREE.Mesh(platGeo, platMat);
     _elevatorPlatform.position.set(0, SPAWN_SHAFT_DEPTH, 0);
@@ -6364,8 +6220,8 @@
     _elevatorPlatform.visible = false;
     scene.add(_elevatorPlatform);
 
-    // Spawn light (point light from below, gold tone)
-    _spawnLight = new THREE.PointLight(0xFFD700, 0, 15);
+    // Spawn light (point light from below, warm amber)
+    _spawnLight = new THREE.PointLight(0xFFAA44, 0, 15);
     _spawnLight.position.set(0, SPAWN_SHAFT_DEPTH + 1, 0);
     scene.add(_spawnLight);
   }
@@ -6397,13 +6253,7 @@
 
   function _hideSpiralDoor() {
     for (let i = 0; i < _spiralDoorParts.length; i++) {
-      const _part = _spiralDoorParts[i];
-      _part.mesh.visible = false;
-      // Reset material state so colors/opacity are clean for the next run
-      if (_part.mesh.material) {
-        _part.mesh.material.transparent = false;
-        _part.mesh.material.opacity = 1;
-      }
+      _spiralDoorParts[i].mesh.visible = false;
     }
     if (_elevatorPlatform) _elevatorPlatform.visible = false;
     if (_spawnLight) { _spawnLight.intensity = 0; }
@@ -6640,15 +6490,16 @@
 
   // ─── Blood system init ────────────────────────────────────────────────────────
   function _initBloodSystem() {
-    // NEW BLOOD SIMULATOR V2.1 – terrain-aware + full fantasy realism
-    if (window.BloodSimulatorV21 && typeof BloodSimulatorV21.init === 'function') {
-      const terrainMesh =
-        window._engine2Instance && window._engine2Instance.groundMesh
-          ? window._engine2Instance.groundMesh
-          : null;
-      window.BloodSimulatorV21.init(scene, terrainMesh, player ? player.mesh : null);
+    if (window.BloodSystem && typeof BloodSystem.init === 'function') {
+      BloodSystem.init(scene);
     }
-    // BloodSimulatorV21 is the primary blood system; GoreSim is also active for weapon-specific gore reactions.
+    // New v2 systems — guarded so missing scripts are harmless
+    if (window.BloodV2 && typeof window.BloodV2.init === 'function') {
+      window.BloodV2.init(scene);
+    }
+    if (window.GoreSim && typeof window.GoreSim.init === 'function') {
+      window.GoreSim.init(scene, camera);
+    }
     if (window.SlimePool && typeof window.SlimePool.init === 'function') {
       window.SlimePool.init(scene, 40);
     }
@@ -6737,9 +6588,6 @@
 
     // Initialize gold coin pool
     _initGoldPool();
-
-    // PERF FIX: Initialize wound decal pool (enemy-class.js)
-    if (window._initWoundPool) window._initWoundPool();
 
     // Build pooled PointLight flash pool (muzzle flashes, hit lights)
     _buildFlashPool();
@@ -6856,9 +6704,7 @@
     }
 
     // Blood on hit
-    if (window.BloodSimulatorV21) {
-      window.BloodSimulatorV21.rawBurst(hx, hy, hz, 5, { color: 0xc8c7c0, spreadXZ: 2, spreadY: 4 });
-    } else if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+    if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
       BloodV2.rawBurst(hx, hy, hz, 5, { color: 0xc8c7c0 });
     }
 
@@ -6884,9 +6730,7 @@
     _triggerHitStop(HIT_STOP_KILL_DURATION_MS * 0.9);
     _triggerShake(SHAKE_KILL_BASE * 0.9);
 
-    if (window.BloodSimulatorV21) {
-      window.BloodSimulatorV21.rawBurst(x, y, z, 20, { color: 0xc8c7c0, spreadXZ: 9, spreadY: 14 });
-    } else if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+    if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
       BloodV2.rawBurst(x, y, z, 20, { color: 0xc8c7c0 });
     }
     if (window.GoreSim && typeof GoreSim.onKill === 'function') {
@@ -7475,26 +7319,6 @@
     if (window.TraumaSystem && typeof TraumaSystem.clearAll === 'function') {
       TraumaSystem.clearAll();
     }
-
-    // PERF FIX: Release all wound pool decals between waves
-    if (window._updateWoundPool) {
-      // Force-expire all wounds by passing a huge dt
-      window._updateWoundPool(999);
-    }
-
-    // PERF FIX: Reset flesh pool — hide all active flesh chunks
-    for (let _fi = 0; _fi < _fleshPool.length; _fi++) {
-      if (_fleshPool[_fi].active) {
-        _fleshPool[_fi].active = false;
-        _fleshPool[_fi].mesh.visible = false;
-      }
-    }
-
-    // PERF FIX: Reset blood stain pool
-    for (let _bsi = 0; _bsi < _bloodStainPool.length; _bsi++) {
-      _bloodStainPool[_bsi].mesh.visible = false;
-      _bloodStainPool[_bsi].fadeTimer = 0;
-    }
   }
 
   // ─── Main animation loop ──────────────────────────────────────────────────────
@@ -7574,12 +7398,13 @@
         player.update(dt, _allEnemiesScratch, _activeProjList, expGems);
       }
 
-      // Blood system tick - V2.1 is the sole blood system.
-      if (window.BloodSimulatorV21 && typeof BloodSimulatorV21.update === 'function') {
-        window.BloodSimulatorV21.update(dt);
+      // Blood system tick (BloodSystem shim internally calls BloodV2.update — do NOT call BloodV2.update again)
+      if (window.BloodSystem && typeof BloodSystem.update === 'function') {
+        BloodSystem.update();
       }
-      // PERF FIX: Update wound decal pool (frame-driven timer, replaces setTimeout)
-      if (window._updateWoundPool) window._updateWoundPool(dt);
+      if (window.GoreSim && typeof window.GoreSim.update === 'function') {
+        window.GoreSim.update(dt);
+      }
       if (window.SlimePool && typeof window.SlimePool.update === 'function') {
         window.SlimePool.update(dt, player ? player.mesh.position : null);
       }
@@ -7597,8 +7422,10 @@
         const playerPos = (player && player.mesh && player.mesh.position) ? player.mesh.position : null;
         window._engine2Instance._worldTrees.update(dt, playerPos);
       }
-      // TraumaSystem.update is disabled — wound decals are kept but chunk geometry
-      // (explosiveGib, shotgunBlast, swordCleave) causes the artifact issue.
+      // Trauma system tick (gore chunks, stuck arrows, wound decals)
+      if (window.TraumaSystem && typeof TraumaSystem.update === 'function') {
+        TraumaSystem.update(dt);
+      }
 
       // Blood stain decal fade update
       _updateBloodStains(dt);
@@ -7691,10 +7518,7 @@
         }
 
         // Check blood instanced meshes — ensure they aren't accidentally hidden
-        if (window.BloodSimulatorV21 && window.BloodSimulatorV21.dropIM) {
-          if (!window.BloodSimulatorV21.dropIM.visible) window.BloodSimulatorV21.dropIM.visible = true;
-          if (window.BloodSimulatorV21.mistIM && !window.BloodSimulatorV21.mistIM.visible) window.BloodSimulatorV21.mistIM.visible = true;
-        } else if (window.BloodV2 && typeof window.BloodV2.getMeshes === 'function') {
+        if (window.BloodV2 && typeof window.BloodV2.getMeshes === 'function') {
           const _bMeshes = window.BloodV2.getMeshes();
           if (_bMeshes.drops && !_bMeshes.drops.visible) _bMeshes.drops.visible = true;
           if (_bMeshes.mist  && !_bMeshes.mist.visible)  _bMeshes.mist.visible  = true;
@@ -8267,15 +8091,6 @@
       window._sandboxXpMagnetRunStacks = 0;
       _sandboxRunStartTime = Date.now();
       window.gameStartTime = _sandboxRunStartTime; // expose for ui.js showYouDiedBanner
-      // Initialize per-run stats for RunEndScreen (xpAccumulated populated by addAccountXP)
-      window.currentRunStats = {
-        normalKills: 0, eliteKills: 0, bossKills: 0,
-        xpFromKills: 0, xpAccumulated: 0,
-        startAccountLevel: (window.saveData && window.saveData.accountLevel) || 1,
-        startAccountXP:    (window.saveData && window.saveData.accountXP)    || 0
-      };
-      _sbMaxCombo = 0;
-      _sbStartGold = (window.saveData && window.saveData.gold) || 0;
       if (saveData.tutorialQuests) saveData.tutorialQuests.killsThisRun = 0;
       // Track total runs — keep stats.* and top-level counter in sync
       if (saveData) {
