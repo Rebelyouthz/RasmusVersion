@@ -1767,16 +1767,17 @@ window.spawnBossChest = function(x, z) {
         card.style.pointerEvents = 'none'; // Disable clicks until flipped
         card.style.animation = `${_animName} ${_animDur}s cubic-bezier(0.25, 0.46, 0.45, 0.94) ${cardDelay}s both`;
 
-        // After entry animation completes, flash the thud effect
-        // Store the expected animation name for this specific card to avoid firing on wrong animations
+        // After entry animation completes, flash the thud effect.
+        // Set opacity and transform BEFORE clearing animation so the browser
+        // never paints a single frame with the reset (un-animated) card state.
         const _expectedAnimName = _animName;
         card.addEventListener('animationend', (e) => {
           // Only trigger on the specific entry animation for this card
           if (e.animationName === _expectedAnimName) {
-            card.style.animation = '';
             card.style.opacity = '1';
             card.style.transform = '';
-            card.style.pointerEvents = 'auto'; // Re-enable interaction
+            card.style.animation = ''; // clear last: prevents 1-frame state-reset flash
+            card.style.pointerEvents = 'auto';
             // Thud flash
             card.classList.add('card-thud-flash');
             setTimeout(() => card.classList.remove('card-thud-flash'), 420);
@@ -2130,78 +2131,77 @@ window.spawnBossChest = function(x, z) {
           levelUpPending = false;
           return;
         }
+
+        // ── Show modal container ──────────────────────────────────────────────
         modal.style.display = 'flex';
         modal.style.opacity = '0';
-        const existingAnimation = modal.style.animation || (window.getComputedStyle ? window.getComputedStyle(modal).animation : '') || '';
-        const wallFadeInAnim = 'wallFadeIn 0.32s cubic-bezier(0.22,1,0.36,1) forwards';
-        modal.style.animation = existingAnimation
-          ? existingAnimation + ', ' + wallFadeInAnim
-          : wallFadeInAnim;
-        // Trigger entrance animation on cards
-        modal.classList.remove('lvl-entering');
-        void modal.offsetHeight;
-        modal.classList.add('lvl-entering');
-        setTimeout(function() { modal.classList.remove('lvl-entering'); }, 700);
+        // Reset any leftover animation from a previous open so wallFadeIn always
+        // plays cleanly from the beginning (avoids "already at final frame" flash).
+        modal.style.animation = 'none';
+        void modal.offsetHeight; // force reflow to commit 'none' before re-adding
+        modal.style.animation = 'wallFadeIn 0.32s cubic-bezier(0.22,1,0.36,1) forwards';
 
-        // ── After all cards have landed, reveal face-up one by one ──
-        const _numCards = choices.length;
-        // Time for last card to land: 0.3s wall + (n-1)*0.24s stagger + 0.55s entry anim
+        // ── Card flip sequencer (complete rewrite) ────────────────────────────
+        // Single, flat sequence — no nested setTimeouts fighting each other.
+        // No CollectorCards.animateEntrance() call: the CSS cardEnterFrom* animations
+        // already handle the entry; a second animation system was the flicker source.
+        //
+        // Timeline per card (ms from _allEnteredMs):
+        //   cardIdx * STAGGER_MS →
+        //     +0   : lift toward camera (back face still shown)
+        //     +280 : fast flip to front face
+        //     +600 : smack squash on landing
+        //     +760 : bounce settle, card is now interactive
+        const STAGGER_MS   = 450; // gap between each card's flip start
+        const _numCards    = choices.length;
+        // Wait for the last entry animation to finish before starting flips.
+        // wall fade (0.3 s) + stagger per card (0.24 s) + entry duration (0.55 s) + 80 ms slack
         const _allEnteredMs = Math.round((0.3 + (_numCards - 1) * 0.24 + 0.55) * 1000) + 80;
-        const _allCards = list.querySelectorAll('.upgrade-card');
-        setTimeout(function() {
-          for (let _fi = 0; _fi < _allCards.length; _fi++) {
-            (function(_idx, _c) {
-              // Stagger 450 ms between each card for clear one-by-one reveal
-              setTimeout(function() {
-                const _ci = _c.querySelector('.card-inner');
-                if (!_ci) return;
+        const _allCards    = list.querySelectorAll('.upgrade-card');
 
-                // Phase 1 — Lift toward camera (maintain back face shown)
-                _ci.style.transition = 'transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1)';
-                _ci.style.transform = 'scale(1.18) translateZ(55px) rotateY(180deg)';
+        setTimeout(function () {
+          Array.from(_allCards).forEach(function (card, idx) {
+            const ci   = card.querySelector('.card-inner');
+            if (!ci) return;
 
-                setTimeout(function() {
-                  // Phase 2 — Flip fast (Y-axis 360°, front face comes into view)
-                  _ci.style.transition = 'transform 0.32s cubic-bezier(0.55, 0, 0.45, 1)';
-                  _ci.style.transform = 'scale(1.14) translateZ(40px) rotateY(360deg)';
+            const base = idx * STAGGER_MS;
 
-                  setTimeout(function() {
-                    // Phase 3 — Smack hard back to resting position (squash on impact)
-                    _ci.style.transition = 'transform 0.16s ease-in';
-                    _ci.style.transform = 'scaleX(1.1) scaleY(0.9) rotateY(360deg)';
+            // Phase 1 — Lift toward camera (back face still visible)
+            setTimeout(function () {
+              ci.style.transition = 'transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1)';
+              ci.style.transform  = 'scale(1.18) translateZ(55px) rotateY(180deg)';
+            }, base);
 
-                    setTimeout(function() {
-                      // Phase 4 — Bounce settle (front face visible)
-                      _ci.style.transition = 'transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)';
-                      _ci.style.transform = 'rotateY(360deg)';
-                      _c.classList.add('card-flipped');
+            // Phase 2 — Fast flip (front face revealed at rotateY 360°)
+            setTimeout(function () {
+              ci.style.transition = 'transform 0.32s cubic-bezier(0.55, 0, 0.45, 1)';
+              ci.style.transform  = 'scale(1.14) translateZ(40px) rotateY(360deg)';
+            }, base + 280);
 
-                      // Screen shake on smack
-                      document.body.classList.add('screen-shake-brief');
-                      setTimeout(() => document.body.classList.remove('screen-shake-brief'), 200);
+            // Phase 3 — Smack squash on landing
+            setTimeout(function () {
+              ci.style.transition = 'transform 0.16s ease-in';
+              ci.style.transform  = 'scaleX(1.1) scaleY(0.9) rotateY(360deg)';
+            }, base + 600);
 
-                      // Enable clicks after settle
-                      setTimeout(function() { _c.style.pointerEvents = 'auto'; }, 260);
-                    }, 160);
-                  }, 320);
-                }, 280);
-              }, _idx * 450);
-            })(_fi, _allCards[_fi]);
-          }
+            // Phase 4 — Bounce settle; mark card selectable
+            setTimeout(function () {
+              ci.style.transition = 'transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)';
+              ci.style.transform  = 'rotateY(360deg)';
+              card.classList.add('card-flipped');
+              document.body.classList.add('screen-shake-brief');
+              setTimeout(function () { document.body.classList.remove('screen-shake-brief'); }, 200);
+              setTimeout(function () { card.style.pointerEvents = 'auto'; }, 260);
+            }, base + 760);
+          });
         }, _allEnteredMs);
-
-        // Animate upgrade cards as collector cards
-        if (window.DopamineSystem && window.DopamineSystem.CollectorCards) {
-          const cards = list.querySelectorAll('.upgrade-option, .upgrade-card');
-          window.DopamineSystem.CollectorCards.animateEntrance(cards);
-        }
 
         // Show skip button after 5 seconds as safety valve if player can't select an upgrade
         const skipBtn = document.getElementById('levelup-skip-btn');
         if (skipBtn) {
           skipBtn.style.display = 'none';
           clearTimeout(window.levelupSkipTimeoutId);
-          window.levelupSkipTimeoutId = setTimeout(() => {
+          window.levelupSkipTimeoutId = setTimeout(function () {
             if (modal.style.display === 'flex') skipBtn.style.display = 'inline-block';
           }, 5000);
         }

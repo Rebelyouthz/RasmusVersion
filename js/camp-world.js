@@ -168,6 +168,16 @@
   let _robotWalkFromX = 0;
   let _robotWalkFromZ = 0;
 
+  // ── AIDA cinematic lock ───────────────────────────────────────────────────
+  // True while the AIDA robot-wake cinematic is playing after chip insertion.
+  // Completely bypasses _openMenu()/_checkMenuClosed() so the old 350 ms race
+  // that re-enabled player input mid-cinematic can never fire.
+  // The lock is cleared in the onComplete callback, in exit(), and by a 30 s
+  // failsafe so a crash in the dialogue system can never trap the player forever.
+  let _aidaCinematicLock   = false;
+  let _aidaCinematicLockTs = 0;
+  const _AIDA_CINEMATIC_LOCK_MAX_MS = 30000;
+
   // Camp Quest Arrow
   let _campArrowEl = null;
   let _campArrowDistEl = null;
@@ -2056,27 +2066,35 @@
     }
 
     window._suppressAidaBubbles = true;
-    // (floating bubbles have been removed — nothing to clean up)
 
     _aidaRobotEyesOn(true);
 
     // Start robot lap animation around the fire
     _robotLapActive = true;
     _robotLapT = 0;
-    console.log('[CampWorld] AIDA chip inserted - starting robot lap animation around campfire');
+    console.log('[CampWorld] AIDA chip inserted – starting robot lap + cinematic lock');
 
     const DS = window.DialogueSystem;
     if (DS) {
+      // ── New: use a dedicated cinematic lock instead of _openMenu() ──────────
+      // _openMenu() + _checkMenuClosed() had a 350 ms race that restored player
+      // input while the full-screen cinematic was still showing, letting the
+      // player walk into the Teleport Portal (campBoard) and navigate away.
+      // _aidaCinematicLock is checked directly in update() and is ONLY cleared
+      // in onComplete (and by the 30 s failsafe), so it cannot fire early.
+      _aidaCinematicLock   = true;
+      _aidaCinematicLockTs = Date.now();
+
       DS.show(DS.DIALOGUES.aidaRobotWake, {
         onComplete: function () {
+          _aidaCinematicLock = false;
           _aidaGrantStarterMaterials();
           if (typeof window.startAidaIntroQuest === 'function') {
             window.startAidaIntroQuest();
           }
-          _resumeInput();
         }
       });
-      _openMenu();
+      // Do NOT call _openMenu() — _aidaCinematicLock owns the freeze.
     } else {
       _aidaGrantStarterMaterials();
       if (typeof window.startAidaIntroQuest === 'function') window.startAidaIntroQuest();
@@ -5680,10 +5698,13 @@
     const menuAge = Date.now() - _menuOpenTs;
 
     if (!overlayVisible) {
-      // No DOM overlay is visible — the build-progress overlay now has a stable id
-      // ('camp-build-overlay') and is included in _OVERLAY_IDS, so the DOM check above
-      // is authoritative.  Resume immediately; log if we've hit the original failsafe
-      // threshold to aid debugging.
+      // Guard: DialogueSystem cinematic/bubble still active — keep input frozen.
+      // This check MUST come before _resumeInput() — previously it was placed after
+      // the early return and was therefore dead code, causing the 350 ms race that
+      // restored player input while the AIDA robot-wake cinematic was still showing.
+      if (window.DialogueSystem && typeof window.DialogueSystem.isActive === 'function' && window.DialogueSystem.isActive()) return;
+
+      // No DOM overlay and no active dialogue — safe to resume.
       if (menuAge > _MENU_OPEN_FAILSAFE_MS) {
         console.warn('[CampWorld] _menuOpen failsafe triggered after ' + Math.round(menuAge / 1000) + 's — forcing resume');
       }
@@ -5695,9 +5716,6 @@
     // DOM element IS present (e.g., during the brief window before the element is
     // removed from the DOM after _buildOverlayActive is cleared).
     if (window._buildOverlayActive) return;
-
-    // Active DialogueSystem dialogue should hold input frozen until dismissed.
-    if (window.DialogueSystem && typeof window.DialogueSystem.isActive === 'function' && window.DialogueSystem.isActive()) return;
   }
 
   function _resumeInput() {
@@ -7296,6 +7314,7 @@
    */
   function exit() {
     _isActive = false;
+    _aidaCinematicLock = false; // always clear on exit — prevents phantom freeze next visit
     if (typeof window._syncJoystickZone === 'function') window._syncJoystickZone();
     _menuOpen = false;
     // Hide camp-specific overlays
@@ -7715,7 +7734,16 @@
       _checkMenuClosed();
     }
 
-    if (!_menuOpen) {
+    // _aidaCinematicLock: dedicated freeze for the AIDA robot-wake cinematic.
+    // Cleared automatically in the DS.show onComplete callback and by a 30 s
+    // failsafe below.  This is separate from _menuOpen so _checkMenuClosed()
+    // cannot prematurely unlock input during the full-screen cinematic.
+    if (_aidaCinematicLock && Date.now() - _aidaCinematicLockTs > _AIDA_CINEMATIC_LOCK_MAX_MS) {
+      _aidaCinematicLock = false;
+      console.warn('[CampWorld] _aidaCinematicLock failsafe cleared after 30 s');
+    }
+
+    if (!_menuOpen && !_aidaCinematicLock) {
       _updatePlayer(dt);
       _updateInteraction();
     }
