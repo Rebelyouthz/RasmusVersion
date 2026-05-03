@@ -1220,12 +1220,10 @@
   <!-- 10. Dopamine system: time dilation, damage numbers, fever mode, LevelUpFX -->
   <script src="js/dopamine-system.js"></script>
 
-    <!-- 11-v21. Blood Simulator V2.1 — terrain-aware, 120fps, fantasy-realism gore -->
-  <script src="js/blood-simulator-v21.js"></script>
-
-  <!-- 11a/11b. gore-simulator.js and trauma-system.js are DISABLED.
-       BloodSimulatorV21 is the sole active blood/gore system. Loading legacy systems
-       alongside it causes Z-fighting artifacts and duplicate geometry. -->
+  <!-- 11. Blood system V2 + Gore Simulator + Trauma System -->
+  <script src="js/blood-system-v2.js"></script>
+  <script src="js/gore-simulator.js"></script>
+  <script src="js/trauma-system.js"></script>
 
   <!-- 11c. Slime enemy and wave spawning system -->
   <script src="js/wave-system.js"></script>
@@ -1359,13 +1357,13 @@
     var overlay = document.getElementById('engine2-overlay');
     var status = [];
 
-    // Check BloodSimulatorV21 (active blood system)
-    if (window.BloodSimulatorV21 && typeof window.BloodSimulatorV21.init === 'function') {
-      status.push('BloodSimulatorV21:OK');
-      console.log('!!! BLOOD SYSTEM CHECK: BloodSimulatorV21 LOADED !!!');
+    // Check BloodV2 (active blood system)
+    if (window.BloodV2 && typeof window.BloodV2.init === 'function') {
+      status.push('BloodV2:OK');
+      console.log('!!! BLOOD SYSTEM CHECK: BloodV2 LOADED !!!');
     } else {
-      status.push('BloodSimulatorV21:MISSING');
-      console.error('!!! BLOOD SYSTEM CHECK: BloodSimulatorV21 NOT FOUND !!!');
+      status.push('BloodV2:MISSING');
+      console.error('!!! BLOOD SYSTEM CHECK: BloodV2 NOT FOUND !!!');
     }
 
     // Update overlay with status
