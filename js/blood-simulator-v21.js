@@ -30,22 +30,23 @@ const _BSV21_MIST = {
 };
 
 // Device capability detection — auto-scales pool sizes:
-// Low-memory/mobile (≤2GB or touch device): 200 drops / 100 mist
-// Mid-tier (≤4GB): 600 drops / 400 mist
-// Desktop/high-memory (>4GB): ≥1200 drops / ≥800 mist
+// Low-memory/mobile (≤2GB or touch device): 600 drops / 50 mist
+// Mid-tier (≤4GB): 1800 drops / 120 mist
+// Desktop/high-memory (>4GB): 3600 drops / 250 mist
+// Goal: maximum blood coverage with minimal mist particles for advanced visual impact.
 (function _bsv21DetectDevice() {
   const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
     || ('ontouchstart' in window && navigator.maxTouchPoints > 1);
   const mem = (navigator.deviceMemory || (isMobile ? 2 : 8));
   if (isMobile || mem <= 2) {
-    window._BSV21_MAX_DROPS = 200;
-    window._BSV21_MAX_MIST  = 100;
-  } else if (mem <= 4) {
     window._BSV21_MAX_DROPS = 600;
-    window._BSV21_MAX_MIST  = 400;
+    window._BSV21_MAX_MIST  = 50;
+  } else if (mem <= 4) {
+    window._BSV21_MAX_DROPS = 1800;
+    window._BSV21_MAX_MIST  = 120;
   } else {
-    window._BSV21_MAX_DROPS = 1200;
-    window._BSV21_MAX_MIST  = 800;
+    window._BSV21_MAX_DROPS = 3600;
+    window._BSV21_MAX_MIST  = 250;
   }
 }());
 
@@ -458,19 +459,18 @@ const BloodSimulatorV21 = {
 
   onEnemyHit(enemy, hitPoint, damageType) {
     const isProjectile = (typeof damageType === 'string') && damageType !== 'melee';
-    const burstCount   = isProjectile ? 220 : 150;
-    // Drop particles are always dark red — this makes the spray look like blood
-    // regardless of enemy type.  Mist/chunks retain the enemy's characteristic color
-    // (green for slimes, yellow for bugs, etc.) so enemy type is still visible.
+    // More blood drops on every hit — fewer mist particles to keep the look clean.
+    const burstCount   = isProjectile ? 350 : 250;
     const mistColor    = (enemy && enemy.enemyType && _BSV21_MIST[enemy.enemyType])
       ? _BSV21_MIST[enemy.enemyType]  : 0xee2200;
 
     this.rawBurst(hitPoint.x, hitPoint.y, hitPoint.z, burstCount, {
-      spreadXZ:14, spreadY:20,
+      spreadXZ: 16, spreadY: 22,
       viscosity: (enemy && enemy.bloodViscosity) ? enemy.bloodViscosity : 0.62,
       color: 0xaa0000
     });
-    this.spawnMist(hitPoint.x, hitPoint.y+0.3, hitPoint.z, isProjectile ? 16 : 8, mistColor);
+    // Reduced mist — only a light haze on impact
+    this.spawnMist(hitPoint.x, hitPoint.y+0.3, hitPoint.z, isProjectile ? 6 : 3, mistColor);
     if (isProjectile || damageType === 'sword') {
       this.arterialJet(hitPoint.x, hitPoint.y+0.4, hitPoint.z,
         (Math.random()-0.5), (Math.random()-0.5), 0xaa0000);
@@ -479,19 +479,22 @@ const BloodSimulatorV21 = {
   },
 
   onEnemyDeath(enemy, position) {
-    // Same principle: drops are dark red, mist retains the enemy-type color.
+    // Massive blood burst on death — 6 arterial jets in all directions, huge decal.
     const mistColor  = (enemy && enemy.enemyType && _BSV21_MIST[enemy.enemyType])
       ? _BSV21_MIST[enemy.enemyType]  : 0xee2200;
 
-    this.rawBurst(position.x, position.y+0.8, position.z, 250,
-      { spreadXZ:18, spreadY:28, viscosity:0.55, color: 0xaa0000 });
-    for (let jet = 0; jet < 3; jet++) {
-      const ang = (jet / 3) * Math.PI * 2;
+    this.rawBurst(position.x, position.y+0.8, position.z, 600,
+      { spreadXZ: 22, spreadY: 32, viscosity: 0.50, color: 0xaa0000 });
+    // 6 jets spread evenly — fan of arterial sprays
+    for (let jet = 0; jet < 6; jet++) {
+      const ang = (jet / 6) * Math.PI * 2;
       this.arterialJet(position.x, position.y+1.0, position.z,
         Math.cos(ang), Math.sin(ang), 0xaa0000);
     }
-    this.spawnMist(position.x, position.y+0.6, position.z, 40, mistColor);
-    this._spawnDecal(position.x, position.z, 1.4+Math.random()*0.8, 0xaa0000, 60);
+    // Minimal mist on death — just enough for atmosphere
+    this.spawnMist(position.x, position.y+0.6, position.z, 10, mistColor);
+    // Larger, more dramatic ground decal
+    this._spawnDecal(position.x, position.z, 2.5+Math.random()*1.2, 0xaa0000, 60);
     this.addWoundPulse(position.x, position.y+0.5, position.z, 0xaa0000, 9.0);
   },
 

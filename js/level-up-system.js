@@ -1768,16 +1768,20 @@ window.spawnBossChest = function(x, z) {
         card.style.animation = `${_animName} ${_animDur}s cubic-bezier(0.25, 0.46, 0.45, 0.94) ${cardDelay}s both`;
 
         // After entry animation completes, flash the thud effect.
-        // Set opacity and transform BEFORE clearing animation so the browser
-        // never paints a single frame with the reset (un-animated) card state.
+        // IMPORTANT: set opacity/transform BEFORE deferring animation clear.
+        // Clearing animation = '' synchronously can briefly expose the inline
+        // opacity:0 initial state for one render frame (fill-mode flash).
+        // Using double-rAF defers the clear until after the browser has committed
+        // the opacity:1 and transform:'' inline values to the screen.
         const _expectedAnimName = _animName;
         card.addEventListener('animationend', (e) => {
           // Only trigger on the specific entry animation for this card
           if (e.animationName === _expectedAnimName) {
             card.style.opacity = '1';
             card.style.transform = '';
-            card.style.animation = ''; // clear last: prevents 1-frame state-reset flash
-            card.style.pointerEvents = 'auto';
+            card.style.pointerEvents = 'none'; // keep disabled until flip completes in _doShowModal
+            // Defer animation clear by two frames to prevent fill-mode flash
+            requestAnimationFrame(() => requestAnimationFrame(() => { card.style.animation = ''; }));
             // Thud flash
             card.classList.add('card-thud-flash');
             setTimeout(() => card.classList.remove('card-thud-flash'), 420);

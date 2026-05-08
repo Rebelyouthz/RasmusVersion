@@ -6254,6 +6254,7 @@
   function _hideSpiralDoor() {
     for (let i = 0; i < _spiralDoorParts.length; i++) {
       _spiralDoorParts[i].mesh.visible = false;
+      _spiralDoorParts[i].mesh.scale.y = 1; // reset scale for next spawn
     }
     if (_elevatorPlatform) _elevatorPlatform.visible = false;
     if (_spawnLight) { _spawnLight.intensity = 0; }
@@ -6290,22 +6291,20 @@
     // Only render door if it's appeared
     if (doorAppear > 0.01) {
       _updateSpiralDoorGeometry(doorOpen, spin);
-      // Fade segment opacity during the appear phase only.
-      // Once fully opaque, disable transparency so segments are rendered in the
-      // opaque pass — this prevents them from compositing against the pinkish
-      // sunrise sky background that THREE.js uses for the transparent pass,
-      // which was the root cause of the pink/light-blue colour artefacts.
+      // Use Y-scale to "rise from ground" during the appear phase instead of
+      // opacity transparency.  Keeping segments permanently opaque (transparent=false)
+      // puts them in the opaque render pass, eliminating the pinkish/blue sky-colour
+      // artefact that occurred when transparent meshes composited against the scene
+      // background during the transparent render pass.
+      const appearScale = Math.min(1, doorAppear * 2); // reaches full height quickly
       for (let i = 0; i < _spiralDoorParts.length; i++) {
-        const mat = _spiralDoorParts[i].mesh.material;
-        if (doorAppear < 0.99) {
-          // Still fading in: enable transparency so opacity can blend
-          if (!mat.transparent) mat.transparent = true;
-          mat.opacity = _clamp(doorAppear, 0, 1);
-        } else {
-          // Fully visible: lock to opaque so the fragment ends up in the
-          // opaque render pass (no sky-colour bleed, no pink artefact)
+        const part = _spiralDoorParts[i];
+        part.mesh.scale.y = appearScale;
+        const mat = part.mesh.material;
+        if (mat.transparent) {
           mat.transparent = false;
           mat.opacity = 1;
+          mat.needsUpdate = true;
         }
       }
     }
