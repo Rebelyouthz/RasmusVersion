@@ -138,7 +138,21 @@
     // 64 slots: typically ≤6 ranged enemies × fire-rate ~6 active projectiles each = ~36 concurrent;
     // 64 gives comfortable headroom with minimal VRAM cost.
     const _ENEMY_PROJ_GEO = new THREE.SphereGeometry(0.2, 6, 6);
-    const _ENEMY_PROJ_MAT = new THREE.MeshBasicMaterial({ color: 0xFF6347 });
+    // Enemy projectiles should not look like blood. Use a bright "energy bolt" default,
+    // and allow per-enemy colors via a shared material cache (no per-shot allocations).
+    const _ENEMY_PROJ_DEFAULT_COLOR = 0xFFCC00;
+    const _ENEMY_PROJ_MAT = new THREE.MeshBasicMaterial({ color: _ENEMY_PROJ_DEFAULT_COLOR });
+    const _ENEMY_PROJ_MAT_CACHE = Object.create(null);
+    function _getEnemyProjMat(colorHex) {
+      const key = (colorHex >>> 0).toString(16);
+      let mat = _ENEMY_PROJ_MAT_CACHE[key];
+      if (!mat) {
+        mat = new THREE.MeshBasicMaterial({ color: colorHex });
+        mat._isShared = true;
+        _ENEMY_PROJ_MAT_CACHE[key] = mat;
+      }
+      return mat;
+    }
     _ENEMY_PROJ_GEO._isShared = true;
     _ENEMY_PROJ_MAT._isShared = true;
     const ENEMY_PROJ_POOL_SIZE     = 64;  // Initial pool allocation
@@ -152,7 +166,7 @@
       if (_enemyProjPool.length < ENEMY_PROJ_POOL_SIZE_MAX) {
         const _m = new THREE.Mesh(_ENEMY_PROJ_GEO, _ENEMY_PROJ_MAT);
         _m.frustumCulled = false;
-        const _slot = { mesh: _m, active: false, lifetime: 0, speed: 0, direction: new THREE.Vector3(), damage: 0 };
+        const _slot = { mesh: _m, active: false, lifetime: 0, speed: 0, direction: new THREE.Vector3(), damage: 0, _fxColor: _ENEMY_PROJ_DEFAULT_COLOR };
         _slot.update = _enemyProjUpdate;
         _slot.destroy = _enemyProjDestroy;
         _enemyProjPool.push(_slot);
@@ -184,7 +198,7 @@
           if (window.player && typeof window.player.takeDamage === 'function') {
             window.player.takeDamage(this.damage);
           }
-          if (typeof spawnParticles === 'function') spawnParticles(this.mesh.position, 0xFF6347, 5);
+          if (typeof spawnParticles === 'function') spawnParticles(this.mesh.position, this._fxColor || _ENEMY_PROJ_DEFAULT_COLOR, 5);
           if (typeof playSound === 'function') { try { playSound('hit'); } catch (e) {} }
           this.destroy();
           return false;
@@ -196,6 +210,8 @@
       this.active = false;
       this.isEnemyProjectile = false;
       this._reflected = false;
+      this._fxColor = _ENEMY_PROJ_DEFAULT_COLOR;
+      if (this.mesh) this.mesh.material = _ENEMY_PROJ_MAT;
       if (this.mesh.parent) scene.remove(this.mesh);
     }
 
@@ -1700,6 +1716,13 @@
         projectile.damage           = this.damage;
         projectile.lifetime         = 120; // ~2 s at 60 fps
         projectile.direction.set(dx / dist, 0, dz / dist);
+
+        // Visuals: color bolts by enemy type (prevents "shooting blood" look).
+        const projColor = (_ENEMY_COLORS && _ENEMY_COLORS[this.type] != null)
+          ? _ENEMY_COLORS[this.type]
+          : _ENEMY_PROJ_DEFAULT_COLOR;
+        projectile._fxColor = projColor;
+        projectile.mesh.material = _getEnemyProjMat(projColor);
 
         projectile.mesh.position.set(_startX, 0.8, _startZ);
         scene.add(projectile.mesh);
