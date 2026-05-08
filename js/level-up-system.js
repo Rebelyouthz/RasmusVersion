@@ -1773,6 +1773,9 @@ window.spawnBossChest = function(x, z) {
         // opacity:0 initial state for one render frame (fill-mode flash).
         // Using double-rAF defers the clear until after the browser has committed
         // the opacity:1 and transform:'' inline values to the screen.
+        // NOTE: pointerEvents stays 'none' here; _doShowModal() Phase 4
+        // (setTimeout at base + 760 + 260 ms) sets it back to 'auto' after
+        // the flip completes so the card becomes selectable at the right time.
         const _expectedAnimName = _animName;
         card.addEventListener('animationend', (e) => {
           // Only trigger on the specific entry animation for this card

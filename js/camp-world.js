@@ -263,11 +263,13 @@
 
   // ── A.I.D.A Intro — Broken Robot + Chip ──────────────────
   // Broken robot sits at the southernmost point of the campfire orbit circle (0, 4.5).
+  // In this scene positive-Z is toward the camera (south in top-down view), so z=4.5
+  // places the robot south of the origin campfire — matching where the player spawns.
   // This aligns exactly with orbit angle=0 so the lap animation starts from the
   // robot's resting position with no visible teleport jump.
-  // Chip is placed clearly to the north of the fire so it's easy to spot.
+  // Chip is placed clearly to the north of the fire (z=-5) so it's easy to spot.
   // After Quest Hall is built (level > 0), robot moves in front of it regardless of chip state.
-  const AIDA_ROBOT_POS  = { x: 0, z: 4.5 };   // south of campfire — aligns with orbit start
+  const AIDA_ROBOT_POS  = { x: 0, z: 4.5 };   // south of campfire — aligns with orbit start (positive-Z = south)
   const AIDA_CHIP_POS   = { x: 0, z: -5 };   // north of fire — clearly visible open area
   const _questHallDef = BUILDING_DEFS.find(b => b.id === 'questMission') || { x: -10, z: 16 };
   const AIDA_QUEST_HALL_POS = { x: _questHallDef.x, z: _questHallDef.z - 1.5 }; // 1.5 units in front of Quest Hall
