@@ -36,9 +36,15 @@ function init() {
   );
 
   if (typeof window._ensureEntityPools === 'function') window._ensureEntityPools();
-  if (window.BloodV2 && typeof THREE !== 'undefined') window.BloodV2.init(scene);
-  if (window.BloodSimulatorV21 && typeof THREE !== 'undefined') window.BloodSimulatorV21.init(scene, null, null);
-  if (window.TraumaSystem && typeof THREE !== 'undefined') window.TraumaSystem.init(scene);
+  // Null out all legacy blood systems before V21 init to prevent conflicts
+  window.BloodV2 = null;
+  window.GoreSim = null;
+  window.GoreSimulator = null;
+  window.TraumaSystem = null;
+  // Init the one true blood system
+  if (window.BloodSimulatorV21 && typeof THREE !== 'undefined') {
+    window.BloodSimulatorV21.init(scene, null, null);
+  }
   if (window.GameObjectPool) window.GameObjectPool.prewarm();
   console.log('[Init] Scene created OK');
 
@@ -48,9 +54,6 @@ function init() {
   camera.position.set(RENDERER_CONFIG.cameraPositionX, RENDERER_CONFIG.cameraPositionY, RENDERER_CONFIG.cameraPositionZ);
   camera.lookAt(scene.position);
   console.log('[Init] Camera created OK');
-
-  // Init GoreSim after camera is created (needs camera reference for billboard effects)
-  if (window.GoreSim && typeof THREE !== 'undefined') window.GoreSim.init(scene, camera);
 
   renderer = new THREE.WebGLRenderer({
     antialias: true,
@@ -2853,12 +2856,11 @@ function createLevelUpEffects() {
     }, 300);
   }
   const pos = player.mesh.position;
-  if (window.BloodSystem) {
-    window.BloodSystem.emitBurst(pos, 20, { spreadXZ:0.5,spreadY:1.4,minLife:60,maxLife:110,minSize:0.05,maxSize:0.12,color1:0x5DADE2,color2:0x85C1E9 });
-    window.BloodSystem.emitBurst(pos, 10, { spreadXZ:0.35,spreadY:1.8,minLife:40,maxLife:75,minSize:0.03,maxSize:0.07,color1:0xDDF3FF,color2:0xFFFFFF });
+  if (window.BloodSimulatorV21 && window.BloodSimulatorV21.spawnMist) {
+    window.BloodSimulatorV21.spawnMist(pos.x, pos.y + 0.5, pos.z, 8, 0x5DADE2);
     setTimeout(() => {
       if (!player || !player.mesh) return;
-      window.BloodSystem.emitBurst(player.mesh.position, 12, { spreadXZ:0.25,spreadY:1.0,minLife:70,maxLife:120,minSize:0.04,maxSize:0.09,color1:0x1A8FC1,color2:0x5DADE2 });
+      window.BloodSimulatorV21.spawnMist(player.mesh.position.x, player.mesh.position.y + 0.5, player.mesh.position.z, 8, 0x5DADE2);
     }, 150);
   } else {
     spawnParticles(pos, COLORS.player, 25);
