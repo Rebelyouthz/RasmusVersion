@@ -560,6 +560,7 @@ window.GoreSim = {
   onKill(enemy, weaponKey, position) { BloodSimulatorV21.kill(enemy, weaponKey, position); },
   setEnabled(enabled) { BloodSimulatorV21.setParticleEffects(enabled); },
 };
+// Backward-compatibility no-op stub for legacy callers while old trauma integrations are removed.
 window.TraumaSystem = window.TraumaSystem || {
   init() {},
   update() {},

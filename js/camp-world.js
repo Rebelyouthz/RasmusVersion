@@ -1884,7 +1884,7 @@
     _aidaOrbitWaitingForDialogue = false;
 
     if (_aidaRobotMesh) {
-      _aidaRobotMesh.position.set(0, 0, -14);
+      _aidaRobotMesh.position.set(AIDA_QUEST_HALL_POS.x, 0, AIDA_QUEST_HALL_POS.z);
       _aidaRobotMesh.rotation.y = 0;
     }
 
@@ -7742,7 +7742,13 @@
       _lastValidPlayerZ = _playerMesh.position.z;
     }
     // Global NaN shield: if any player position coordinate is corrupted, restore last valid ground position.
-    if (!Number.isFinite(_playerMesh.position.x) || !Number.isFinite(_playerMesh.position.y) || !Number.isFinite(_playerMesh.position.z)) { _playerMesh.position.set(_lastValidPlayerX, 0, _lastValidPlayerZ); }
+    if (
+      !Number.isFinite(_playerMesh.position.x) ||
+      !Number.isFinite(_playerMesh.position.y) ||
+      !Number.isFinite(_playerMesh.position.z)
+    ) {
+      _playerMesh.position.set(_lastValidPlayerX, 0, _lastValidPlayerZ);
+    }
     // Clamp dt FIRST so every sub-update receives a finite, safe value.
     // This prevents NaN from propagating into _campTime, positions, or WebGL.
     if (!isFinite(dt) || isNaN(dt) || dt <= 0) dt = 0.016;

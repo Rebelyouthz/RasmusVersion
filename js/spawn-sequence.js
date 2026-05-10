@@ -92,6 +92,7 @@
       side: THREE.DoubleSide,
       emissive: 0x0a0505,
       emissiveIntensity: 0.15,
+      // Keep transparent enabled from creation time to avoid runtime shader recompiles.
       transparent: true,
       opacity: 1.0
     });
@@ -112,6 +113,7 @@
       metalness: 0.05,
       emissive: 0x0a0505,
       emissiveIntensity: 0.1,
+      // Keep transparent enabled from creation time to avoid runtime shader recompiles.
       transparent: true,
       opacity: 1.0
     });
@@ -146,6 +148,7 @@
         roughness: 0.9,
         metalness: 0.0,
         side: THREE.DoubleSide,
+        // Keep transparent enabled from creation time to avoid runtime shader recompiles.
         transparent: true,
         opacity: 1.0
       });
