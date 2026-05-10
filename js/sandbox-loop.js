@@ -6173,7 +6173,16 @@
   const SPAWN_SHAFT_DEPTH = -8;   // deep underground start
   // Segment panel height — kept as a module-level constant so _updateSpawnIntro
   // can reference it when correcting position.y during the Y-scale appear animation.
-  const SPIRAL_SEG_H = 0.12;
+  const SPIRAL_SEG_H          = 0.12;
+  // Ground-flush base Y for segments: SPIRAL_SEG_H/2 puts the bottom at y=0.
+  // Each ring is stacked slightly higher (SPIRAL_SEG_RING_Y_STEP per ring).
+  const SPIRAL_SEG_BASE_Y     = 0.06; // = SPIRAL_SEG_H / 2
+  const SPIRAL_SEG_RING_Y_STEP = 0.01; // per-ring height stagger
+
+  /** Returns the natural (fully-scaled) Y position for a segment of the given ring. */
+  function _spiralSegBaseY(ring) {
+    return SPIRAL_SEG_BASE_Y + ring * SPIRAL_SEG_RING_Y_STEP;
+  }
 
   function _buildSpiralDoor() {
     // ── Underground shaft: black cylinder visible through the spawn hole ──
@@ -6245,7 +6254,7 @@
       const radius = closedR + outFrac * (openR - closedR);
       part.mesh.position.set(
         Math.cos(angle) * radius,
-        0.06 + r * 0.01,
+        _spiralSegBaseY(r),
         Math.sin(angle) * radius
       );
       // Rotate segment to face tangent
@@ -6261,7 +6270,7 @@
       part.mesh.scale.y = 1; // reset scale for next spawn
       // Also reset the Y position correction applied during the appear animation
       // so the segment is at its natural ground-flush position on re-use.
-      part.mesh.position.y = 0.06 + part.ring * 0.01;
+      part.mesh.position.y = _spiralSegBaseY(part.ring);
     }
     if (_elevatorPlatform) _elevatorPlatform.visible = false;
     if (_spawnLight) { _spawnLight.intensity = 0; }
@@ -6317,8 +6326,7 @@
         const part = _spiralDoorParts[i];
         part.mesh.scale.y = appearScale;
         // Keep bottom edge grounded regardless of scale
-        const baseY = 0.06 + part.ring * 0.01;
-        part.mesh.position.y = baseY - halfH * (1 - appearScale);
+        part.mesh.position.y = _spiralSegBaseY(part.ring) - halfH * (1 - appearScale);
         const mat = part.mesh.material;
         if (mat.transparent) {
           mat.transparent = false;
