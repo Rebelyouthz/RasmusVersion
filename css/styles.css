@@ -3314,7 +3314,7 @@
       /* absolute + inset:0 so the flip covers the full card including its padding area */
       position: absolute;
       inset: 0;
-      transform-style: preserve-3d;
+      transform-style: preserve-3d !important;
       transition: transform 0.6s;
       will-change: transform;
       /* Start showing the BACK face (Eye of Horus) — flip to rotateY(360deg) reveals the front */
@@ -3331,7 +3331,7 @@
       /* Front face — hidden on initial display (card-inner starts at rotateY(180deg) showing the back).
          Becomes visible once the flip animation reaches rotateY(360deg). */
       transform: rotateY(0deg);
-      background-color: #111 !important;
+      background: #111 !important;
       backface-visibility: hidden !important;
       -webkit-backface-visibility: hidden !important;
       position: absolute !important;

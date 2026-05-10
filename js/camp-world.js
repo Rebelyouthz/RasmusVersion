@@ -31,7 +31,7 @@
     { id: 'codex',               x:  4,    z:   4,  label: 'Codex',               icon: '📖' },
 
     // ── CENTERPIECE: Quest Hall + flanks (north hub) ────────
-    { id: 'questMission',        x: -10,   z:  16,  label: 'Quest Hall',          icon: '📜' },
+    { id: 'questMission',        x:  0,    z: -14,  label: 'Quest Hall',          icon: '📜' },
     { id: 'armory',              x: -12,   z:  13,  label: 'Armory',              icon: '⚔️'  },
     { id: 'progressionHouse',    x:  12,   z:  13,  label: 'Progression House',   icon: '💪' },
 
@@ -162,6 +162,10 @@
   let _robotMesh    = null;
   let _robotLapActive = false;
   let _robotLapT = 0;
+  let _aidaOrbitActive = false;
+  let _aidaOrbitAngle = 0;
+  let _aidaOrbitDone = false;
+  let _lastValidPlayerX = 0, _lastValidPlayerZ = 0;
   // Robot walk-to-quest-hall animation (triggered after lap completes)
   let _robotWalkToQuestHall = false;
   let _robotWalkT = 0;
@@ -271,8 +275,8 @@
   // After Quest Hall is built (level > 0), robot moves in front of it regardless of chip state.
   const AIDA_ROBOT_POS  = { x: 0, z: 4.5 };   // south of campfire — aligns with orbit start (positive-Z = south)
   const AIDA_CHIP_POS   = { x: 0, z: -5 };   // north of fire — clearly visible open area
-  const _questHallDef = BUILDING_DEFS.find(b => b.id === 'questMission') || { x: -10, z: 16 };
-  const AIDA_QUEST_HALL_POS = { x: _questHallDef.x, z: _questHallDef.z - 1.5 }; // 1.5 units in front of Quest Hall
+  const _questHallDef = BUILDING_DEFS.find(b => b.id === 'questMission') || { x: 0, z: -14 };
+  const AIDA_QUEST_HALL_POS = { x: _questHallDef.x, z: _questHallDef.z };
   const AIDA_INTRO_RADIUS      = 5.0;   // Generous radius so the interaction is easy to trigger
   const AIDA_CHIP_MAGNET_RANGE = 2.0;   // Distance at which chip starts flying toward player
   const AIDA_CHIP_AUTO_PICKUP  = 0.4;   // Auto-pickup distance — sucks chip into hand
@@ -1875,60 +1879,59 @@
 
   function _updateRobotBubble() { /* disabled — no floating bubbles */ }
 
+  function _aidaArriveAtQuestHall() {
+    _aidaCinematicLock = false;
+    _aidaOrbitWaitingForDialogue = false;
+
+    if (_aidaRobotMesh) {
+      _aidaRobotMesh.position.set(0, 0, -14);
+      _aidaRobotMesh.rotation.y = 0;
+    }
+
+    if (typeof addResource === 'function') {
+      addResource('wood', 50);
+      addResource('stone', 30);
+    }
+
+    window._campBuildingUnlocks = window._campBuildingUnlocks || {};
+    window._campBuildingUnlocks['questMission'] = true;
+
+    const DS = window.DialogueSystem;
+    if (DS && typeof DS.show === 'function') {
+      DS.show([{ text: '🏛️ Quest Hall unlocked! Build it to start your quest.', emotion: 'task' }]);
+    }
+
+    if (typeof showStatusMessage === 'function') {
+      showStatusMessage('🏛️ Quest Hall unlocked! Build it to start your quest.', 5000);
+    }
+
+    const QS = window.QuestSystem || (typeof QuestSystem !== 'undefined' ? QuestSystem : null);
+    if (QS && typeof QS.startQuest === 'function') {
+      QS.startQuest('build_quest_hall');
+    }
+  }
+
+  function _updateAidaOrbit(dt) {
+    if (!_aidaOrbitActive || _aidaOrbitDone) return;
+    const FIRE_X = 0, FIRE_Z = 0, ORBIT_R = 5, SPEED = 0.7;
+    _aidaOrbitAngle += SPEED * dt;
+    if (_aidaRobotMesh) {
+      _aidaRobotMesh.position.x = FIRE_X + Math.cos(_aidaOrbitAngle) * ORBIT_R;
+      _aidaRobotMesh.position.z = FIRE_Z + Math.sin(_aidaOrbitAngle) * ORBIT_R;
+      _aidaRobotMesh.rotation.y = -_aidaOrbitAngle + Math.PI * 0.5;
+    }
+    if (_aidaOrbitAngle >= Math.PI * 2) {
+      _aidaOrbitDone = true;
+      _aidaOrbitActive = false;
+      _aidaArriveAtQuestHall();
+    }
+  }
+
   // Per-frame update for Aida intro props (chip glow + proximity prompts)
-  // STATE MACHINE — all position writes are NaN-guarded and use only Math.sin/cos.
-  // State 1: _robotLapActive  — A.I.D.A orbits the campfire
-  // State 2: _robotWalkToQuestHall — A.I.D.A walks to Quest Hall
+  // Orbit movement is handled by _updateAidaOrbit().
+  // State 2: _robotWalkToQuestHall — legacy walk-to-hall state
   function _updateAidaIntro(dt) {
     if (!_campScene) return;
-
-    // ── STATE 1: Orbit fire ──────────────────────────────────────────────────
-    // Timer-based orbit using Math.sin/Math.cos only — no division, no vectors.
-    if (_robotLapActive && _robotMesh) {
-      _robotLapT += dt;
-      const _lapDuration = 6.0;
-      const _lapProgress = Math.min(_robotLapT / _lapDuration, 1.0);
-      // Full circle driven by the safe timer, clamped to [0,1]
-      const _angle = _lapProgress * Math.PI * 2;
-      const _lapRadius = 4.5;
-      const _nx = Math.sin(_angle) * _lapRadius;
-      const _nz = Math.cos(_angle) * _lapRadius;
-      // Guard: never write NaN into the mesh
-      _robotMesh.position.x = isFinite(_nx) ? _nx : 0;
-      _robotMesh.position.y = 0;
-      _robotMesh.position.z = isFinite(_nz) ? _nz : 0;
-      _robotMesh.rotation.y = -_angle + Math.PI * 0.5;
-      if (_lapProgress >= 1.0) {
-        _robotLapActive = false;
-        console.log('[CampWorld] AIDA robot lap complete - transitioning to Quest Hall walk');
-        // Transition to State 2: record current (safe) position as walk origin
-        _robotWalkToQuestHall = true;
-        _robotWalkT = 0;
-        _robotWalkFromX = isFinite(_robotMesh.position.x) ? _robotMesh.position.x : 0;
-        _robotWalkFromZ = isFinite(_robotMesh.position.z) ? _robotMesh.position.z : 0;
-
-        // ── Fire deferred dialogue now that the orbit is visually complete ───
-        if (_aidaOrbitWaitingForDialogue) {
-          _aidaOrbitWaitingForDialogue = false;
-          const DS = window.DialogueSystem;
-          if (DS) {
-            DS.show(DS.DIALOGUES.aidaRobotWake, {
-              onComplete: function () {
-                _aidaCinematicLock = false;
-                _aidaGrantStarterMaterials();
-                if (typeof window.startAidaIntroQuest === 'function') {
-                  window.startAidaIntroQuest();
-                }
-              }
-            });
-          } else {
-            _aidaCinematicLock = false;
-            _aidaGrantStarterMaterials();
-            if (typeof window.startAidaIntroQuest === 'function') window.startAidaIntroQuest();
-          }
-        }
-      }
-    }
 
     // ── STATE 2: Walk to Quest Hall ─────────────────────────────────────────
     // Simple lerp — no division, origin already sanitised above.
@@ -2104,8 +2107,9 @@
     // the player cannot walk away during the orbit, but there is no overlay yet
     // (3D scene is fully visible).  When the lap ends, _updateAidaIntro() fires
     // the dialogue automatically via _aidaOrbitWaitingForDialogue.
-    _robotLapActive = true;
-    _robotLapT = 0;
+    _aidaOrbitActive = true;
+    _aidaOrbitAngle = 0;
+    _aidaOrbitDone = false;
     _aidaOrbitWaitingForDialogue = true;
 
     // Freeze player in place so the orbit is the focal point (no overlay yet)
@@ -7180,7 +7184,7 @@
       // Explicitly reset to campfire position when quest is unresolved, in case the
       // scene was built with AIDA at the Quest Hall (e.g. _buildAidaIntroProps raced
       // with a stale save that had level > 0 but quest not yet resolved).
-      if (_aidaRobotMesh && !_robotLapActive && !_robotWalkToQuestHall) {
+      if (_aidaRobotMesh && !_aidaOrbitActive && !_robotWalkToQuestHall) {
         const _qmData = _saveData && _saveData.campBuildings && _saveData.campBuildings.questMission;
         if (_qmData && _qmData.level > 0 && _isAidaQuestResolved()) {
           _aidaRobotMesh.position.set(AIDA_QUEST_HALL_POS.x, 0, AIDA_QUEST_HALL_POS.z);
@@ -7334,6 +7338,9 @@
     // the walk would complete with no dialogue if not also reset here).
     _robotLapActive = false;
     _robotLapT = 0;
+    _aidaOrbitActive = false;
+    _aidaOrbitAngle = 0;
+    _aidaOrbitDone = false;
     _robotWalkToQuestHall = false;
     _robotWalkT = 0;
     if (typeof window._syncJoystickZone === 'function') window._syncJoystickZone();
@@ -7730,8 +7737,12 @@
    */
   function update(dt) {
     if (!_isActive || !_campScene || !_playerMesh || !_campCamera) return;
-    // Global NaN shield: if any player position coordinate is corrupted, reset to origin before any logic runs.
-    if (!Number.isFinite(_playerMesh.position.x) || !Number.isFinite(_playerMesh.position.y) || !Number.isFinite(_playerMesh.position.z)) { _playerMesh.position.set(0, 0, 0); }
+    if (Number.isFinite(_playerMesh.position.x)) {
+      _lastValidPlayerX = _playerMesh.position.x;
+      _lastValidPlayerZ = _playerMesh.position.z;
+    }
+    // Global NaN shield: if any player position coordinate is corrupted, restore last valid ground position.
+    if (!Number.isFinite(_playerMesh.position.x) || !Number.isFinite(_playerMesh.position.y) || !Number.isFinite(_playerMesh.position.z)) { _playerMesh.position.set(_lastValidPlayerX, 0, _lastValidPlayerZ); }
     // Clamp dt FIRST so every sub-update receives a finite, safe value.
     // This prevents NaN from propagating into _campTime, positions, or WebGL.
     if (!isFinite(dt) || isNaN(dt) || dt <= 0) dt = 0.016;
@@ -7740,6 +7751,7 @@
     _updateParticles(dt);
     _updateBennyNPC(dt);
     _updateIncubator(dt);
+    _updateAidaOrbit(dt);
     _updateAidaIntro(dt);
     // Camp quest arrow removed
     _updatePlayerBubble(dt);
@@ -7861,7 +7873,7 @@
     // Guard: do not move AIDA during the robot-lap animation.
     // Explicitly reset to campfire when quest is unresolved so AIDA cannot remain
     // parked in front of the Quest Hall from a prior scene build.
-    if (_aidaRobotMesh && !_robotLapActive && !_robotWalkToQuestHall) {
+    if (_aidaRobotMesh && !_aidaOrbitActive && !_robotWalkToQuestHall) {
       const _qmBd = _saveData && _saveData.campBuildings && _saveData.campBuildings.questMission;
       if (_qmBd && _qmBd.level > 0 && _isAidaQuestResolved()) {
         _aidaRobotMesh.position.set(AIDA_QUEST_HALL_POS.x, 0, AIDA_QUEST_HALL_POS.z);

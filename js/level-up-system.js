@@ -1665,8 +1665,7 @@ window.spawnBossChest = function(x, z) {
         // The inline style ensures the back face is the initial painted state,
         // preventing the browser from showing the front face (0deg) for one frame
         // before CSS transitions take effect — the "pre-render flicker" fix.
-        cardInner.style.transform = 'rotateY(180deg)';
-        cardInner.style.transition = 'none';
+        cardInner.style.cssText = 'transform:rotateY(180deg);transition:none;visibility:hidden;';
 
         // Set rarity colour CSS variable on the card for the back-face glow bleed
         card.style.setProperty('--rarity-color', cardColor);
@@ -2116,11 +2115,14 @@ window.spawnBossChest = function(x, z) {
       // No innerHTML = '' before this means no flash of empty content if modal was already visible.
       list.replaceChildren(cardFrag);
 
-      // Trigger reflow on each cardInner now that cards are in the live DOM,
-      // so the initial rotateY(180deg) is committed before transitions are re-enabled.
+      // Trigger reflow + visibility restore on each cardInner now that cards are in the live DOM,
+      // then re-enable transition on a double-rAF to prevent first-paint flicker.
       for (let i = 0; i < cardInners.length; i++) {
         void cardInners[i].offsetHeight;
-        cardInners[i].style.transition = 'none'; // explicit 'none' prevents CSS default transitions from re-enabling
+        cardInners[i].style.visibility = 'visible';
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          cardInners[i].style.transition = 'transform 0.7s cubic-bezier(0.25,0.46,0.45,0.94)';
+        }));
       }
 
       } catch(cardErr) {
