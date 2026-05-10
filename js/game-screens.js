@@ -2849,7 +2849,8 @@ function createSlowMotionEffect() {
 }
 
 function createLevelUpEffects() {
-  if (player && player.mesh && player.mesh.material && player.mesh.material.color) {
+  if (!player || !player.mesh) return;
+  if (player.mesh.material && player.mesh.material.color) {
     const origColor  = player.mesh.material.color.getHex();
     const origScaleX = player.mesh.scale.x;
     const origScaleY = player.mesh.scale.y;
@@ -2862,7 +2863,6 @@ function createLevelUpEffects() {
       player.mesh.scale.set(origScaleX, origScaleY, origScaleZ);
     }, 300);
   }
-  if (!player || !player.mesh) return;
   const pos = player.mesh.position;
   if (window.BloodSimulatorV21 && window.BloodSimulatorV21.spawnMist) {
     window.BloodSimulatorV21.spawnMist(pos.x, pos.y + 0.5, pos.z, 8, 0x5DADE2);
