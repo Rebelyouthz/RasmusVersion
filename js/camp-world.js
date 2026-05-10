@@ -1880,34 +1880,31 @@
   function _updateRobotBubble() { /* disabled — no floating bubbles */ }
 
   function _aidaArriveAtQuestHall() {
-    _aidaCinematicLock = false;
-    _aidaOrbitWaitingForDialogue = false;
-
     if (_aidaRobotMesh) {
       _aidaRobotMesh.position.set(AIDA_QUEST_HALL_POS.x, 0, AIDA_QUEST_HALL_POS.z);
       _aidaRobotMesh.rotation.y = 0;
     }
 
-    if (typeof addResource === 'function') {
-      addResource('wood', 50);
-      addResource('stone', 30);
-    }
-
-    window._campBuildingUnlocks = window._campBuildingUnlocks || {};
-    window._campBuildingUnlocks['questMission'] = true;
-
     const DS = window.DialogueSystem;
-    if (DS && typeof DS.show === 'function') {
-      DS.show([{ text: '🏛️ Quest Hall unlocked! Build it to start your quest.', emotion: 'task' }]);
-    }
-
-    if (typeof showStatusMessage === 'function') {
-      showStatusMessage('🏛️ Quest Hall unlocked! Build it to start your quest.', 5000);
-    }
-
-    const QS = window.QuestSystem || (typeof QuestSystem !== 'undefined' ? QuestSystem : null);
-    if (QS && typeof QS.startQuest === 'function') {
-      QS.startQuest('build_quest_hall');
+    if (DS && typeof DS.show === 'function' && DS.DIALOGUES && DS.DIALOGUES.aidaRobotWake) {
+      DS.show(DS.DIALOGUES.aidaRobotWake, {
+        onComplete: function () {
+          _aidaCinematicLock = false;
+          _aidaOrbitWaitingForDialogue = false;
+          _aidaGrantStarterMaterials();
+          if (typeof window.startAidaIntroQuest === 'function') {
+            window.startAidaIntroQuest();
+          }
+        }
+      });
+    } else {
+      // Fallback when DialogueSystem is unavailable
+      _aidaCinematicLock = false;
+      _aidaOrbitWaitingForDialogue = false;
+      _aidaGrantStarterMaterials();
+      if (typeof window.startAidaIntroQuest === 'function') {
+        window.startAidaIntroQuest();
+      }
     }
   }
 
@@ -7737,7 +7734,7 @@
    */
   function update(dt) {
     if (!_isActive || !_campScene || !_playerMesh || !_campCamera) return;
-    if (Number.isFinite(_playerMesh.position.x)) {
+    if (Number.isFinite(_playerMesh.position.x) && Number.isFinite(_playerMesh.position.z)) {
       _lastValidPlayerX = _playerMesh.position.x;
       _lastValidPlayerZ = _playerMesh.position.z;
     }
