@@ -91,7 +91,10 @@
       metalness: 0.1,
       side: THREE.DoubleSide,
       emissive: 0x0a0505,
-      emissiveIntensity: 0.15
+      emissiveIntensity: 0.15,
+      // Keep transparent enabled from creation time to avoid runtime shader recompiles.
+      transparent: true,
+      opacity: 1.0
     });
 
     _undergroundShaft = new THREE.Mesh(shaftGeo, shaftMat);
@@ -109,7 +112,10 @@
       roughness: 0.95,
       metalness: 0.05,
       emissive: 0x0a0505,
-      emissiveIntensity: 0.1
+      emissiveIntensity: 0.1,
+      // Keep transparent enabled from creation time to avoid runtime shader recompiles.
+      transparent: true,
+      opacity: 1.0
     });
 
     _holeRim = new THREE.Mesh(rimGeo, rimMat);
@@ -141,7 +147,10 @@
         color: 0x6B5A4A, // Ground color matching the terrain
         roughness: 0.9,
         metalness: 0.0,
-        side: THREE.DoubleSide
+        side: THREE.DoubleSide,
+        // Keep transparent enabled from creation time to avoid runtime shader recompiles.
+        transparent: true,
+        opacity: 1.0
       });
 
       const coverPiece = new THREE.Mesh(geometry, material);
@@ -418,7 +427,6 @@
         const scale = 1.0 - easeProgress;
         _holeRim.scale.set(scale, scale, scale);
         _holeRim.material.opacity = scale;
-        _holeRim.material.transparent = true;
       }
 
       // Slide ground covers back inward
@@ -432,7 +440,6 @@
         cover.rotation.z = (1.0 - easeProgress) * 0.3;
         // Fade out as closing completes
         cover.material.opacity = 1.0 - easeProgress * 0.5;
-        cover.material.transparent = true;
       });
 
       // Lower elevator back down
@@ -445,7 +452,6 @@
       // Fade out underground shaft
       if (_undergroundShaft) {
         _undergroundShaft.material.opacity = 1.0 - easeProgress;
-        _undergroundShaft.material.transparent = true;
       }
 
       // Update phase time
