@@ -6171,6 +6171,9 @@
   const SPIRAL_RING_RADII = [1.0, 1.8, 2.6]; // inner to outer — clamped within hole radius 3
   const SPIRAL_COLORS     = [0x555555, 0x444444, 0x333333]; // heavy metal grey tones
   const SPAWN_SHAFT_DEPTH = -8;   // deep underground start
+  // Segment panel height — kept as a module-level constant so _updateSpawnIntro
+  // can reference it when correcting position.y during the Y-scale appear animation.
+  const SPIRAL_SEG_H = 0.12;
 
   function _buildSpiralDoor() {
     // ── Underground shaft: black cylinder visible through the spawn hole ──
@@ -6181,7 +6184,7 @@
     scene.add(_undergroundShaft);
 
     // Segment geometry: heavy metal door panels
-    const segH = 0.12; // thicker door panels for heavy metal feel
+    const segH = SPIRAL_SEG_H; // thicker door panels for heavy metal feel
     for (let r = 0; r < SPIRAL_RING_COUNT; r++) {
       const ringR = SPIRAL_RING_RADII[r];
       const arcLen = (2 * Math.PI * ringR) / SPIRAL_SEG_COUNT * 0.88;
@@ -6253,8 +6256,12 @@
 
   function _hideSpiralDoor() {
     for (let i = 0; i < _spiralDoorParts.length; i++) {
-      _spiralDoorParts[i].mesh.visible = false;
-      _spiralDoorParts[i].mesh.scale.y = 1; // reset scale for next spawn
+      const part = _spiralDoorParts[i];
+      part.mesh.visible = false;
+      part.mesh.scale.y = 1; // reset scale for next spawn
+      // Also reset the Y position correction applied during the appear animation
+      // so the segment is at its natural ground-flush position on re-use.
+      part.mesh.position.y = 0.06 + part.ring * 0.01;
     }
     if (_elevatorPlatform) _elevatorPlatform.visible = false;
     if (_spawnLight) { _spawnLight.intensity = 0; }
@@ -6296,10 +6303,22 @@
       // puts them in the opaque render pass, eliminating the pinkish/blue sky-colour
       // artefact that occurred when transparent meshes composited against the scene
       // background during the transparent render pass.
+      //
+      // BoxGeometry is origin-centered, so scaling Y from 0→1 would shrink/grow
+      // toward the mesh center, lifting the bottom off the ground.  We compensate
+      // by pushing position.y DOWN by half the missing height so the bottom stays
+      // flush with the floor at all scale values:
+      //   baseY    = 0.06 + r*0.01  (set by _updateSpiralDoorGeometry)
+      //   correction = (SPIRAL_SEG_H / 2) * (1 - appearScale)
+      //   adjustedY  = baseY - correction
       const appearScale = Math.min(1, doorAppear * 2); // reaches full height quickly
+      const halfH = SPIRAL_SEG_H / 2;
       for (let i = 0; i < _spiralDoorParts.length; i++) {
         const part = _spiralDoorParts[i];
         part.mesh.scale.y = appearScale;
+        // Keep bottom edge grounded regardless of scale
+        const baseY = 0.06 + part.ring * 0.01;
+        part.mesh.position.y = baseY - halfH * (1 - appearScale);
         const mat = part.mesh.material;
         if (mat.transparent) {
           mat.transparent = false;

@@ -7329,6 +7329,13 @@
     _isActive = false;
     _aidaCinematicLock = false; // always clear on exit — prevents phantom freeze next visit
     _aidaOrbitWaitingForDialogue = false; // clear deferred dialogue flag on exit
+    // Reset robot orbit/walk state machines so mid-orbit exits don't leave stale
+    // state on the next enter() call (dialogue flag was already cleared above so
+    // the walk would complete with no dialogue if not also reset here).
+    _robotLapActive = false;
+    _robotLapT = 0;
+    _robotWalkToQuestHall = false;
+    _robotWalkT = 0;
     if (typeof window._syncJoystickZone === 'function') window._syncJoystickZone();
     _menuOpen = false;
     // Hide camp-specific overlays
