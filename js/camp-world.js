@@ -177,6 +177,10 @@
   let _aidaCinematicLock   = false;
   let _aidaCinematicLockTs = 0;
   const _AIDA_CINEMATIC_LOCK_MAX_MS = 30000;
+  // When true the robot is completing its orbit lap and the dialogue has not yet
+  // fired.  The dialogue is triggered automatically when the lap finishes so the
+  // player can watch AIDA go around the fire before any full-screen overlay.
+  let _aidaOrbitWaitingForDialogue = false;
 
   // Camp Quest Arrow
   let _campArrowEl = null;
@@ -258,10 +262,14 @@
   let _incubatorInteracted = false; // guard against duplicate interactions this session
 
   // ── A.I.D.A Intro — Broken Robot + Chip ──────────────────
-  // Broken robot sits directly beside the campfire (south side).
-  // Chip is placed clearly to the north of the fire so it's easy to spot.
+  // Broken robot sits at the southernmost point of the campfire orbit circle (0, 4.5).
+  // In this scene positive-Z is toward the camera (south in top-down view), so z=4.5
+  // places the robot south of the origin campfire — matching where the player spawns.
+  // This aligns exactly with orbit angle=0 so the lap animation starts from the
+  // robot's resting position with no visible teleport jump.
+  // Chip is placed clearly to the north of the fire (z=-5) so it's easy to spot.
   // After Quest Hall is built (level > 0), robot moves in front of it regardless of chip state.
-  const AIDA_ROBOT_POS  = { x: 2, z: 2 };    // directly by campfire (south side)
+  const AIDA_ROBOT_POS  = { x: 0, z: 4.5 };   // south of campfire — aligns with orbit start (positive-Z = south)
   const AIDA_CHIP_POS   = { x: 0, z: -5 };   // north of fire — clearly visible open area
   const _questHallDef = BUILDING_DEFS.find(b => b.id === 'questMission') || { x: -10, z: 16 };
   const AIDA_QUEST_HALL_POS = { x: _questHallDef.x, z: _questHallDef.z - 1.5 }; // 1.5 units in front of Quest Hall
@@ -1898,6 +1906,27 @@
         _robotWalkT = 0;
         _robotWalkFromX = isFinite(_robotMesh.position.x) ? _robotMesh.position.x : 0;
         _robotWalkFromZ = isFinite(_robotMesh.position.z) ? _robotMesh.position.z : 0;
+
+        // ── Fire deferred dialogue now that the orbit is visually complete ───
+        if (_aidaOrbitWaitingForDialogue) {
+          _aidaOrbitWaitingForDialogue = false;
+          const DS = window.DialogueSystem;
+          if (DS) {
+            DS.show(DS.DIALOGUES.aidaRobotWake, {
+              onComplete: function () {
+                _aidaCinematicLock = false;
+                _aidaGrantStarterMaterials();
+                if (typeof window.startAidaIntroQuest === 'function') {
+                  window.startAidaIntroQuest();
+                }
+              }
+            });
+          } else {
+            _aidaCinematicLock = false;
+            _aidaGrantStarterMaterials();
+            if (typeof window.startAidaIntroQuest === 'function') window.startAidaIntroQuest();
+          }
+        }
       }
     }
 
@@ -2069,36 +2098,20 @@
 
     _aidaRobotEyesOn(true);
 
-    // Start robot lap animation around the fire
+    // ── Sequence: orbit FIRST (visible to player), dialogue AFTER ────────────
+    // The player should clearly see AIDA go around the campfire before the
+    // full-screen dialogue overlay appears.  The cinematic lock is set now so
+    // the player cannot walk away during the orbit, but there is no overlay yet
+    // (3D scene is fully visible).  When the lap ends, _updateAidaIntro() fires
+    // the dialogue automatically via _aidaOrbitWaitingForDialogue.
     _robotLapActive = true;
     _robotLapT = 0;
-    console.log('[CampWorld] AIDA chip inserted – starting robot lap + cinematic lock');
+    _aidaOrbitWaitingForDialogue = true;
 
-    const DS = window.DialogueSystem;
-    if (DS) {
-      // ── New: use a dedicated cinematic lock instead of _openMenu() ──────────
-      // _openMenu() + _checkMenuClosed() had a 350 ms race that restored player
-      // input while the full-screen cinematic was still showing, letting the
-      // player walk into the Teleport Portal (campBoard) and navigate away.
-      // _aidaCinematicLock is checked directly in update() and is ONLY cleared
-      // in onComplete (and by the 30 s failsafe), so it cannot fire early.
-      _aidaCinematicLock   = true;
-      _aidaCinematicLockTs = Date.now();
-
-      DS.show(DS.DIALOGUES.aidaRobotWake, {
-        onComplete: function () {
-          _aidaCinematicLock = false;
-          _aidaGrantStarterMaterials();
-          if (typeof window.startAidaIntroQuest === 'function') {
-            window.startAidaIntroQuest();
-          }
-        }
-      });
-      // Do NOT call _openMenu() — _aidaCinematicLock owns the freeze.
-    } else {
-      _aidaGrantStarterMaterials();
-      if (typeof window.startAidaIntroQuest === 'function') window.startAidaIntroQuest();
-    }
+    // Freeze player in place so the orbit is the focal point (no overlay yet)
+    _aidaCinematicLock   = true;
+    _aidaCinematicLockTs = Date.now();
+    console.log('[CampWorld] AIDA chip inserted – robot orbit started, dialogue deferred until orbit completes');
   }
 
   // Grant starter materials to build the first building (Quest Hall)
@@ -7315,6 +7328,14 @@
   function exit() {
     _isActive = false;
     _aidaCinematicLock = false; // always clear on exit — prevents phantom freeze next visit
+    _aidaOrbitWaitingForDialogue = false; // clear deferred dialogue flag on exit
+    // Reset robot orbit/walk state machines so mid-orbit exits don't leave stale
+    // state on the next enter() call (dialogue flag was already cleared above so
+    // the walk would complete with no dialogue if not also reset here).
+    _robotLapActive = false;
+    _robotLapT = 0;
+    _robotWalkToQuestHall = false;
+    _robotWalkT = 0;
     if (typeof window._syncJoystickZone === 'function') window._syncJoystickZone();
     _menuOpen = false;
     // Hide camp-specific overlays
@@ -7740,6 +7761,7 @@
     // cannot prematurely unlock input during the full-screen cinematic.
     if (_aidaCinematicLock && Date.now() - _aidaCinematicLockTs > _AIDA_CINEMATIC_LOCK_MAX_MS) {
       _aidaCinematicLock = false;
+      _aidaOrbitWaitingForDialogue = false;
       console.warn('[CampWorld] _aidaCinematicLock failsafe cleared after 30 s');
     }
 

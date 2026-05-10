@@ -6171,6 +6171,18 @@
   const SPIRAL_RING_RADII = [1.0, 1.8, 2.6]; // inner to outer — clamped within hole radius 3
   const SPIRAL_COLORS     = [0x555555, 0x444444, 0x333333]; // heavy metal grey tones
   const SPAWN_SHAFT_DEPTH = -8;   // deep underground start
+  // Segment panel height — kept as a module-level constant so _updateSpawnIntro
+  // can reference it when correcting position.y during the Y-scale appear animation.
+  const SPIRAL_SEG_H          = 0.12;
+  // Ground-flush base Y for segments: SPIRAL_SEG_H/2 puts the bottom at y=0.
+  // Each ring is stacked slightly higher (SPIRAL_SEG_RING_Y_STEP per ring).
+  const SPIRAL_SEG_BASE_Y     = 0.06; // = SPIRAL_SEG_H / 2
+  const SPIRAL_SEG_RING_Y_STEP = 0.01; // per-ring height stagger
+
+  /** Returns the natural (fully-scaled) Y position for a segment of the given ring. */
+  function _spiralSegBaseY(ring) {
+    return SPIRAL_SEG_BASE_Y + ring * SPIRAL_SEG_RING_Y_STEP;
+  }
 
   function _buildSpiralDoor() {
     // ── Underground shaft: black cylinder visible through the spawn hole ──
@@ -6181,7 +6193,7 @@
     scene.add(_undergroundShaft);
 
     // Segment geometry: heavy metal door panels
-    const segH = 0.12; // thicker door panels for heavy metal feel
+    const segH = SPIRAL_SEG_H; // thicker door panels for heavy metal feel
     for (let r = 0; r < SPIRAL_RING_COUNT; r++) {
       const ringR = SPIRAL_RING_RADII[r];
       const arcLen = (2 * Math.PI * ringR) / SPIRAL_SEG_COUNT * 0.88;
@@ -6242,7 +6254,7 @@
       const radius = closedR + outFrac * (openR - closedR);
       part.mesh.position.set(
         Math.cos(angle) * radius,
-        0.06 + r * 0.01,
+        _spiralSegBaseY(r),
         Math.sin(angle) * radius
       );
       // Rotate segment to face tangent
@@ -6253,7 +6265,12 @@
 
   function _hideSpiralDoor() {
     for (let i = 0; i < _spiralDoorParts.length; i++) {
-      _spiralDoorParts[i].mesh.visible = false;
+      const part = _spiralDoorParts[i];
+      part.mesh.visible = false;
+      part.mesh.scale.y = 1; // reset scale for next spawn
+      // Also reset the Y position correction applied during the appear animation
+      // so the segment is at its natural ground-flush position on re-use.
+      part.mesh.position.y = _spiralSegBaseY(part.ring);
     }
     if (_elevatorPlatform) _elevatorPlatform.visible = false;
     if (_spawnLight) { _spawnLight.intensity = 0; }
@@ -6290,22 +6307,31 @@
     // Only render door if it's appeared
     if (doorAppear > 0.01) {
       _updateSpiralDoorGeometry(doorOpen, spin);
-      // Fade segment opacity during the appear phase only.
-      // Once fully opaque, disable transparency so segments are rendered in the
-      // opaque pass — this prevents them from compositing against the pinkish
-      // sunrise sky background that THREE.js uses for the transparent pass,
-      // which was the root cause of the pink/light-blue colour artefacts.
+      // Use Y-scale to "rise from ground" during the appear phase instead of
+      // opacity transparency.  Keeping segments permanently opaque (transparent=false)
+      // puts them in the opaque render pass, eliminating the pinkish/blue sky-colour
+      // artefact that occurred when transparent meshes composited against the scene
+      // background during the transparent render pass.
+      //
+      // BoxGeometry is origin-centered, so scaling Y from 0→1 would shrink/grow
+      // toward the mesh center, lifting the bottom off the ground.  We compensate
+      // by pushing position.y DOWN by half the missing height so the bottom stays
+      // flush with the floor at all scale values:
+      //   baseY    = 0.06 + r*0.01  (set by _updateSpiralDoorGeometry)
+      //   correction = (SPIRAL_SEG_H / 2) * (1 - appearScale)
+      //   adjustedY  = baseY - correction
+      const appearScale = Math.min(1, doorAppear * 2); // reaches full height quickly
+      const halfH = SPIRAL_SEG_H / 2;
       for (let i = 0; i < _spiralDoorParts.length; i++) {
-        const mat = _spiralDoorParts[i].mesh.material;
-        if (doorAppear < 0.99) {
-          // Still fading in: enable transparency so opacity can blend
-          if (!mat.transparent) mat.transparent = true;
-          mat.opacity = _clamp(doorAppear, 0, 1);
-        } else {
-          // Fully visible: lock to opaque so the fragment ends up in the
-          // opaque render pass (no sky-colour bleed, no pink artefact)
+        const part = _spiralDoorParts[i];
+        part.mesh.scale.y = appearScale;
+        // Keep bottom edge grounded regardless of scale
+        part.mesh.position.y = _spiralSegBaseY(part.ring) - halfH * (1 - appearScale);
+        const mat = part.mesh.material;
+        if (mat.transparent) {
           mat.transparent = false;
           mat.opacity = 1;
+          mat.needsUpdate = true;
         }
       }
     }
