@@ -1885,26 +1885,21 @@
       _aidaRobotMesh.rotation.y = 0;
     }
 
-    const DS = window.DialogueSystem;
-    if (DS && typeof DS.show === 'function' && DS.DIALOGUES && DS.DIALOGUES.aidaRobotWake) {
-      DS.show(DS.DIALOGUES.aidaRobotWake, {
-        onComplete: function () {
-          _aidaCinematicLock = false;
-          _aidaOrbitWaitingForDialogue = false;
-          _aidaGrantStarterMaterials();
-          if (typeof window.startAidaIntroQuest === 'function') {
-            window.startAidaIntroQuest();
-          }
-        }
-      });
-    } else {
-      // Fallback when DialogueSystem is unavailable
+    function _onArrivalComplete() {
       _aidaCinematicLock = false;
       _aidaOrbitWaitingForDialogue = false;
       _aidaGrantStarterMaterials();
       if (typeof window.startAidaIntroQuest === 'function') {
         window.startAidaIntroQuest();
       }
+    }
+
+    const DS = window.DialogueSystem;
+    const arrivalDialogue = DS && DS.DIALOGUES && DS.DIALOGUES.aidaRobotWake;
+    if (DS && typeof DS.show === 'function' && arrivalDialogue) {
+      DS.show(arrivalDialogue, { onComplete: _onArrivalComplete });
+    } else {
+      _onArrivalComplete();
     }
   }
 
