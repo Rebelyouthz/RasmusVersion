@@ -54,7 +54,6 @@ const BloodSimulatorV21 = {
   scene: null,
   terrainMesh: null,
   player: null,
-  enabled: true,
   dropIM: null,
   mistIM: null,
   _decals: null,
@@ -189,14 +188,7 @@ const BloodSimulatorV21 = {
 
     this._pulseWounds = [];
     this._pulseTimer  = 0;
-    this._syncLegacyAliases();
     return this;
-  },
-
-  _syncLegacyAliases() {
-    this._dropIM = this.dropIM;
-    this._dropData = this._pool;
-    this._mistIM = this.mistIM;
   },
 
   reset() {
@@ -219,7 +211,6 @@ const BloodSimulatorV21 = {
     this._pulseTimer = 0;
     if (this.dropIM) { this.dropIM.count = 0; this.dropIM.instanceMatrix.needsUpdate = true; }
     if (this.mistIM) { this.mistIM.count = 0; this.mistIM.instanceMatrix.needsUpdate = true; }
-    this._syncLegacyAliases();
   },
 
   _spawnDecal(x, z, radius, hexColor, lifetime) {
@@ -251,7 +242,6 @@ const BloodSimulatorV21 = {
   },
 
   update(dt) {
-    if (this.enabled === false) return;
     if (!this.dropIM || !this._pool) return;
     const matrix = this._matrix;
     const color  = this._color;
@@ -408,12 +398,6 @@ const BloodSimulatorV21 = {
     }
   },
 
-  rawBurstUpward(x, y, z, count, options) {
-    const opts = Object.assign({}, options || {});
-    opts.spreadY = Math.max(12, opts.spreadY || 18);
-    this.rawBurst(x, y, z, count, opts);
-  },
-
   // V-shaped arterial jet: two diverging high-pressure streams + mist
   arterialJet(x, y, z, dirX, dirZ, hexColor) {
     if (!this._pool) return;
@@ -514,29 +498,6 @@ const BloodSimulatorV21 = {
     this.addWoundPulse(position.x, position.y+0.5, position.z, 0xaa0000, 9.0);
   },
 
-  hit(enemy, weaponKey, hitPoint) {
-    if (!hitPoint) return;
-    this.onEnemyHit(enemy, hitPoint, weaponKey || 'melee');
-  },
-
-  kill(enemy, weaponKey, position) {
-    const p = position || (enemy && enemy.mesh && enemy.mesh.position) || { x: 0, y: 0, z: 0 };
-    this.onEnemyDeath(enemy || null, p);
-  },
-
-  setParticleEffects(enabled) {
-    this.enabled = enabled !== false;
-  },
-
-  addEnemyBlood(enemyType, hexColor) {
-    if (!enemyType) return;
-    _BSV21_BLOOD[enemyType] = hexColor;
-  },
-
-  getMeshes() {
-    return [this.dropIM, this.mistIM].filter(Boolean);
-  },
-
   // Returns the 3D blood hex color for a given enemy type string.
   // Single source of truth — avoids duplicating _BSV21_BLOOD elsewhere.
   getEnemyBloodColor(enemyType) {
@@ -545,25 +506,3 @@ const BloodSimulatorV21 = {
 };
 
 window.BloodSimulatorV21 = BloodSimulatorV21;
-
-// Backward-compatible aliases while legacy scripts are removed.
-window.BloodV2 = BloodSimulatorV21;
-window.GoreSim = {
-  init(scene, camera) {
-    if (!BloodSimulatorV21.scene) {
-      BloodSimulatorV21.init(scene, null, window.player && window.player.mesh ? window.player.mesh : null);
-    }
-  },
-  update(dt) { BloodSimulatorV21.update(dt); },
-  reset() { BloodSimulatorV21.reset(); },
-  onHit(enemy, weaponKey, hitPoint) { BloodSimulatorV21.hit(enemy, weaponKey, hitPoint); },
-  onKill(enemy, weaponKey, position) { BloodSimulatorV21.kill(enemy, weaponKey, position); },
-  setEnabled(enabled) { BloodSimulatorV21.setParticleEffects(enabled); },
-};
-// Backward-compatibility no-op stub for legacy callers while old trauma integrations are removed.
-window.TraumaSystem = window.TraumaSystem || {
-  init() {},
-  update() {},
-  clearAll() {},
-  setEnabled() {},
-};
