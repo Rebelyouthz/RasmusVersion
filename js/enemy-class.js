@@ -4486,6 +4486,9 @@
         }
         
         playerStats.kills++;
+        if (window.PowerUpSystem && typeof window.PowerUpSystem.onEnemyKilled === 'function') {
+          try { window.PowerUpSystem.onEnemyKilled(deathPos); } catch (_e) {}
+        }
 
         // Alien Biomatter rare drop from Grey Alien Scout (type 17)
         if (this.type === 17 && Math.random() < 0.35) {

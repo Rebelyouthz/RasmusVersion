@@ -59,6 +59,8 @@ WOBBLE_SPEED:     6.0,    // idle wobble animation speed
 SQUISH_ON_HIT:    true,
 };
 
+var _SLIME_DEATH_FX = ['flat','headTear','explode','melt','split'];
+
 // Organ layout (normalized Y: -1=bottom, +1=top)
 var ORGANS = {
 brain:    { yMin: 0.52, yMax: 1.00, hp: 22,  maxHp: 22,  bleedRate: 0.18, name: 'Nucleus'    },
@@ -1186,10 +1188,16 @@ if (global.GoreSim && typeof global.GoreSim.onKill === 'function') {
 global.GoreSim.onKill(this, wk, null);
 }
 
-// Choose death style based on weapon + organ + level
-var style = this._chooseDeathStyle(wk, wlvl, organ);
+// Choose one of the premium randomized death FX variants
+var chosenFx = _SLIME_DEATH_FX[(Math.random() * _SLIME_DEATH_FX.length) | 0];
+var style = 'standard_collapse';
+if (chosenFx === 'flat') style = 'standard_collapse';
+else if (chosenFx === 'headTear') style = 'head_tear';
+else if (chosenFx === 'explode') style = 'slime_explode';
+else if (chosenFx === 'melt') style = 'plasma_melt';
+else if (chosenFx === 'split') style = 'split_top';
 this.deathStyle = style;
-this.deathData  = { wk: wk, wlvl: wlvl, organ: organ, dir: bulletDir };
+this.deathData  = { wk: wk, wlvl: wlvl, organ: organ, dir: bulletDir, chosenFx: chosenFx };
 this._initDeathAnimation(style);
 };
 
@@ -1238,6 +1246,51 @@ switch (style) {
 case 'standard_collapse':
   // Slime tips over and melts flat
   this.deathData.phase = 'tipping';
+  break;
+
+// ── 1B. HEAD TEAR ───────────────────────────────────────────────
+case 'head_tear':
+  this.deathData.phase = 'head_launch';
+  this.deathData.headVy = 4.8 + Math.random() * 1.4;
+  this.deathData.headVx = (Math.random() - 0.5) * 2.0;
+  this.deathData.headVz = (Math.random() - 0.5) * 2.0;
+  this.deathData.headY = pos.y + this.scale * 0.45;
+  this.rawBurst(pos.x, pos.y + this.scale * 0.3, pos.z, 14, { spreadXZ: 5, spreadY: 8, color: 0x22cc44, enemyType: 'slime' });
+  break;
+
+// ── 1C. EXPLODE ────────────────────────────────────────────────
+case 'slime_explode':
+  this.deathData.phase = 'exploding';
+  this.rawBurst(pos.x, pos.y + 0.15, pos.z, 20, { spreadXZ: 10, spreadY: 12, color: 0x22cc44, enemyType: 'slime' });
+  if (global.BloodV2 && typeof global.BloodV2.spawnMist === 'function') {
+    global.BloodV2.spawnMist(pos.x, pos.y + 0.3, pos.z, 3, 0x55ff66, 'slime');
+  }
+  break;
+
+case 'head_tear':
+  if (data.phase === 'head_launch') {
+    data.headVy -= 9.81 * dt;
+    data.headY += data.headVy * dt;
+    pos.y = Math.max(0.03, pos.y - dt * 1.3);
+    this.mesh.scale.set(this.scale * 1.2, Math.max(0.02, this.scale * 0.55), this.scale * 1.2);
+    if (this.eyeL) {
+      this.eyeL.position.y = (this.eyeL.position.y || 0) + data.headVy * dt * 0.55;
+      this.eyeR.position.y = (this.eyeR.position.y || 0) + data.headVy * dt * 0.55;
+      if (data.headY <= 0.08 && data.headVy < 0 && !data._headBounced) {
+        data._headBounced = true;
+        data.headVy = Math.abs(data.headVy) * 0.35;
+      }
+    }
+    if (this.deathTimer > 1.3) this._finishDeath();
+  }
+  break;
+
+case 'slime_explode':
+  if (!data._exploded) {
+    data._exploded = true;
+    this.mesh.visible = false;
+  }
+  if (this.deathTimer > 1.5) this._finishDeath();
   break;
 
 // ── 2. NEURAL MELT (brain death) ─────────────────────────────

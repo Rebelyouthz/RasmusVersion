@@ -1989,6 +1989,15 @@
           }
         }
 
+        // Shield Bubble: blocks next 3 hits
+        if (playerStats._shieldHits && playerStats._shieldHits > 0) {
+          playerStats._shieldHits = Math.max(0, playerStats._shieldHits - 1);
+          createFloatingText('SHIELD!', this.mesh.position, '#E0E6FF');
+          spawnParticles(this.mesh.position, 0xE0E6FF, 10);
+          updateHUD();
+          return;
+        }
+
         // Last Stand — survive a fatal hit once per run
         if (playerStats.hasLastStand && !playerStats.lastStandUsed && playerStats.hp - reduced <= 0) {
           playerStats.lastStandUsed = true;

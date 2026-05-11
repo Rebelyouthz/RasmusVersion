@@ -255,11 +255,15 @@
       };
 
       // Use new dopamine end screen if available, fall back to legacy
-      if (window.RunEndScreen) {
+      if (typeof window.showRunEndScreen === 'function' || window.RunEndScreen) {
         // Hide the YOU DIED banner
         const youDiedBanner = document.getElementById('you-died-banner');
         if (youDiedBanner) youDiedBanner.style.display = 'none';
-        window.RunEndScreen.show(window._resCurrentStats);
+        if (typeof window.showRunEndScreen === 'function') {
+          window.showRunEndScreen(window._resCurrentStats);
+        } else {
+          window.RunEndScreen.show(window._resCurrentStats);
+        }
         updateGoldDisplays();
       } else {
         // ── Legacy fallback gameover screen ──────────────────────────────────

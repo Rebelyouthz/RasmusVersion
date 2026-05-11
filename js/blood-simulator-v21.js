@@ -16,6 +16,7 @@ const _BSV21_BLOOD = {
   robot:         0x88aaff,
 };
 window._BSV21_BLOOD = _BSV21_BLOOD;
+const _BSV21_HUMAN_BLOOD_PALETTE = [0xcc1100, 0xaa0000, 0x8b0000, 0x990000, 0xbb1111, 0xdd2200];
 
 // Per-enemy mist color palette
 const _BSV21_MIST = {
@@ -30,23 +31,22 @@ const _BSV21_MIST = {
 };
 
 // Device capability detection — auto-scales pool sizes:
-// Low-memory/mobile (≤2GB or touch device): 600 drops / 50 mist
-// Mid-tier (≤4GB): 1800 drops / 120 mist
-// Desktop/high-memory (>4GB): 3600 drops / 250 mist
-// Goal: maximum blood coverage with minimal mist particles for advanced visual impact.
+// Mobile ≤2GB: 800 drops / 30 mist
+// Mid ≤4GB: 2400 drops / 80 mist
+// Desktop >4GB: 4800 drops / 120 mist
 (function _bsv21DetectDevice() {
   const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
     || ('ontouchstart' in window && navigator.maxTouchPoints > 1);
   const mem = (navigator.deviceMemory || (isMobile ? 2 : 8));
   if (isMobile || mem <= 2) {
-    window._BSV21_MAX_DROPS = 600;
-    window._BSV21_MAX_MIST  = 50;
+    window._BSV21_MAX_DROPS = 800;
+    window._BSV21_MAX_MIST  = 30;
   } else if (mem <= 4) {
-    window._BSV21_MAX_DROPS = 1800;
-    window._BSV21_MAX_MIST  = 120;
+    window._BSV21_MAX_DROPS = 2400;
+    window._BSV21_MAX_MIST  = 80;
   } else {
-    window._BSV21_MAX_DROPS = 3600;
-    window._BSV21_MAX_MIST  = 250;
+    window._BSV21_MAX_DROPS = 4800;
+    window._BSV21_MAX_MIST  = 120;
   }
 }());
 
@@ -66,6 +66,9 @@ const BloodSimulatorV21 = {
   _head: 0,
   _mistPool: null,
   _mistHead: 0,
+  _rivulets: null,
+  _rivuletHead: 0,
+  _bulletHoleSpurts: null,
 
   // Heartbeat pulse state
   _pulseTimer: 0,
@@ -122,7 +125,7 @@ const BloodSimulatorV21 = {
     this._pool = new Array(this.MAX_DROPS);
     for (let i = 0; i < this.MAX_DROPS; i++) {
       this._pool[i] = { alive:false, px:0, py:0, pz:0, vx:0, vy:0, vz:0,
-        radius:0.025, viscosity:0.62, life:0, onGround:false, color:0x8B0000 };
+        radius:0.025, viscosity:0.62, life:0, onGround:false, color:0x8B0000, bounces:0, enemyType:'human' };
     }
     this._head = 0;
 
@@ -184,6 +187,20 @@ const BloodSimulatorV21 = {
       scene.add(m);
       this._decals.push({ mesh:m, life:0, maxLife:0 });
     }
+    this._rivulets = [];
+    this._rivuletHead = 0;
+    const rivGeo = new THREE.CircleGeometry(0.35, 8);
+    rivGeo.rotateX(-Math.PI / 2);
+    const rivMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.7, depthWrite: false, side: THREE.DoubleSide });
+    for (let i = 0; i < 40; i++) {
+      const rv = new THREE.Mesh(rivGeo, rivMat.clone());
+      rv.visible = false;
+      rv.position.y = 0.017;
+      scene.add(rv);
+      this._rivulets.push({ mesh: rv, life: 0, maxLife: 8 });
+    }
+
+    this._bulletHoleSpurts = [];
 
     this._pulseWounds = [];
     this._pulseTimer  = 0;
@@ -206,6 +223,14 @@ const BloodSimulatorV21 = {
       }
       this._decalHead = 0;
     }
+    if (this._rivulets) {
+      for (let i = 0; i < this._rivulets.length; i++) {
+        this._rivulets[i].life = 0;
+        this._rivulets[i].mesh.visible = false;
+      }
+      this._rivuletHead = 0;
+    }
+    if (this._bulletHoleSpurts) this._bulletHoleSpurts.length = 0;
     if (this._pulseWounds) this._pulseWounds.length = 0;
     this._pulseTimer = 0;
     if (this.dropIM) { this.dropIM.count = 0; this.dropIM.instanceMatrix.needsUpdate = true; }
@@ -240,8 +265,17 @@ const BloodSimulatorV21 = {
     m.color     = hexColor;
   },
 
+  _pickBloodColor(enemyType, fallbackColor) {
+    if (enemyType === 'slime') return _BSV21_BLOOD.slime;
+    if (enemyType === 'human' || !enemyType || enemyType === 'default') {
+      return _BSV21_HUMAN_BLOOD_PALETTE[(Math.random() * _BSV21_HUMAN_BLOOD_PALETTE.length) | 0];
+    }
+    return _BSV21_BLOOD[enemyType] || fallbackColor || 0x8B0000;
+  },
+
   update(dt) {
     if (!this.dropIM || !this._pool) return;
+    dt = Math.min(Math.max(dt || 0.016, 0.001), 0.05);
     const matrix = this._matrix;
     const color  = this._color;
 
@@ -254,10 +288,7 @@ const BloodSimulatorV21 = {
         wnd.life -= this._pulseInterval;
         if (wnd.life <= 0) { this._pulseWounds.splice(w, 1); continue; }
         const pulseStr = Math.max(0.2, wnd.life / wnd.maxLife);
-        // Scale count by device tier (MAX_DROPS relative to desktop max of 1200)
-        // so lower-end devices never generate more particles than their pool supports.
-        const tierScale = Math.min(1, this.MAX_DROPS / 1200);
-        const cnt = Math.ceil(18 * pulseStr * tierScale);
+        const cnt = Math.max(2, Math.min(4, Math.round(2 + pulseStr * 2)));
         for (let i = 0; i < cnt; i++) {
           const d = this._pool[this._head];
           this._head = (this._head + 1) % this.MAX_DROPS;
@@ -265,14 +296,33 @@ const BloodSimulatorV21 = {
           d.px = wnd.x + (Math.random() - 0.5) * 0.3;
           d.py = wnd.y;
           d.pz = wnd.z + (Math.random() - 0.5) * 0.3;
-          d.vx = (Math.random() - 0.5) * 4;
-          d.vy = 2.5 + Math.random() * 5.0;
-          d.vz = (Math.random() - 0.5) * 4;
-          d.radius = 0.095 + Math.random() * 0.100; // 2.5x base for visibility
+          d.vx = (Math.random() - 0.5) * 2.8;
+          d.vy = 2.5 + Math.random() * 1.5;
+          d.vz = (Math.random() - 0.5) * 2.8;
+          d.radius = 0.06 + Math.random() * 0.05;
           d.viscosity = 0.72;
           d.life = 2 + Math.random() * 1.5;
           d.onGround = false;
+          d.bounces = 0;
           d.color = wnd.color;
+          // mini trail: 3 droplets trailing behind
+          for (let t = 1; t <= 3; t++) {
+            const tr = this._pool[this._head];
+            this._head = (this._head + 1) % this.MAX_DROPS;
+            tr.alive = true;
+            tr.px = d.px - d.vx * 0.01 * t;
+            tr.py = d.py - 0.03 * t;
+            tr.pz = d.pz - d.vz * 0.01 * t;
+            tr.vx = d.vx * 0.35;
+            tr.vy = Math.max(0, d.vy * 0.35 - t * 0.1);
+            tr.vz = d.vz * 0.35;
+            tr.radius = 0.02 + Math.random() * 0.01;
+            tr.viscosity = 0.78;
+            tr.life = 0.9 + Math.random() * 0.4;
+            tr.onGround = false;
+            tr.bounces = 0;
+            tr.color = wnd.color;
+          }
         }
       }
     }
@@ -288,20 +338,42 @@ const BloodSimulatorV21 = {
         continue;
       }
       if (!d.onGround) {
-        d.vy -= 9.81 * dt * 1.1;
+        d.vy -= 9.8 * dt;
         const speed = Math.hypot(d.vx, d.vy, d.vz);
         const drag  = Math.max(0, 1 - d.viscosity * dt * Math.max(speed, 0.1) * 1.2);
         d.vx *= drag; d.vy *= drag; d.vz *= drag;
         d.px += d.vx * dt; d.py += d.vy * dt; d.pz += d.vz * dt;
-        if (d.py <= 0.015) {
-          d.py = 0.015;
-          d.vy = Math.abs(d.vy) * 0.25;
-          if (d.vy < 0.15) {
+        if (d.py <= 0.05) {
+          d.py = 0.05;
+          if ((d.bounces || 0) < 1) {
+            d.bounces = (d.bounces || 0) + 1;
+            d.vy = Math.abs(d.vy) * 0.25;
+            d.vx *= 0.6; d.vz *= 0.6;
+            this._spawnDecal(d.px, d.pz, d.radius * 8 + 0.05, d.color, 18);
+          } else {
             d.onGround = true;
-            d.vx *= 0.3; d.vz *= 0.3;
+            d.vx *= 0.88; d.vz *= 0.88;
             this._spawnDecal(d.px, d.pz, d.radius * 16 + 0.10, d.color, 30);
+            if (Math.random() < 0.30 && this._rivulets && this._rivulets.length) {
+              const rv = this._rivulets[this._rivuletHead];
+              this._rivuletHead = (this._rivuletHead + 1) % this._rivulets.length;
+              rv.mesh.visible = true;
+              rv.mesh.position.set(d.px, 0.016, d.pz);
+              rv.mesh.rotation.x = -Math.PI / 2;
+              rv.mesh.rotation.z = Math.atan2(d.vz || (Math.random() - 0.5), d.vx || (Math.random() - 0.5));
+              rv.mesh.material.color.setHex(d.color);
+              rv.mesh.material.opacity = 0.68;
+              rv.life = 8;
+              rv.maxLife = 8;
+              rv.mesh.scale.set(1, 1 + Math.random() * 1.4, 1);
+            }
           }
         }
+      } else {
+        d.vx *= Math.max(0, 1 - dt * 2.5);
+        d.vz *= Math.max(0, 1 - dt * 2.5);
+        d.px += d.vx * dt;
+        d.pz += d.vz * dt;
       }
       if (this.player && !d.onGround) {
         const dx = d.px - this.player.position.x;
@@ -364,21 +436,183 @@ const BloodSimulatorV21 = {
         }
       }
     }
+
+    if (this._rivulets) {
+      for (let i = 0; i < this._rivulets.length; i++) {
+        const rv = this._rivulets[i];
+        if (!rv.mesh.visible || rv.life <= 0) continue;
+        rv.life -= dt;
+        if (rv.life <= 0) {
+          rv.mesh.visible = false;
+        } else {
+          rv.mesh.material.opacity = Math.max(0, 0.68 * (rv.life / rv.maxLife));
+          rv.mesh.material.needsUpdate = true;
+        }
+      }
+    }
+
+    if (this._bulletHoleSpurts && this._bulletHoleSpurts.length) {
+      for (let i = this._bulletHoleSpurts.length - 1; i >= 0; i--) {
+        const bh = this._bulletHoleSpurts[i];
+        bh.life -= dt;
+        bh.tick -= dt;
+        if (bh.life <= 0) {
+          this._bulletHoleSpurts.splice(i, 1);
+          continue;
+        }
+        if (bh.tick <= 0) {
+          bh.tick = bh.life > 0.4 ? 0.06 : 0.08;
+          const drops = bh.life > 0.4 ? 10 : (2 + ((Math.random() * 2) | 0));
+          for (let j = 0; j < drops; j++) {
+            const d = this._pool[this._head];
+            this._head = (this._head + 1) % this.MAX_DROPS;
+            const spread = bh.life > 0.4 ? 0.45 : 0.2;
+            d.alive = true;
+            d.px = bh.x + (Math.random() - 0.5) * 0.04;
+            d.py = bh.y + (Math.random() - 0.5) * 0.04;
+            d.pz = bh.z + (Math.random() - 0.5) * 0.04;
+            d.vx = (bh.nx + (Math.random() - 0.5) * spread) * (bh.life > 0.4 ? 12 : 4);
+            d.vy = 1.3 + Math.random() * 2.6;
+            d.vz = (bh.nz + (Math.random() - 0.5) * spread) * (bh.life > 0.4 ? 12 : 4);
+            d.radius = 0.025 + Math.random() * 0.02;
+            d.viscosity = 0.72;
+            d.life = 0.9 + Math.random() * 0.8;
+            d.onGround = false;
+            d.bounces = 0;
+            d.color = bh.color;
+          }
+        }
+      }
+    }
+  },
+
+  emit(x, y, z, count, options) {
+    const opts = options || {};
+    const shotType = opts.shotType || 'pistol';
+    const map = {
+      pistol: { count: 10, spreadXZ: 6, spreadY: 8, radius: 0.03 },
+      shotgun: { count: 22, spreadXZ: 12, spreadY: 10, radius: 0.035 },
+      rifle: { count: 5, spreadXZ: 2, spreadY: 6, radius: 0.03 },
+      uzi: { count: 7, spreadXZ: 7, spreadY: 7, radius: 0.028 },
+      sniper: { count: 3, spreadXZ: 1.2, spreadY: 9, radius: 0.09 },
+      melee: { count: 16, spreadXZ: 10, spreadY: 12, radius: 0.035 }
+    }[shotType] || { count: 10, spreadXZ: 6, spreadY: 8, radius: 0.03 };
+    const finalCount = count || map.count;
+    const emitColor = (opts.color !== undefined && opts.color !== null)
+      ? opts.color
+      : this._pickBloodColor(opts.enemyType || 'human', 0xaa0000);
+    this.rawBurst(x, y, z, finalCount, {
+      spreadXZ: map.spreadXZ,
+      spreadY: map.spreadY,
+      viscosity: opts.viscosity || 0.62,
+      color: emitColor,
+      enemyType: opts.enemyType
+    });
+    if (shotType === 'sniper') {
+      for (let i = 0; i < 6; i++) {
+        this.rawBurst(x, y + 0.05 * i, z, 1, { spreadXZ: 0.8, spreadY: 2, color: opts.color, enemyType: opts.enemyType });
+      }
+    }
+    if (Math.random() < 0.15) {
+      this.rawBurst(x, y, z, 1, { spreadXZ: 0.5, spreadY: 0.5, color: opts.color, enemyType: opts.enemyType });
+      const ad = this._pool[(this._head - 1 + this.MAX_DROPS) % this.MAX_DROPS];
+      ad.vx = (Math.random() - 0.5) * 0.6;
+      ad.vy = 5.0 + Math.random() * 3.0;
+      ad.vz = (Math.random() - 0.5) * 0.6;
+      ad.radius = 0.05 + Math.random() * 0.06;
+    }
+  },
+
+  emitBurst(pos, count, opts) {
+    if (!pos) return;
+    this.emit(pos.x || 0, pos.y || 0, pos.z || 0, count || 8, Object.assign({ shotType: 'pistol' }, opts || {}));
+  },
+
+  emitWaterBurst(pos, count, opts) {
+    if (!pos) return;
+    this.spawnMist(pos.x || 0, (pos.y || 0) + 0.2, pos.z || 0, Math.max(1, Math.min(6, count || 2)), 0x5DADE2);
+  },
+
+  emitWaterPulse(pos, opts) {
+    if (!pos) return;
+    const o = opts || {};
+    const pulses = o.pulses || 3;
+    const perPulse = o.perPulse || 3;
+    for (let i = 0; i < pulses; i++) {
+      this.spawnMist(pos.x || 0, (pos.y || 0) + 0.2 + i * 0.02, pos.z || 0, Math.min(8, perPulse), 0x5DADE2);
+    }
+  },
+
+  emitPulse(pos, opts) { this.emitBurst(pos, (opts && opts.perPulse) || 8, opts || {}); },
+  emitGuts(pos, count) { this.emitBurst(pos, count || 6, { shotType: 'melee', spreadXZ: 7, spreadY: 10 }); },
+  emitDroneMist(pos, dir, count) { if (pos) this.spawnMist(pos.x, (pos.y || 0) + 0.2, pos.z, Math.min(8, count || 4), 0x5DADE2); },
+  emitSwordSlash(pos, dir, count) { this.emitBurst(pos, count || 12, { shotType: 'melee' }); },
+  emitExitWound(pos, dir, count, opts) { this.emitBurst(pos, count || 8, Object.assign({ shotType: 'rifle' }, opts || {})); },
+  emitHeartbeatWound(pos, opts) {
+    if (!pos) return;
+    this.addWoundPulse(pos.x || 0, (pos.y || 0) + ((opts && opts.woundHeight) || 0.5), pos.z || 0, 0xaa0000, 2.0);
+  },
+  emitArterialSpurt(pos, dir, opts) {
+    if (!pos) return;
+    this.arterialJet(pos.x || 0, (pos.y || 0) + 0.1, pos.z || 0, (dir && dir.x) || 1, (dir && dir.z) || 0, (opts && opts.color) || 0xaa0000);
+  },
+
+  emitBulletHole(pos, normal, opts) {
+    if (!pos) return;
+    const o = opts || {};
+    const color = o.color || 0xaa0000;
+    this._spawnDecal(pos.x || 0, pos.z || 0, 0.12 + Math.random() * 0.18, color, 24);
+    const nx = normal && typeof normal.x === 'number' ? -normal.x : (Math.random() - 0.5);
+    const nz = normal && typeof normal.z === 'number' ? -normal.z : (Math.random() - 0.5);
+    this._bulletHoleSpurts.push({ x: pos.x || 0, y: pos.y || 0.1, z: pos.z || 0, nx, nz, color, life: 0.5, tick: 0 });
+  },
+
+  emitPoolGrow(pos, opts) {
+    if (!pos) return;
+    const o = opts || {};
+    this._spawnDecal(pos.x || 0, pos.z || 0, o.maxRadius || 1.2, o.color || 0xaa0000, 60);
+  },
+
+  dispose() {
+    try {
+      if (this.scene && this.dropIM) this.scene.remove(this.dropIM);
+      if (this.scene && this.mistIM) this.scene.remove(this.mistIM);
+      if (this.dropIM) { this.dropIM.geometry.dispose(); this.dropIM.material.dispose(); }
+      if (this.mistIM) { this.mistIM.geometry.dispose(); this.mistIM.material.dispose(); }
+      if (this._decals) {
+        for (let i = 0; i < this._decals.length; i++) {
+          const m = this._decals[i].mesh;
+          if (this.scene && m) this.scene.remove(m);
+          if (m && m.geometry) m.geometry.dispose();
+          if (m && m.material) m.material.dispose();
+        }
+      }
+      if (this._rivulets) {
+        for (let i = 0; i < this._rivulets.length; i++) {
+          const m = this._rivulets[i].mesh;
+          if (this.scene && m) this.scene.remove(m);
+          if (m && m.geometry) m.geometry.dispose();
+          if (m && m.material) m.material.dispose();
+        }
+      }
+    } catch (_e) {}
   },
 
   rawBurst(x, y, z, count, options) {
     if (!this._pool) return;
     count = count || 45;
     options = options || {};
+    const enemyType = options.enemyType || 'human';
     let resolvedColor = options.color;
-    if (!resolvedColor && options.enemyType && _BSV21_BLOOD[options.enemyType]) {
-      resolvedColor = _BSV21_BLOOD[options.enemyType];
+    if (resolvedColor === undefined || resolvedColor === null) {
+      resolvedColor = _BSV21_BLOOD[enemyType] || 0x8B0000;
     }
     const spreadXZ  = options.spreadXZ  || 9;
     const spreadY   = options.spreadY   || 14;
     const viscosity = options.viscosity || 0.62;
     const col       = resolvedColor || 0x8B0000;
-    const n = Math.min(count, this.MAX_DROPS);
+    const _slimeScale = enemyType === 'slime' ? 0.5 : 1.0;
+    const n = Math.min(Math.max(1, Math.round(count * _slimeScale)), this.MAX_DROPS);
     for (let i = 0; i < n; i++) {
       const d = this._pool[this._head];
       this._head = (this._head + 1) % this.MAX_DROPS;
@@ -389,10 +623,12 @@ const BloodSimulatorV21 = {
       d.vx = (Math.random()-0.5)*spreadXZ;
       d.vy = 4 + Math.random()*spreadY;
       d.vz = (Math.random()-0.5)*spreadXZ;
-      d.radius    = 0.3375 + Math.random()*0.4125; // 3x base for maximum visibility
+      d.radius    = 0.04 + Math.random() * 0.08;
       d.viscosity = viscosity;
       d.life      = 5 + Math.random()*3;
       d.onGround  = false;
+      d.bounces   = 0;
+      d.enemyType = enemyType;
       d.color     = col;
     }
   },
@@ -445,8 +681,11 @@ const BloodSimulatorV21 = {
       maxLife: duration||4.0, life: duration||4.0 });
   },
 
-  spawnMist(x, y, z, count, hexColor) {
-    const n = Math.min(count || 6, Math.max(2, Math.floor(this.MAX_MIST / 6)));
+  spawnMist(x, y, z, count, hexColor, enemyType) {
+    const isSlimeMist = enemyType === 'slime' || hexColor === _BSV21_MIST.slime || hexColor === _BSV21_BLOOD.slime;
+    const n = isSlimeMist
+      ? Math.min(3, Math.max(1, count || 2))
+      : Math.min(count || 6, Math.max(2, Math.floor(this.MAX_MIST / 6)));
     for (let i = 0; i < n; i++) {
       this._spawnMist(
         x+(Math.random()-0.5)*0.5, y+0.1+Math.random()*0.4, z+(Math.random()-0.5)*0.5,
@@ -463,13 +702,14 @@ const BloodSimulatorV21 = {
     const mistColor    = (enemy && enemy.enemyType && _BSV21_MIST[enemy.enemyType])
       ? _BSV21_MIST[enemy.enemyType]  : 0xee2200;
 
-    this.rawBurst(hitPoint.x, hitPoint.y, hitPoint.z, burstCount, {
-      spreadXZ: 16, spreadY: 22,
-      viscosity: (enemy && enemy.bloodViscosity) ? enemy.bloodViscosity : 0.62,
-      color: 0xaa0000
+    const enemyType = (enemy && enemy.enemyType) ? enemy.enemyType : 'human';
+    this.emit(hitPoint.x, hitPoint.y, hitPoint.z, burstCount, {
+      shotType: damageType === 'shotgun' ? 'shotgun' : (damageType === 'sniper' ? 'sniper' : (damageType === 'melee' ? 'melee' : (damageType === 'uzi' ? 'uzi' : 'pistol'))),
+      enemyType,
+      viscosity: (enemy && enemy.bloodViscosity) ? enemy.bloodViscosity : 0.62
     });
     // Reduced mist — only a light haze on impact
-    this.spawnMist(hitPoint.x, hitPoint.y+0.3, hitPoint.z, isProjectile ? 6 : 3, mistColor);
+    this.spawnMist(hitPoint.x, hitPoint.y+0.3, hitPoint.z, isProjectile ? 6 : 3, mistColor, enemyType);
     if (isProjectile || damageType === 'sword') {
       this.arterialJet(hitPoint.x, hitPoint.y+0.4, hitPoint.z,
         (Math.random()-0.5), (Math.random()-0.5), 0xaa0000);
@@ -482,8 +722,9 @@ const BloodSimulatorV21 = {
     const mistColor  = (enemy && enemy.enemyType && _BSV21_MIST[enemy.enemyType])
       ? _BSV21_MIST[enemy.enemyType]  : 0xee2200;
 
-    this.rawBurst(position.x, position.y+0.8, position.z, 600,
-      { spreadXZ: 22, spreadY: 32, viscosity: 0.50, color: 0xaa0000 });
+    const enemyType = (enemy && enemy.enemyType) ? enemy.enemyType : 'human';
+    this.emit(position.x, position.y+0.8, position.z, 600,
+      { shotType: 'shotgun', spreadXZ: 22, spreadY: 32, viscosity: 0.50, enemyType });
     // 6 jets spread evenly — fan of arterial sprays
     for (let jet = 0; jet < 6; jet++) {
       const ang = (jet / 6) * Math.PI * 2;
@@ -491,7 +732,7 @@ const BloodSimulatorV21 = {
         Math.cos(ang), Math.sin(ang), 0xaa0000);
     }
     // Minimal mist on death — just enough for atmosphere
-    this.spawnMist(position.x, position.y+0.6, position.z, 10, mistColor);
+    this.spawnMist(position.x, position.y+0.6, position.z, 10, mistColor, enemyType);
     // Larger, more dramatic ground decal
     this._spawnDecal(position.x, position.z, 2.5+Math.random()*1.2, 0xaa0000, 60);
     this.addWoundPulse(position.x, position.y+0.5, position.z, 0xaa0000, 9.0);
