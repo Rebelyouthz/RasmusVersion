@@ -3,6 +3,8 @@
 // Depends on: all previously loaded game files
 
 // --- GAME LOGIC ---
+const SANDBOX_BGM_TRACK = 'guitarbagpipe-synapse.mp3';
+const SANDBOX_BGM_VOLUME = 0.25;
 
 function init() {
   console.log('[Init] Starting game initialization...');
@@ -801,7 +803,7 @@ function setupMenus() {
       var shown = gameoverScreen.style.display && gameoverScreen.style.display !== 'none';
       if (shown) _stopBgm();
     });
-    gameoverScreen._bgmObserver.observe(gameoverScreen, { attributes: true, attributeFilter: ['style', 'class'] });
+    gameoverScreen._bgmObserver.observe(gameoverScreen, { attributes: true, attributeFilter: ['style'] });
   }
 }
 
@@ -852,7 +854,7 @@ function hideMainMenu() {
 function startGame() {
   if (window.CampWorld) window.CampWorld.exit();
   if (window.GameAudio && window.GameAudio.playBackgroundMusic) {
-    window.GameAudio.playBackgroundMusic('guitarbagpipe-synapse.mp3', 0.25);
+    window.GameAudio.playBackgroundMusic(SANDBOX_BGM_TRACK, SANDBOX_BGM_VOLUME);
   }
   const campScreenEl = document.getElementById('camp-screen');
   if (campScreenEl) campScreenEl.classList.remove('camp-3d-mode');

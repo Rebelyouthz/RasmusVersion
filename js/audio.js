@@ -1082,7 +1082,11 @@ function playBackgroundMusic(url, volume = 0.35, loop = true) {
     if (playPromise && typeof playPromise.catch === 'function') {
       playPromise.catch(() => {
         const resume = () => {
-          if (_bgmAudio) _bgmAudio.play().catch(() => {});
+          if (_bgmAudio) {
+            _bgmAudio.play().catch((err) => {
+              console.warn('[Audio] BGM resume blocked:', err);
+            });
+          }
           document.removeEventListener('pointerdown', resume);
         };
         document.addEventListener('pointerdown', resume);

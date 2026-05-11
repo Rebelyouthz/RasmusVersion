@@ -23,6 +23,8 @@
   const PLAYER_SPEED = 7.0;                    // units per second
   const PLAYER_RADIUS = 0.55;
   const INTERACTION_RADIUS = 5.5;             // proximity to trigger interact
+  const CAMP_BGM_TRACK = 'Waterdrop survivor .mp3';
+  const CAMP_BGM_VOLUME = 0.3;
 
   // Building layout (id → world position + label)
   const BUILDING_DEFS = [
@@ -7318,7 +7320,7 @@
 
     _isActive = true;
     if (window.GameAudio && window.GameAudio.playBackgroundMusic) {
-      window.GameAudio.playBackgroundMusic('Waterdrop survivor .mp3', 0.3);
+      window.GameAudio.playBackgroundMusic(CAMP_BGM_TRACK, CAMP_BGM_VOLUME);
     }
     if (typeof window._syncJoystickZone === 'function') window._syncJoystickZone();
   }
