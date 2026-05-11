@@ -7317,6 +7317,9 @@
     }
 
     _isActive = true;
+    if (window.GameAudio && window.GameAudio.playBackgroundMusic) {
+      window.GameAudio.playBackgroundMusic('Waterdrop survivor .mp3', 0.3);
+    }
     if (typeof window._syncJoystickZone === 'function') window._syncJoystickZone();
   }
 
@@ -7326,6 +7329,9 @@
    */
   function exit() {
     _isActive = false;
+    if (window.GameAudio && window.GameAudio.stopBackgroundMusic) {
+      window.GameAudio.stopBackgroundMusic();
+    }
     _aidaCinematicLock = false; // always clear on exit — prevents phantom freeze next visit
     _aidaOrbitWaitingForDialogue = false; // clear deferred dialogue flag on exit
     // Reset robot orbit/walk state machines so mid-orbit exits don't leave stale

@@ -726,6 +726,11 @@ function init() {
 function setupMenus() {
   var startBtn = document.getElementById('start-game-btn');
   var campBtn  = document.getElementById('camp-btn');
+  var _stopBgm = function () {
+    if (window.GameAudio && window.GameAudio.stopBackgroundMusic) {
+      window.GameAudio.stopBackgroundMusic();
+    }
+  };
 
   function _showCamp() {
     var mainMenu = document.getElementById('main-menu');
@@ -760,6 +765,7 @@ function setupMenus() {
     gotoCampBtn.addEventListener('click', function() {
       var gameoverScreen = document.getElementById('gameover-screen');
       if (gameoverScreen) gameoverScreen.style.display = 'none';
+      _stopBgm();
       window._campFromRun = true; // Flag used by quest-system.js to delay the account level-up curtain by 3s on return from a run
       _showCamp();
     });
@@ -771,6 +777,7 @@ function setupMenus() {
     quitMenuBtn.addEventListener('click', function() {
       var gameoverScreen = document.getElementById('gameover-screen');
       if (gameoverScreen) gameoverScreen.style.display = 'none';
+      _stopBgm();
       _showCamp();
     });
   }
@@ -782,9 +789,19 @@ function setupMenus() {
     restartBtn.addEventListener('click', function() {
       var gameoverScreen = document.getElementById('gameover-screen');
       if (gameoverScreen) gameoverScreen.style.display = 'none';
+      _stopBgm();
       window._campFromRun = true;
       _showCamp();
     });
+  }
+
+  var gameoverScreen = document.getElementById('gameover-screen');
+  if (gameoverScreen && !gameoverScreen._bgmObserver) {
+    gameoverScreen._bgmObserver = new MutationObserver(function() {
+      var shown = gameoverScreen.style.display && gameoverScreen.style.display !== 'none';
+      if (shown) _stopBgm();
+    });
+    gameoverScreen._bgmObserver.observe(gameoverScreen, { attributes: true, attributeFilter: ['style', 'class'] });
   }
 }
 
@@ -834,6 +851,9 @@ function hideMainMenu() {
 
 function startGame() {
   if (window.CampWorld) window.CampWorld.exit();
+  if (window.GameAudio && window.GameAudio.playBackgroundMusic) {
+    window.GameAudio.playBackgroundMusic('guitarbagpipe-synapse.mp3', 0.25);
+  }
   const campScreenEl = document.getElementById('camp-screen');
   if (campScreenEl) campScreenEl.classList.remove('camp-3d-mode');
   document.getElementById('main-menu').style.display = 'none';
