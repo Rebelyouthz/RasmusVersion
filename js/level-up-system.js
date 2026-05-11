@@ -1894,25 +1894,44 @@ window.spawnBossChest = function(x, z) {
             greenEdge.classList.add('animating');
           }
 
-          // Phase 2: After edge animation (1.0s), zoom card up
+          // Phase 2: After edge animation, zoom card up
           setTimeout(() => {
             // Zoom chosen card up
             card.style.transition = 'transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s';
             card.style.transform = 'scale(1.35) translateY(-25px)';
             card.style.zIndex = '200';
 
-            // Dim and suck other cards + modal bg into center hole
+            // Vortex spiral for rejected cards
             allCards.forEach(c => {
               if (c !== card) {
                 const rejectedCard = c;
-                const randX = (Math.random() > 0.5 ? 1 : -1) * (50 + Math.random() * 150);
-                const randY = (Math.random() > 0.5 ? 1 : -1) * (50 + Math.random() * 150);
-                const randAngle = (Math.random() - 0.5) * 720;
-                rejectedCard.style.transition = 'transform 0.4s ease-in, opacity 0.4s ease-in';
-                rejectedCard.style.transform = `translate(${randX}vw, ${randY}vh) scale(0) rotate(${randAngle}deg)`;
+                const rect = rejectedCard.getBoundingClientRect();
+                const cardCX = rect.left + rect.width / 2;
+                const cardCY = rect.top + rect.height / 2;
+                const offsetX = window.innerWidth / 2 - cardCX;
+                const offsetY = window.innerHeight / 2 - cardCY;
+                rejectedCard.style.transition = 'transform 0.4s cubic-bezier(0.55, 0, 1, 0.45), opacity 0.3s ease-in';
+                rejectedCard.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(0) rotate(540deg)`;
                 rejectedCard.style.opacity = '0';
               }
             });
+
+            // Vortex dark disc at screen center
+            const vortexEl = document.createElement('div');
+            vortexEl.style.cssText = [
+              'position:fixed', 'top:50%', 'left:50%',
+              'width:0', 'height:0',
+              'border-radius:50%',
+              'background:radial-gradient(circle at center, rgba(0,0,0,0.95) 0%, rgba(20,0,40,0.85) 50%, transparent 100%)',
+              'transform:translate(-50%,-50%)',
+              'transition:width 0.4s ease-in,height 0.4s ease-in',
+              'pointer-events:none',
+              'z-index:10000',
+            ].join(';');
+            document.body.appendChild(vortexEl);
+            requestAnimationFrame(() => { vortexEl.style.width = '320px'; vortexEl.style.height = '320px'; });
+            setTimeout(() => { if (vortexEl.parentNode) vortexEl.parentNode.removeChild(vortexEl); }, 550);
+
             // Suck the modal background out
             const modalContent = modal.querySelector('.modal-content');
             if (modalContent) {
@@ -1921,7 +1940,7 @@ window.spawnBossChest = function(x, z) {
               modalContent.style.opacity = '0';
             }
 
-            // Phase 3: After zoom (0.5s), apply the upgrade and do shard explosion
+            // Phase 3: After zoom, apply the upgrade and do shard explosion
             setTimeout(() => {
               // Apply upgrade
               try {
@@ -2039,8 +2058,8 @@ window.spawnBossChest = function(x, z) {
                 lastHudUpdateMs = 0; // Force HUD refresh after level-up
                 updateHUD();
               }, 200); // 0.2s after shards
-            }, 350); // shard explosion duration
-          }, 1100); // 1.0s green edge + 0.1s zoom
+            }, 180); // shard explosion duration
+          }, 500); // green edge + zoom
         };
 
         let holdTimer = null;
@@ -2085,9 +2104,10 @@ window.spawnBossChest = function(x, z) {
             activeHold = null;
             // Guard: only apply if the modal is still visible and card is still selected
             if (card.dataset.selected === '1' && modal.style.display !== 'none') {
+              if (window.GameAudio && window.GameAudio.playSound) window.GameAudio.playSound('card_select');
               applyUpgradeAndClose();
             }
-          }, 400);
+          }, 200);
           activeHold = { timer: holdTimer, card };
         });
 
@@ -2121,7 +2141,7 @@ window.spawnBossChest = function(x, z) {
         void cardInners[i].offsetHeight;
         cardInners[i].style.visibility = 'visible';
         requestAnimationFrame(() => requestAnimationFrame(() => {
-          cardInners[i].style.transition = 'transform 0.7s cubic-bezier(0.25,0.46,0.45,0.94)';
+          cardInners[i].style.transition = 'transform 0.18s cubic-bezier(0.25,0.46,0.45,0.94)';
         }));
       }
 
@@ -2190,6 +2210,7 @@ window.spawnBossChest = function(x, z) {
             setTimeout(function () {
               ci.style.transition = 'transform 0.32s cubic-bezier(0.55, 0, 0.45, 1)';
               ci.style.transform  = 'scale(1.14) translateZ(40px) rotateY(360deg)';
+              if (window.GameAudio && window.GameAudio.playSound) window.GameAudio.playSound('card_flip');
             }, base + 280);
 
             // Phase 3 — Smack squash on landing

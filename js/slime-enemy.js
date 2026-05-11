@@ -362,6 +362,13 @@ var dist = Math.sqrt(dx*dx + dz*dz) + 0.001;
 // Hop movement — slimes bounce slightly as they move
 this.wobblePhase += dt * SLIME_CFG.WOBBLE_SPEED;
 var hopY = Math.max(0, Math.sin(this.wobblePhase) * 0.08);
+// Throttled hop sound — play once per hop peak
+if (!this._hopSoundCooldown) this._hopSoundCooldown = 0;
+this._hopSoundCooldown -= dt;
+if (hopY > 0.06 && this._hopSoundCooldown <= 0) {
+  if (window.GameAudio) window.GameAudio.playSound('slime_hop');
+  this._hopSoundCooldown = 0.4;
+}
 this.vx += (dx/dist) * this.speed * dt * 8.0;
 this.vz += (dz/dist) * this.speed * dt * 8.0;
 // Cap speed
@@ -552,6 +559,7 @@ global.BloodV2.hit(this, weaponKey, hitPoint, hitNormal);
 if (global.GoreSim && typeof global.GoreSim.onHit === 'function') {
 global.GoreSim.onHit(this, weaponKey, hitPoint, hitNormal);
 }
+if (window.GameAudio) window.GameAudio.playSound('slime_hit');
 
 // ── Check death
 if (this.hp <= 0) {
@@ -1169,6 +1177,7 @@ this.hp       = 0;
 this.speed    = 0;
 this.state    = 'dying';
 this.deathTimer = 0;
+if (window.GameAudio) window.GameAudio.playSound('slime_die');
 
 if (global.BloodV2) {
 global.BloodV2.kill(this, wk);

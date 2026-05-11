@@ -2084,6 +2084,7 @@
   function _insertAidaChip() {
     if (!_aidaIntroState.chipPickedUp || _aidaIntroState.chipInserted) return;
     _aidaIntroState.chipInserted = true;
+    if (window.GameAudio && window.GameAudio.playSound) window.GameAudio.playSound('aida_chip_insert');
 
     const sd = (typeof saveData !== 'undefined') ? saveData : null;
     if (sd) {
@@ -4957,8 +4958,8 @@
     // is teleported to a known-good location rather than world origin.
     if (!Number.isFinite(_playerVel.x)) _playerVel.x = 0;
     if (!Number.isFinite(_playerVel.z)) _playerVel.z = 0;
-    if (!Number.isFinite(_playerPos.x)) _playerPos.x = SPAWN_POS.x;
-    if (!Number.isFinite(_playerPos.z)) _playerPos.z = SPAWN_POS.z;
+    if (!Number.isFinite(_playerPos.x)) _playerPos.x = _lastValidPlayerX;
+    if (!Number.isFinite(_playerPos.z)) _playerPos.z = _lastValidPlayerZ;
 
     // Clamp
     _playerPos.x = Math.max(-38, Math.min(38, _playerPos.x));
@@ -4973,8 +4974,8 @@
     }
 
     // Apply position to mesh — NaN-guarded so no corrupt value ever reaches WebGL
-    _playerMesh.position.x = isFinite(_playerPos.x) ? _playerPos.x : SPAWN_POS.x;
-    _playerMesh.position.z = isFinite(_playerPos.z) ? _playerPos.z : SPAWN_POS.z;
+    _playerMesh.position.x = isFinite(_playerPos.x) ? _playerPos.x : _lastValidPlayerX;
+    _playerMesh.position.z = isFinite(_playerPos.z) ? _playerPos.z : _lastValidPlayerZ;
 
     // Rotation toward movement direction — crisp and responsive
     const speed = Math.sqrt(_playerVel.x * _playerVel.x + _playerVel.z * _playerVel.z);

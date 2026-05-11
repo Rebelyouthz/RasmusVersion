@@ -373,6 +373,7 @@
             this._prevState = this.state;
             this._setState(attackState);
             this._dealDamage();
+            if (window.GameAudio) window.GameAudio.playSound('skinwalker_screech');
             return;
         }
 
@@ -522,6 +523,12 @@
         p.hand_L.rotation.z = Math.sin(t * 4.1) * 0.06 + Math.sin(t * 7.3) * 0.03;
         p.hand_R.rotation.z = Math.sin(t * 3.7) * 0.05 + Math.sin(t * 6.9) * 0.03;
         p.jaw.rotation.x    = 0.18 + Math.sin(t * 0.4) * 0.02;
+        // Throttled ambient growl: only play if more than 3 seconds have passed
+        if (!this._lastGrowlTime) this._lastGrowlTime = 0;
+        if (this.animTime - this._lastGrowlTime > 3) {
+            this._lastGrowlTime = this.animTime;
+            if (window.GameAudio) window.GameAudio.playSound('skinwalker_growl');
+        }
     };
 
     // ---- ANIMATION 2: UPRIGHT WALK ----
