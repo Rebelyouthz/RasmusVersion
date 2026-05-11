@@ -37,16 +37,9 @@ function init() {
 
   if (typeof window._ensureEntityPools === 'function') window._ensureEntityPools();
   if (window.BloodSimulatorV21 && typeof THREE !== 'undefined') {
-    // V21 is present — disable legacy systems to prevent conflicts, then init V21
-    window.BloodV2 = null;
-    window.GoreSim = null;
-    window.GoreSimulator = null;
-    window.TraumaSystem = null;
     window.BloodSimulatorV21.init(scene, null, null);
-  } else {
-    // V21 not available — fall back to legacy blood systems
-    if (window.BloodV2 && typeof THREE !== 'undefined') window.BloodV2.init(scene);
-    if (window.TraumaSystem && typeof THREE !== 'undefined') window.TraumaSystem.init(scene);
+  } else if (window.BloodV2 && typeof window.BloodV2.init === 'function') {
+    window.BloodV2.init(scene);
   }
   if (window.GameObjectPool) window.GameObjectPool.prewarm();
   console.log('[Init] Scene created OK');
@@ -57,10 +50,6 @@ function init() {
   camera.position.set(RENDERER_CONFIG.cameraPositionX, RENDERER_CONFIG.cameraPositionY, RENDERER_CONFIG.cameraPositionZ);
   camera.lookAt(scene.position);
   console.log('[Init] Camera created OK');
-
-  // Init GoreSim after camera is created (needs camera reference for billboard effects)
-  // Only when V21 is not present — if V21 was inited above, GoreSim was already nulled.
-  if (window.GoreSim && typeof THREE !== 'undefined') window.GoreSim.init(scene, camera);
 
   renderer = new THREE.WebGLRenderer({
     antialias: true,

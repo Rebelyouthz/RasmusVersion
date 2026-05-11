@@ -165,7 +165,8 @@
   let _aidaOrbitActive = false;
   let _aidaOrbitAngle = 0;
   let _aidaOrbitDone = false;
-  let _lastValidPlayerX = 0, _lastValidPlayerZ = 0;
+  let _lastValidPlayerX = 12;
+  let _lastValidPlayerZ = 0;
   // Robot walk-to-quest-hall animation (triggered after lap completes)
   let _robotWalkToQuestHall = false;
   let _robotWalkT = 0;
@@ -4960,6 +4961,8 @@
     // Clamp
     _playerPos.x = Math.max(-38, Math.min(38, _playerPos.x));
     _playerPos.z = Math.max(-38, Math.min(38, _playerPos.z));
+    if (Number.isFinite(_playerPos.x)) _lastValidPlayerX = _playerPos.x;
+    if (Number.isFinite(_playerPos.z)) _lastValidPlayerZ = _playerPos.z;
 
     // Update action timer
     if (_campActionAnim) {
@@ -7732,13 +7735,7 @@
     if (Number.isFinite(_playerMesh.position.x) && Number.isFinite(_playerMesh.position.z)) {
       _lastValidPlayerX = _playerMesh.position.x;
       _lastValidPlayerZ = _playerMesh.position.z;
-    }
-    // Global NaN shield: if any player position coordinate is corrupted, restore last valid ground position.
-    if (
-      !Number.isFinite(_playerMesh.position.x) ||
-      !Number.isFinite(_playerMesh.position.y) ||
-      !Number.isFinite(_playerMesh.position.z)
-    ) {
+    } else {
       _playerMesh.position.set(_lastValidPlayerX, 0, _lastValidPlayerZ);
     }
     // Clamp dt FIRST so every sub-update receives a finite, safe value.

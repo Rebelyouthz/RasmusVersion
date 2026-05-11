@@ -2142,6 +2142,8 @@ window.spawnBossChest = function(x, z) {
         }
 
         // ── Show modal container ──────────────────────────────────────────────
+        const upgradeList = document.getElementById('upgrade-list');
+        if (upgradeList) upgradeList.style.opacity = '0';
         modal.style.display = 'flex';
         modal.style.opacity = '0';
         // Reset any leftover animation from a previous open so wallFadeIn always
@@ -2149,6 +2151,9 @@ window.spawnBossChest = function(x, z) {
         modal.style.animation = 'none';
         void modal.offsetHeight; // force reflow to commit 'none' before re-adding
         modal.style.animation = 'wallFadeIn 0.32s cubic-bezier(0.22,1,0.36,1) forwards';
+        setTimeout(() => {
+          if (upgradeList) upgradeList.style.opacity = '1';
+        }, 320);
 
         // ── Card flip sequencer (complete rewrite) ────────────────────────────
         // Single, flat sequence — no nested setTimeouts fighting each other.
