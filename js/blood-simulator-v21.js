@@ -107,10 +107,6 @@ const BloodSimulatorV21 = {
   },
 
   init(scene, terrainMesh, player) {
-    // Kill any legacy blood/gore systems that may linger from old saves or cached scripts.
-    window.BloodV2 = null;
-    window.GoreSimulator = null;
-
     this.scene = scene;
     this.terrainMesh = terrainMesh;
     this.player = player;
@@ -167,6 +163,9 @@ const BloodSimulatorV21 = {
     this.mistIM.instanceColor = new THREE.InstancedBufferAttribute(
       new Float32Array(this.MAX_MIST * 3), 3);
     scene.add(this.mistIM);
+    this._dropIM = this.dropIM;
+    this._dropData = this._pool;
+    this._mistIM = this.mistIM;
 
     // Ground decal pool
     this._decals = [];
@@ -502,7 +501,112 @@ const BloodSimulatorV21 = {
   // Single source of truth — avoids duplicating _BSV21_BLOOD elsewhere.
   getEnemyBloodColor(enemyType) {
     return (enemyType && _BSV21_BLOOD[enemyType]) ? _BSV21_BLOOD[enemyType] : 0xcc1100;
+  },
+
+  hit(enemy, weaponKey, hitPoint) {
+    const pos = hitPoint || (enemy && enemy.mesh && enemy.mesh.position) || { x: 0, y: 0, z: 0 };
+    this.onEnemyHit(enemy || { enemyType: 'default' }, { x: pos.x || 0, y: pos.y || 0, z: pos.z || 0 }, weaponKey);
+  },
+
+  kill(enemy, weaponKey, hitPoint) {
+    const pos = hitPoint || (enemy && enemy.mesh && enemy.mesh.position) || { x: 0, y: 0, z: 0 };
+    this.onEnemyDeath(enemy || { enemyType: 'default' }, { x: pos.x || 0, y: pos.y || 0, z: pos.z || 0 }, weaponKey);
+  },
+
+  rawBurstUpward(x, y, z, count, opts) {
+    const o = opts || {};
+    this.rawBurst(x, y, z, count, Object.assign({}, o, { spreadY: Math.max(8, o.spreadY || 0) }));
+  },
+
+  smearBlood(x1, y1, z1, x2, y2, z2, count, color) {
+    const mx = (x1 + x2) * 0.5;
+    const my = (y1 + y2) * 0.5;
+    const mz = (z1 + z2) * 0.5;
+    this.rawBurst(mx, my, mz, Math.max(6, count || 10), {
+      spreadXZ: 4,
+      spreadY: 6,
+      viscosity: 0.75,
+      color: color || 0xaa0000
+    });
+    this._spawnDecal(mx, mz, 0.45 + Math.random() * 0.25, color || 0xaa0000, 30);
+  },
+
+  getMeshes() {
+    return {
+      drops: this.dropIM || null,
+      mist: this.mistIM || null,
+    };
+  },
+
+  setParticleEffects(enabled) {
+    this._particleEffectsEnabled = enabled !== false;
+  },
+
+  addEnemyBlood(enemyType, colors) {
+    if (!enemyType || !colors) return;
+    _BSV21_BLOOD[enemyType] = colors.base || colors.dark || colors.organ || colors.mist || 0xcc1100;
+    _BSV21_MIST[enemyType] = colors.mist || colors.base || 0xee2200;
   }
 };
 
 window.BloodSimulatorV21 = BloodSimulatorV21;
+window.BloodV2 = BloodSimulatorV21;
+window.BloodV2.ENEMY_BLOOD = window.BloodV2.ENEMY_BLOOD || {};
+Object.keys(_BSV21_BLOOD).forEach((enemyType) => {
+  const base = _BSV21_BLOOD[enemyType];
+  const mist = _BSV21_MIST[enemyType] || base;
+  window.BloodV2.ENEMY_BLOOD[enemyType] = { base, dark: base, organ: base, mist };
+});
+if (!window.BloodV2.ENEMY_BLOOD.default) {
+  window.BloodV2.ENEMY_BLOOD.default = { base: 0xcc1100, dark: 0xaa0000, organ: 0xcc1100, mist: 0xee2200 };
+}
+window.BloodSystem = window.BloodV2;
+
+if (!window.GoreSim) {
+  window.GoreSim = {
+    init() {},
+    update() {},
+    reset() {},
+    onHit(enemy, weaponKey, hitPoint) { window.BloodSimulatorV21.hit(enemy, weaponKey, hitPoint); },
+    onKill(enemy, weaponKey, hitPoint) { window.BloodSimulatorV21.kill(enemy, weaponKey, hitPoint); },
+  };
+}
+window.GoreSimulator = window.GoreSim;
+
+if (!window.TraumaSystem) {
+  window.TraumaSystem = {
+    init() {},
+    update() {},
+    startArterialPump(position, dirX, dirY, dirZ, color) {
+      if (!position) return;
+      window.BloodSimulatorV21.arterialJet(position.x, position.y + 0.1, position.z, dirX || 0, dirZ || 0, color || 0xaa0000);
+    },
+    shotgunBlast(position, blastDir, enemyColor) {
+      if (!position) return;
+      window.BloodSimulatorV21.rawBurst(position.x, position.y, position.z, 40, {
+        spreadXZ: 10,
+        spreadY: 12,
+        color: enemyColor || 0xaa0000
+      });
+      if (blastDir) {
+        window.BloodSimulatorV21.arterialJet(position.x, position.y + 0.1, position.z, blastDir.x || 0, blastDir.z || 0, enemyColor || 0xaa0000);
+      }
+    },
+    swordCleave(position, sliceAxisX, sliceAxisZ, enemyColor) {
+      if (!position) return;
+      window.BloodSimulatorV21.smearBlood(
+        position.x - (sliceAxisX || 1) * 0.5, position.y + 0.1, position.z - (sliceAxisZ || 0) * 0.5,
+        position.x + (sliceAxisX || 1) * 0.5, position.y + 0.1, position.z + (sliceAxisZ || 0) * 0.5,
+        18, enemyColor || 0xaa0000
+      );
+    },
+    explosiveGib(position, enemyColor) {
+      if (!position) return;
+      window.BloodSimulatorV21.rawBurst(position.x, position.y, position.z, 80, {
+        spreadXZ: 16,
+        spreadY: 20,
+        color: enemyColor || 0xaa0000
+      });
+    }
+  };
+}

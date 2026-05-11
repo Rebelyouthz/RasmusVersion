@@ -36,12 +36,10 @@ function init() {
   );
 
   if (typeof window._ensureEntityPools === 'function') window._ensureEntityPools();
-  window.BloodV2 = null;
-  window.GoreSim = null;
-  window.GoreSimulator = null;
-  window.TraumaSystem = null;
   if (window.BloodSimulatorV21 && typeof THREE !== 'undefined') {
     window.BloodSimulatorV21.init(scene, null, null);
+  } else if (window.BloodV2 && typeof window.BloodV2.init === 'function') {
+    window.BloodV2.init(scene);
   }
   if (window.GameObjectPool) window.GameObjectPool.prewarm();
   console.log('[Init] Scene created OK');
