@@ -1267,32 +1267,6 @@ case 'slime_explode':
   }
   break;
 
-case 'head_tear':
-  if (data.phase === 'head_launch') {
-    data.headVy -= 9.81 * dt;
-    data.headY += data.headVy * dt;
-    pos.y = Math.max(0.03, pos.y - dt * 1.3);
-    this.mesh.scale.set(this.scale * 1.2, Math.max(0.02, this.scale * 0.55), this.scale * 1.2);
-    if (this.eyeL) {
-      this.eyeL.position.y = (this.eyeL.position.y || 0) + data.headVy * dt * 0.55;
-      this.eyeR.position.y = (this.eyeR.position.y || 0) + data.headVy * dt * 0.55;
-      if (data.headY <= 0.08 && data.headVy < 0 && !data._headBounced) {
-        data._headBounced = true;
-        data.headVy = Math.abs(data.headVy) * 0.35;
-      }
-    }
-    if (this.deathTimer > 1.3) this._finishDeath();
-  }
-  break;
-
-case 'slime_explode':
-  if (!data._exploded) {
-    data._exploded = true;
-    this.mesh.visible = false;
-  }
-  if (this.deathTimer > 1.5) this._finishDeath();
-  break;
-
 // ── 2. NEURAL MELT (brain death) ─────────────────────────────
 case 'neural_melt':
   // Cross-eyes → wobble → melt from top down
@@ -1467,6 +1441,32 @@ case 'standard_collapse':
     data.meltProgress = (data.meltProgress||0) + dt * 0.6;
     if ((data.meltProgress||0) > 1.0) this._finishDeath();
   }
+  break;
+
+case 'head_tear':
+  if (data.phase === 'head_launch') {
+    data.headVy -= 9.81 * dt;
+    data.headY += data.headVy * dt;
+    pos.y = Math.max(0.03, pos.y - dt * 1.3);
+    this.mesh.scale.set(this.scale * 1.2, Math.max(0.02, this.scale * 0.55), this.scale * 1.2);
+    if (this.eyeL) {
+      this.eyeL.position.y = (this.eyeL.position.y || 0) + data.headVy * dt * 0.55;
+      this.eyeR.position.y = (this.eyeR.position.y || 0) + data.headVy * dt * 0.55;
+      if (data.headY <= 0.08 && data.headVy < 0 && !data._headBounced) {
+        data._headBounced = true;
+        data.headVy = Math.abs(data.headVy) * 0.35;
+      }
+    }
+    if (this.deathTimer > 1.3) this._finishDeath();
+  }
+  break;
+
+case 'slime_explode':
+  if (!data._exploded) {
+    data._exploded = true;
+    this.mesh.visible = false;
+  }
+  if (this.deathTimer > 1.5) this._finishDeath();
   break;
 
 case 'neural_melt':

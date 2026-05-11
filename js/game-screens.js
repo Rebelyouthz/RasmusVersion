@@ -19,6 +19,10 @@ const _activePowerUps = [];
 let _powerUpHudEl = null;
 let _powerUpUpdateTimer = null;
 let _powerUpGeo = null;
+function _toCssHexColor(v) {
+  const safe = Math.max(0, Math.min(0xFFFFFF, (v >>> 0) & 0xFFFFFF));
+  return `#${safe.toString(16).padStart(6, '0')}`;
+}
 
 function _ensurePowerUpHud() {
   if (_powerUpHudEl) return _powerUpHudEl;
@@ -51,7 +55,7 @@ function _applyPowerUp(pu) {
   showStatChange(`${pu.icon} ${pu.name}${pu.duration > 0 ? ` (${pu.duration}s)` : ''}`);
   if (pu.duration > 0) {
     _activePowerUps.push({
-      id: pu.id, icon: pu.icon, name: pu.name, color: `#${pu.color.toString(16).padStart(6,'0')}`,
+      id: pu.id, icon: pu.icon, name: pu.name, color: _toCssHexColor(pu.color),
       duration: pu.duration, expiresAt: Date.now() + pu.duration * 1000
     });
   }
