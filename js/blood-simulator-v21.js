@@ -697,12 +697,22 @@ const BloodSimulatorV21 = {
 
   onEnemyHit(enemy, hitPoint, damageType) {
     const isProjectile = (typeof damageType === 'string') && damageType !== 'melee';
+    const enemyType = (enemy && enemy.enemyType) ? enemy.enemyType : 'human';
+
+    // Slimes get a smaller, melee-style burst to avoid excessive green particles
+    if (enemy && enemy.enemyType === 'slime') {
+      this.emit(hitPoint.x, hitPoint.y, hitPoint.z, 8, {
+        shotType: 'melee', enemyType, viscosity: 0.62
+      });
+      const mistColor = _BSV21_MIST.slime || 0x55ff66;
+      this.spawnMist(hitPoint.x, hitPoint.y + 0.3, hitPoint.z, 2, mistColor, 'slime');
+      return;
+    }
+
     // More blood drops on every hit — fewer mist particles to keep the look clean.
     const burstCount   = isProjectile ? 350 : 250;
     const mistColor    = (enemy && enemy.enemyType && _BSV21_MIST[enemy.enemyType])
       ? _BSV21_MIST[enemy.enemyType]  : 0xee2200;
-
-    const enemyType = (enemy && enemy.enemyType) ? enemy.enemyType : 'human';
     this.emit(hitPoint.x, hitPoint.y, hitPoint.z, burstCount, {
       shotType: damageType === 'shotgun' ? 'shotgun' : (damageType === 'sniper' ? 'sniper' : (damageType === 'melee' ? 'melee' : (damageType === 'uzi' ? 'uzi' : 'pistol'))),
       enemyType,
@@ -791,8 +801,22 @@ const BloodSimulatorV21 = {
 };
 
 window.BloodSimulatorV21 = BloodSimulatorV21;
-window.BloodV2 = BloodSimulatorV21;
-window.BloodV2.ENEMY_BLOOD = window.BloodV2.ENEMY_BLOOD || {};
+// BloodV2 shim — inherits all BloodSimulatorV21 methods via prototype but hides
+// init() to prevent accidental re-initialisation via window.BloodV2.init(scene).
+// window.BloodSimulatorV21.init(scene) remains the canonical initialisation path.
+window.BloodV2 = Object.create(BloodSimulatorV21);
+// BloodV2.init delegates to BloodSimulatorV21.init with an idempotent guard so that
+// sandbox-loop.js (which calls window.BloodV2.init(scene)) correctly initialises the
+// blood system while duplicate calls (e.g. from game-screens.js which already called
+// window.BloodSimulatorV21.init) are silently skipped.
+Object.defineProperty(window.BloodV2, 'init', {
+  value: function(scene) {
+    if (BloodSimulatorV21.scene) return; // already initialised — skip
+    BloodSimulatorV21.init(scene, null, null);
+  },
+  writable: false, configurable: true, enumerable: false
+});
+window.BloodV2.ENEMY_BLOOD = {};
 Object.keys(_BSV21_BLOOD).forEach((enemyType) => {
   const base = _BSV21_BLOOD[enemyType];
   const mist = _BSV21_MIST[enemyType] || base;

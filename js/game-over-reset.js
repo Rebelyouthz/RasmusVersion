@@ -254,46 +254,20 @@
         questName:     _activeQuest ? (_activeQuest.title || _activeQuest.id || '') : ''
       };
 
-      // Use new dopamine end screen if available, fall back to legacy
-      if (typeof window.showRunEndScreen === 'function' || window.RunEndScreen) {
-        // Hide the YOU DIED banner
-        const youDiedBanner = document.getElementById('you-died-banner');
-        if (youDiedBanner) youDiedBanner.style.display = 'none';
-        if (typeof window.showRunEndScreen === 'function') {
-          window.showRunEndScreen(window._resCurrentStats);
-        } else {
+      // Always use RunEndScreen — shown after YOU DIED banner (3200ms).
+      // Do NOT hide #you-died-banner here — showYouDiedBanner(3000) above already
+      // controls its lifetime.  Only hide the legacy plain game-over div so it
+      // cannot overlay the YOU DIED banner during the delay.
+      const go = document.getElementById('gameover-screen');
+      if (go) go.style.display = 'none';
+      setTimeout(() => {
+        if (window.RunEndScreen && typeof window.RunEndScreen.show === 'function') {
           window.RunEndScreen.show(window._resCurrentStats);
+        } else if (typeof window.showRunEndScreen === 'function') {
+          window.showRunEndScreen(window._resCurrentStats);
         }
         updateGoldDisplays();
-      } else {
-        // ── Legacy fallback gameover screen ──────────────────────────────────
-        document.getElementById('gameover-screen').style.display = 'flex';
-        const youDiedBanner = document.getElementById('you-died-banner');
-        if (youDiedBanner) youDiedBanner.style.display = 'none';
-        const isFirstRun = saveData.totalRuns === 1;
-        document.getElementById('restart-btn').style.display = isFirstRun ? 'none' : '';
-        document.getElementById('quit-to-menu-btn').style.display = isFirstRun ? 'none' : '';
-        document.getElementById('goto-camp-btn').style.display = '';
-        document.getElementById('final-score').innerText = `${survivalTime}s`;
-        document.getElementById('final-kills').innerText = `${playerStats.kills}`;
-        document.getElementById('final-level').innerText = `${playerStats.lvl}`;
-        document.getElementById('gold-earned').innerText = `${goldEarned}`;
-        document.getElementById('total-gold').innerText = `${saveData.gold}`;
-        const lootItemsDiv = document.getElementById('loot-items');
-        if (window.runLootGained && window.runLootGained.length > 0) {
-          lootItemsDiv.innerHTML = window.runLootGained.map(item => {
-            const rarityColors = {
-              Common: '#AAA', Uncommon: '#1EFF00', Rare: '#0070DD',
-              Epic: '#A335EE', Legendary: '#FF8000', Mythic: '#E6CC80'
-            };
-            const color = rarityColors[item.rarity] || '#FFF';
-            return `<p style="margin: 5px 0; color: ${color};">• ${item.name} (${item.rarity})</p>`;
-          }).join('');
-        } else {
-          lootItemsDiv.innerHTML = '<p style="margin: 5px 0;">No items gained this run</p>';
-        }
-        updateGoldDisplays();
-      }
+      }, 3200);
       
       // Show deferred mission notification after death (quest completed during run)
       if (saveData.tutorialQuests && saveData.tutorialQuests.pendingMissionNotification === 'quest1_kill3') {

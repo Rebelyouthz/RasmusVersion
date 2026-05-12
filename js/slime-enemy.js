@@ -1169,6 +1169,13 @@ return;
 }
 };
 
+// Delegate rawBurst calls to the global blood system (used by death animations)
+SlimeEnemy.prototype.rawBurst = function(x, y, z, count, opts) {
+  if (window.BloodSimulatorV21 && typeof window.BloodSimulatorV21.rawBurst === 'function') {
+    window.BloodSimulatorV21.rawBurst(x, y, z, count, opts);
+  }
+};
+
 // ════════════════════════════════════════════════
 //  18 KILL ANIMATIONS
 // ════════════════════════════════════════════════
@@ -1653,6 +1660,37 @@ case 'melee_spin':
   pos.y = Math.max(0.02, pos.y - dt * 1.0);
   if (pos.y <= 0.02 || Math.abs(data.spinV) < 0.3) this._finishDeath();
   break;
+
+case 'plasma_melt': {
+  // Scale X and Z grow from 1→2, scale Y shrinks from 1→0 over 0.8 s
+  var MELT_TOTAL    = 0.8;  // seconds for full melt
+  var FADE_START    = 0.625; // normalised progress when opacity fade begins (last 0.3 s of 0.8 s)
+  var FADE_RANGE    = 0.375; // remaining normalised duration for the fade (1.0 - FADE_START)
+  data.meltProgress = (data.meltProgress || 0) + dt / MELT_TOTAL;
+  var mp = Math.min(1.0, data.meltProgress);
+  var expandedScale = this.scale * (1.0 + mp);
+  this.mesh.scale.set(
+    expandedScale,
+    Math.max(0.02, this.scale * (1.0 - mp)),
+    expandedScale
+  );
+  // During last 0.3 s fade material opacity to 0
+  if (mp > FADE_START) {
+    if (!this.mesh.material.transparent) {
+      this.mesh.material.transparent = true;
+      this.mesh.material.needsUpdate = true;
+    }
+    this.mesh.material.opacity = Math.max(0, 1.0 - (mp - FADE_START) / FADE_RANGE);
+  }
+  if (mp >= 1.0) {
+    // Leave a green ground decal via the public emitPoolGrow API
+    if (window.BloodSimulatorV21 && typeof window.BloodSimulatorV21.emitPoolGrow === 'function') {
+      window.BloodSimulatorV21.emitPoolGrow({ x: pos.x, y: pos.y, z: pos.z }, { color: 0x22cc44, maxRadius: 0.8 });
+    }
+    this._finishDeath();
+  }
+  break;
+}
 
 }
 

@@ -1668,7 +1668,7 @@ window.spawnBossChest = function(x, z) {
         // The inline style ensures the back face is the initial painted state,
         // preventing the browser from showing the front face (0deg) for one frame
         // before CSS transitions take effect — the "pre-render flicker" fix.
-        cardInner.style.cssText = 'transform:rotateY(180deg);transition:none;visibility:hidden;';
+        cardInner.style.cssText = 'transform:rotateY(180deg);transition:none;visibility:hidden;backface-visibility:hidden;';
 
         // Set rarity colour CSS variable on the card for the back-face glow bleed
         card.style.setProperty('--rarity-color', cardColor);
@@ -2166,7 +2166,7 @@ window.spawnBossChest = function(x, z) {
 
         // ── Show modal container ──────────────────────────────────────────────
         const upgradeList = document.getElementById('upgrade-list');
-        if (upgradeList) upgradeList.style.opacity = '0';
+        if (upgradeList) { upgradeList.style.opacity = '0'; upgradeList.style.visibility = 'hidden'; }
         // Stardust background particles (CSS-only animation hints behind cards)
         const _oldDust = modal.querySelectorAll('.lvlup-stardust');
         _oldDust.forEach(d => d.remove());
@@ -2186,9 +2186,11 @@ window.spawnBossChest = function(x, z) {
         modal.style.animation = 'none';
         void modal.offsetHeight; // force reflow to commit 'none' before re-adding
         modal.style.animation = 'wallFadeIn 0.32s cubic-bezier(0.22,1,0.36,1) forwards';
-        setTimeout(() => {
-          if (upgradeList) upgradeList.style.opacity = '1';
-        }, 320);
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if (upgradeList) { upgradeList.style.opacity = '1'; upgradeList.style.visibility = 'visible'; }
+          });
+        });
 
         // ── Card flip sequencer (complete rewrite) ────────────────────────────
         // Single, flat sequence — no nested setTimeouts fighting each other.
