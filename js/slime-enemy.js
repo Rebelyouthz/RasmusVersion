@@ -1661,6 +1661,33 @@ case 'melee_spin':
   if (pos.y <= 0.02 || Math.abs(data.spinV) < 0.3) this._finishDeath();
   break;
 
+case 'plasma_melt': {
+  // Scale X and Z grow from 1→2, scale Y shrinks from 1→0 over 0.8 s
+  data.meltProgress = (data.meltProgress || 0) + dt / 0.8;
+  var mp = Math.min(1.0, data.meltProgress);
+  this.mesh.scale.set(
+    this.scale * (1.0 + mp),
+    Math.max(0.02, this.scale * (1.0 - mp)),
+    this.scale * (1.0 + mp)
+  );
+  // During last 0.3 s (mp > 0.625) fade material opacity to 0
+  if (mp > 0.625) {
+    if (!this.mesh.material.transparent) {
+      this.mesh.material.transparent = true;
+      this.mesh.material.needsUpdate = true;
+    }
+    this.mesh.material.opacity = Math.max(0, 1.0 - (mp - 0.625) / 0.375);
+  }
+  if (mp >= 1.0) {
+    // Leave a green ground decal
+    if (window.BloodSimulatorV21 && typeof window.BloodSimulatorV21._spawnDecal === 'function') {
+      window.BloodSimulatorV21._spawnDecal(pos.x, pos.z, 0.8, 0x22cc44, 60);
+    }
+    this._finishDeath();
+  }
+  break;
+}
+
 }
 
 // Safety timeout
