@@ -805,10 +805,15 @@ window.BloodSimulatorV21 = BloodSimulatorV21;
 // init() to prevent accidental re-initialisation via window.BloodV2.init(scene).
 // window.BloodSimulatorV21.init(scene) remains the canonical initialisation path.
 window.BloodV2 = Object.create(BloodSimulatorV21);
-// Override init with a no-op warning so sandbox-loop typeof check returns 'function'
-// but actual re-initialisation is blocked (initialised via window.BloodSimulatorV21.init).
+// BloodV2.init delegates to BloodSimulatorV21.init with an idempotent guard so that
+// sandbox-loop.js (which calls window.BloodV2.init(scene)) correctly initialises the
+// blood system while duplicate calls (e.g. from game-screens.js which already called
+// window.BloodSimulatorV21.init) are silently skipped.
 Object.defineProperty(window.BloodV2, 'init', {
-  value: function() { console.warn('[BloodV2] Use window.BloodSimulatorV21.init(scene) to initialise.'); },
+  value: function(scene) {
+    if (BloodSimulatorV21.scene) return; // already initialised — skip
+    BloodSimulatorV21.init(scene, null, null);
+  },
   writable: false, configurable: true, enumerable: false
 });
 window.BloodV2.ENEMY_BLOOD = {};

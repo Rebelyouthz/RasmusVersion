@@ -1683,9 +1683,9 @@ case 'plasma_melt': {
     this.mesh.material.opacity = Math.max(0, 1.0 - (mp - FADE_START) / FADE_RANGE);
   }
   if (mp >= 1.0) {
-    // Leave a green ground decal
-    if (window.BloodSimulatorV21 && typeof window.BloodSimulatorV21._spawnDecal === 'function') {
-      window.BloodSimulatorV21._spawnDecal(pos.x, pos.z, 0.8, 0x22cc44, 60);
+    // Leave a green ground decal via the public emitPoolGrow API
+    if (window.BloodSimulatorV21 && typeof window.BloodSimulatorV21.emitPoolGrow === 'function') {
+      window.BloodSimulatorV21.emitPoolGrow({ x: pos.x, y: pos.y, z: pos.z }, { color: 0x22cc44, maxRadius: 0.8 });
     }
     this._finishDeath();
   }

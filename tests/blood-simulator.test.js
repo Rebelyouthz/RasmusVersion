@@ -387,3 +387,40 @@ describe('Blood color palette', () => {
     expect(bs._pool[0].color).toBe(0x8B0000);
   });
 });
+
+// ── onEnemyHit slime branching ────────────────────────────────────────────────
+describe('BloodSimulatorV21.onEnemyHit() slime branching', () => {
+  let bs;
+  const hitPoint = { x: 0, y: 1, z: 0 };
+
+  beforeEach(() => { bs = initedSim(); });
+
+  test('slime hit emits exactly 4 drops (8 requested × 0.5 slime scale)', () => {
+    bs.onEnemyHit({ enemyType: 'slime' }, hitPoint, 'pistol');
+    const alive = bs._pool.filter(d => d.alive).length;
+    expect(alive).toBe(4); // rawBurst applies _slimeScale=0.5 → round(8×0.5)=4
+  });
+
+  test('slime hit emits green drops', () => {
+    bs.onEnemyHit({ enemyType: 'slime' }, hitPoint, 'pistol');
+    const aliveDrop = bs._pool.find(d => d.alive);
+    expect(aliveDrop.color).toBe(0x22cc44);
+  });
+
+  test('slime hit spawns at most 2 mist particles', () => {
+    bs.onEnemyHit({ enemyType: 'slime' }, hitPoint, 'pistol');
+    const aliveMist = bs._mistPool.filter(m => m.alive).length;
+    expect(aliveMist).toBeLessThanOrEqual(2);
+  });
+
+  test('non-slime projectile hit emits more than 8 drops', () => {
+    bs.onEnemyHit({ enemyType: 'human' }, hitPoint, 'pistol');
+    const alive = bs._pool.filter(d => d.alive).length;
+    expect(alive).toBeGreaterThan(8);
+  });
+
+  test('non-slime hit does not early-return (spawns mist and wound pulse)', () => {
+    bs.onEnemyHit({ enemyType: 'human' }, hitPoint, 'pistol');
+    expect(bs._pulseWounds.length).toBeGreaterThan(0);
+  });
+});

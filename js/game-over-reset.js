@@ -254,9 +254,10 @@
         questName:     _activeQuest ? (_activeQuest.title || _activeQuest.id || '') : ''
       };
 
-      // Always use RunEndScreen — shown after YOU DIED banner (3200ms)
-      const youDiedBanner = document.getElementById('you-died-banner');
-      if (youDiedBanner) youDiedBanner.style.display = 'none';
+      // Always use RunEndScreen — shown after YOU DIED banner (3200ms).
+      // Do NOT hide #you-died-banner here — showYouDiedBanner(3000) above already
+      // controls its lifetime.  Only hide the legacy plain game-over div so it
+      // cannot overlay the YOU DIED banner during the delay.
       const go = document.getElementById('gameover-screen');
       if (go) go.style.display = 'none';
       setTimeout(() => {
