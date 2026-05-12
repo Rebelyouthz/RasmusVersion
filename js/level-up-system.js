@@ -7,13 +7,13 @@
 // Rarity table: Common(White)=45%, Uncommon(Green)=25%, Rare(Blue)=18%, Epic(Purple)=8%, Legendary(Gold)=3%, Mythic(Red)=1%
 // Thresholds: roll > 0.55 = Common, > 0.30 = Uncommon, > 0.12 = Rare, > 0.04 = Epic, > 0.01 = Legendary, else = Mythic
 const UPGRADE_RARITIES = [
-  { name: 'common',    label: 'COMMON',    cssClass: 'rarity-common',    scale: 1.0, color: '#ffffff' },
-  { name: 'uncommon',  label: 'UNCOMMON',  cssClass: 'rarity-uncommon',  scale: 1.3, color: '#55cc55' },
-  { name: 'rare',      label: 'RARE',      cssClass: 'rarity-rare',      scale: 1.5, color: '#00aaff' },
-  { name: 'epic',      label: 'EPIC',      cssClass: 'rarity-epic',      scale: 2.0, color: '#aa00ff' },
-  { name: 'legendary', label: 'LEGENDARY', cssClass: 'rarity-legendary', scale: 3.0, color: '#ffd700' },
+  { name: 'common',    label: 'COMMON',    cssClass: 'rarity-common',    scale: 1.0, color: '#a0a0a0' },
+  { name: 'uncommon',  label: 'UNCOMMON',  cssClass: 'rarity-uncommon',  scale: 1.3, color: '#1eff00' },
+  { name: 'rare',      label: 'RARE',      cssClass: 'rarity-rare',      scale: 1.5, color: '#0070dd' },
+  { name: 'epic',      label: 'EPIC',      cssClass: 'rarity-epic',      scale: 2.0, color: '#a335ee' },
+  { name: 'legendary', label: 'LEGENDARY', cssClass: 'rarity-legendary', scale: 3.0, color: '#ff8000' },
   // cssClass 'rarity-mythical' matches the existing CSS keyframe name (mythical-glow) intentionally
-  { name: 'mythic',    label: 'MYTHIC',    cssClass: 'rarity-mythical',  scale: 5.0, color: '#ff0000' },
+  { name: 'mythic',    label: 'MYTHIC',    cssClass: 'rarity-mythical',  scale: 5.0, color: '#e6cc80' },
 ];
 
 // Weapon unlock levels: Weapon 2 at Lv6, Weapon 3 at Lv18, Weapon 4 at Lv50
@@ -501,14 +501,14 @@ window.spawnBossChest = function(x, z) {
       if (h2) {
         h2.innerText = isBonusRound ? 'BONUS LEVEL UP!' : 'LEVEL UP!';
         h2.style.color = isBonusRound ? '#FFD700' : '#FFFFFF';
-        h2.style.fontSize = isBonusRound ? '28px' : '36px';
+        h2.style.fontSize = isBonusRound ? '32px' : '42px';
         h2.style.fontFamily = 'Bangers, Impact, sans-serif';
         h2.style.fontWeight = 'bold';
         h2.style.letterSpacing = '6px';
         h2.style.textAlign = 'center';
         h2.style.textShadow = isBonusRound
-          ? '0 0 20px #FFD700, 0 0 40px #FF8800, 2px 2px 0 #000'
-          : '0 0 20px #FF4400, 0 0 40px #FF8800, 2px 2px 0 #000';
+          ? '0 0 24px #FFD700, 0 0 50px #FF9F1A, 2px 2px 0 #000'
+          : '0 0 20px #ffffff, 0 0 34px #FFB347, 0 0 56px #FF8000, 2px 2px 0 #000';
         h2.style.textTransform = 'uppercase';
         h2.style.animation = 'levelUpFly 1s ease-out forwards';
       }
@@ -1650,7 +1650,10 @@ window.spawnBossChest = function(x, z) {
         // Resolve rarity display properties (color + label)
         const rarityInfo  = u._rarity || null;
         const cardColor   = u.rarityColor || (rarityInfo ? rarityInfo.color : '#ffffff') || '#ffffff';
-        const cardRarityLabel = u.rarityName || (rarityInfo ? rarityInfo.label : 'COMMON');
+        const _baseRarityLabel = u.rarityName || (rarityInfo ? rarityInfo.label : 'COMMON');
+        const cardRarityLabel = _baseRarityLabel === 'LEGENDARY'
+          ? `⚡ ${_baseRarityLabel} ⚡`
+          : (_baseRarityLabel === 'MYTHIC' ? `✦ ${_baseRarityLabel} ✦` : _baseRarityLabel);
         
         // Apply only the dynamic rarity-specific inline styles (border, box-shadow, overflow)
         const isMythic = rarityInfo && rarityInfo.name === 'mythic';
@@ -1680,7 +1683,7 @@ window.spawnBossChest = function(x, z) {
         const _backHorusEl = document.createElement('div');
         _backHorusEl.className = 'card-back-horus';
         _backHorusEl.innerHTML = [
-          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 140" width="96" height="67">',
+          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 140" width="120" height="84">',
           '<g fill="none" stroke="#C9A227" stroke-width="1.8">',
           '<path d="M10 70 Q100 10 190 70 Q100 130 10 70 Z" stroke-opacity="0.9"/>',
           '<circle cx="100" cy="70" r="28" stroke-opacity="0.85"/>',
@@ -1760,8 +1763,8 @@ window.spawnBossChest = function(x, z) {
         ];
         const _animName = _cardEntryAnims[index % _cardEntryAnims.length];
         const _animDur = 0.55;
-        // Stagger: 0.3s wall delay + 0.24s between cards for dramatic sequential slams
-        const cardDelay = 0.3 + (index * 0.24);
+        // Stagger: 0.22s between cards for sequential premium entry
+        const cardDelay = 0.3 + (index * 0.22);
         card.style.opacity = '0';
         card.style.pointerEvents = 'none'; // Disable clicks until flipped
         card.style.animation = `${_animName} ${_animDur}s cubic-bezier(0.25, 0.46, 0.45, 0.94) ${cardDelay}s both`;
@@ -1894,25 +1897,44 @@ window.spawnBossChest = function(x, z) {
             greenEdge.classList.add('animating');
           }
 
-          // Phase 2: After edge animation (1.0s), zoom card up
+          // Phase 2: After edge animation, zoom card up
           setTimeout(() => {
             // Zoom chosen card up
             card.style.transition = 'transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s';
             card.style.transform = 'scale(1.35) translateY(-25px)';
             card.style.zIndex = '200';
 
-            // Dim and suck other cards + modal bg into center hole
+            // Vortex spiral for rejected cards
             allCards.forEach(c => {
               if (c !== card) {
                 const rejectedCard = c;
-                const randX = (Math.random() > 0.5 ? 1 : -1) * (50 + Math.random() * 150);
-                const randY = (Math.random() > 0.5 ? 1 : -1) * (50 + Math.random() * 150);
-                const randAngle = (Math.random() - 0.5) * 720;
-                rejectedCard.style.transition = 'transform 0.4s ease-in, opacity 0.4s ease-in';
-                rejectedCard.style.transform = `translate(${randX}vw, ${randY}vh) scale(0) rotate(${randAngle}deg)`;
+                const rect = rejectedCard.getBoundingClientRect();
+                const cardCX = rect.left + rect.width / 2;
+                const cardCY = rect.top + rect.height / 2;
+                const offsetX = window.innerWidth / 2 - cardCX;
+                const offsetY = window.innerHeight / 2 - cardCY;
+                rejectedCard.style.transition = 'transform 0.4s cubic-bezier(0.55, 0, 1, 0.45), opacity 0.3s ease-in';
+                rejectedCard.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(0) rotate(540deg)`;
                 rejectedCard.style.opacity = '0';
               }
             });
+
+            // Vortex dark disc at screen center
+            const vortexEl = document.createElement('div');
+            vortexEl.style.cssText = [
+              'position:fixed', 'top:50%', 'left:50%',
+              'width:0', 'height:0',
+              'border-radius:50%',
+              'background:radial-gradient(circle at center, rgba(0,0,0,0.95) 0%, rgba(20,0,40,0.85) 50%, transparent 100%)',
+              'transform:translate(-50%,-50%)',
+              'transition:width 0.4s ease-in,height 0.4s ease-in',
+              'pointer-events:none',
+              'z-index:10000',
+            ].join(';');
+            document.body.appendChild(vortexEl);
+            requestAnimationFrame(() => { vortexEl.style.width = '320px'; vortexEl.style.height = '320px'; });
+            setTimeout(() => { if (vortexEl.parentNode) vortexEl.parentNode.removeChild(vortexEl); }, 550);
+
             // Suck the modal background out
             const modalContent = modal.querySelector('.modal-content');
             if (modalContent) {
@@ -1921,7 +1943,7 @@ window.spawnBossChest = function(x, z) {
               modalContent.style.opacity = '0';
             }
 
-            // Phase 3: After zoom (0.5s), apply the upgrade and do shard explosion
+            // Phase 3: After zoom, apply the upgrade and do shard explosion
             setTimeout(() => {
               // Apply upgrade
               try {
@@ -2039,8 +2061,8 @@ window.spawnBossChest = function(x, z) {
                 lastHudUpdateMs = 0; // Force HUD refresh after level-up
                 updateHUD();
               }, 200); // 0.2s after shards
-            }, 350); // shard explosion duration
-          }, 1100); // 1.0s green edge + 0.1s zoom
+            }, 180); // shard explosion duration
+          }, 500); // green edge + zoom
         };
 
         let holdTimer = null;
@@ -2055,8 +2077,8 @@ window.spawnBossChest = function(x, z) {
             clearTimeout(activeHold.timer);
             activeHold.card.classList.remove('holding');
             activeHold.card.dataset.selected = '';
-            activeHold.card.style.opacity = '0.5';
-            activeHold.card.style.transform = 'scale(1)';
+            activeHold.card.style.opacity = '0.4';
+            activeHold.card.style.transform = 'scale(0.95)';
             activeHold = null;
           }
           if (holdTimer) return; // Already holding this card
@@ -2068,13 +2090,13 @@ window.spawnBossChest = function(x, z) {
           const allCards = list.querySelectorAll('.upgrade-card');
           allCards.forEach(c => {
             c.dataset.selected = '';
-            c.style.opacity = '0.5';
-            c.style.transform = 'scale(1)';
+            c.style.opacity = '0.4';
+            c.style.transform = 'scale(0.95)';
             c.classList.remove('holding');
           });
           card.dataset.selected = '1';
           card.style.opacity = '1';
-          card.style.transform = 'scale(1.04)';
+          card.style.transform = 'scale(1.08)';
 
           // Start melt-shadow animation on this card
           card.classList.add('holding');
@@ -2085,9 +2107,10 @@ window.spawnBossChest = function(x, z) {
             activeHold = null;
             // Guard: only apply if the modal is still visible and card is still selected
             if (card.dataset.selected === '1' && modal.style.display !== 'none') {
+              if (window.GameAudio && window.GameAudio.playSound) window.GameAudio.playSound('card_select');
               applyUpgradeAndClose();
             }
-          }, 400);
+          }, 200);
           activeHold = { timer: holdTimer, card };
         });
 
@@ -2101,7 +2124,7 @@ window.spawnBossChest = function(x, z) {
           // Restore this card's opacity (still selected, just not confirmed)
           if (card.dataset.selected === '1') {
             card.style.opacity = '1';
-            card.style.transform = 'scale(1.04)';
+            card.style.transform = 'scale(1.08)';
           }
         };
         card.addEventListener('pointerup', cancelHold);
@@ -2121,7 +2144,7 @@ window.spawnBossChest = function(x, z) {
         void cardInners[i].offsetHeight;
         cardInners[i].style.visibility = 'visible';
         requestAnimationFrame(() => requestAnimationFrame(() => {
-          cardInners[i].style.transition = 'transform 0.7s cubic-bezier(0.25,0.46,0.45,0.94)';
+          cardInners[i].style.transition = 'transform 0.18s cubic-bezier(0.25,0.46,0.45,0.94)';
         }));
       }
 
@@ -2144,6 +2167,18 @@ window.spawnBossChest = function(x, z) {
         // ── Show modal container ──────────────────────────────────────────────
         const upgradeList = document.getElementById('upgrade-list');
         if (upgradeList) upgradeList.style.opacity = '0';
+        // Stardust background particles (CSS-only animation hints behind cards)
+        const _oldDust = modal.querySelectorAll('.lvlup-stardust');
+        _oldDust.forEach(d => d.remove());
+        for (let _sd = 0; _sd < 14; _sd++) {
+          const s = document.createElement('div');
+          s.className = 'lvlup-stardust';
+          s.style.left = `${Math.random() * 100}%`;
+          s.style.top = `${40 + Math.random() * 55}%`;
+          s.style.animationDelay = `${(Math.random() * 2).toFixed(2)}s`;
+          s.style.animationDuration = `${(5 + Math.random() * 3).toFixed(2)}s`;
+          modal.appendChild(s);
+        }
         modal.style.display = 'flex';
         modal.style.opacity = '0';
         // Reset any leftover animation from a previous open so wallFadeIn always
@@ -2164,9 +2199,9 @@ window.spawnBossChest = function(x, z) {
         //   cardIdx * STAGGER_MS →
         //     +0   : lift toward camera (back face still shown)
         //     +280 : fast flip to front face
-        //     +600 : smack squash on landing
-        //     +760 : bounce settle, card is now interactive
-        const STAGGER_MS   = 450; // gap between each card's flip start
+        //     +520 : smack squash on landing
+        //     +700 : bounce settle, card is now interactive
+        const STAGGER_MS   = 420; // gap between each card's flip start
         const _numCards    = choices.length;
         // Wait for the last entry animation to finish before starting flips.
         // wall fade (0.3 s) + stagger per card (0.24 s) + entry duration (0.55 s) + 80 ms slack
@@ -2183,20 +2218,21 @@ window.spawnBossChest = function(x, z) {
             // Phase 1 — Lift toward camera (back face still visible)
             setTimeout(function () {
               ci.style.transition = 'transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1)';
-              ci.style.transform  = 'scale(1.18) translateZ(55px) rotateY(180deg)';
+              ci.style.transform  = 'scale(1.20) translateZ(60px) rotateY(180deg)';
             }, base);
 
             // Phase 2 — Fast flip (front face revealed at rotateY 360°)
             setTimeout(function () {
               ci.style.transition = 'transform 0.32s cubic-bezier(0.55, 0, 0.45, 1)';
               ci.style.transform  = 'scale(1.14) translateZ(40px) rotateY(360deg)';
+              if (window.GameAudio && window.GameAudio.playSound) window.GameAudio.playSound('card_flip');
             }, base + 280);
 
             // Phase 3 — Smack squash on landing
             setTimeout(function () {
-              ci.style.transition = 'transform 0.16s ease-in';
-              ci.style.transform  = 'scaleX(1.1) scaleY(0.9) rotateY(360deg)';
-            }, base + 600);
+              ci.style.transition = 'transform 0.14s ease-in';
+              ci.style.transform  = 'scaleX(1.12) scaleY(0.88) rotateY(360deg)';
+            }, base + 520);
 
             // Phase 4 — Bounce settle; mark card selectable
             setTimeout(function () {
@@ -2206,7 +2242,7 @@ window.spawnBossChest = function(x, z) {
               document.body.classList.add('screen-shake-brief');
               setTimeout(function () { document.body.classList.remove('screen-shake-brief'); }, 200);
               setTimeout(function () { card.style.pointerEvents = 'auto'; }, 260);
-            }, base + 760);
+            }, base + 700);
           });
         }, _allEnteredMs);
 

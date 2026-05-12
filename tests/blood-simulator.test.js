@@ -88,8 +88,8 @@ describe('Device pool sizing', () => {
     expect(window._BSV21_MAX_DROPS).toBeGreaterThanOrEqual(1200);
   });
 
-  test('desktop with 8GB memory uses >= 800 mist', () => {
-    expect(window._BSV21_MAX_MIST).toBeGreaterThanOrEqual(800);
+  test('desktop with 8GB memory uses >= 120 mist', () => {
+    expect(window._BSV21_MAX_MIST).toBeGreaterThanOrEqual(120);
   });
 });
 

@@ -3,6 +3,126 @@
 // Depends on: all previously loaded game files
 
 // --- GAME LOGIC ---
+const SANDBOX_BGM_TRACK = 'guitarbagpipe-synapse.mp3';
+const SANDBOX_BGM_VOLUME = 0.25;
+const _POWERUP_PICKUP_RADIUS = 2.5;
+const _POWERUP_DESPAWN_MS = 12000;
+const _POWERUP_DROP_CHANCE = 0.03;
+const _POWERUP_TYPES = [
+  { id: 'health_burst', icon: '❤️', name: 'HEALTH BURST', duration: 0, color: 0xff4455 },
+  { id: 'speed_rush', icon: '⚡', name: 'SPEED RUSH', duration: 8, color: 0x44aaff },
+  { id: 'damage_surge', icon: '💥', name: 'DAMAGE SURGE', duration: 10, color: 0xff6600 },
+  { id: 'shield_bubble', icon: '🛡️', name: 'SHIELD BUBBLE', duration: 0, color: 0xe0e6ff },
+];
+const _powerUps = [];
+const _activePowerUps = [];
+let _powerUpHudEl = null;
+let _powerUpUpdateTimer = null;
+let _powerUpGeo = null;
+function _toCssHexColor(v) {
+  const safe = Math.max(0, Math.min(0xFFFFFF, (v >>> 0) & 0xFFFFFF));
+  return `#${safe.toString(16).padStart(6, '0')}`;
+}
+
+function _ensurePowerUpHud() {
+  if (_powerUpHudEl) return _powerUpHudEl;
+  const el = document.createElement('div');
+  el.id = 'powerup-hud';
+  el.style.cssText = 'position:fixed;top:90px;right:12px;z-index:12000;display:flex;flex-direction:column;gap:6px;pointer-events:none;font-family:Segoe UI,sans-serif;';
+  document.body.appendChild(el);
+  _powerUpHudEl = el;
+  return el;
+}
+
+function _renderPowerUpHud() {
+  const el = _ensurePowerUpHud();
+  if (!_activePowerUps.length) { el.innerHTML = ''; return; }
+  el.innerHTML = _activePowerUps.map(p => `<div style="background:rgba(0,0,0,.7);border:1px solid ${p.color};color:${p.color};padding:4px 8px;border-radius:8px;font-size:12px;min-width:120px;">${p.icon} ${p.name}${p.duration > 0 ? ` · ${Math.max(0, Math.ceil((p.expiresAt - Date.now())/1000))}s` : ''}</div>`).join('');
+}
+
+function _applyPowerUp(pu) {
+  if (!pu) return;
+  if (pu.id === 'health_burst') {
+    playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + playerStats.maxHp * 0.25);
+  } else if (pu.id === 'speed_rush') {
+    playerStats.walkSpeed *= 1.4;
+  } else if (pu.id === 'damage_surge') {
+    playerStats.strength = (playerStats.strength || 1) * 1.5;
+  } else if (pu.id === 'shield_bubble') {
+    playerStats._shieldHits = (playerStats._shieldHits || 0) + 3;
+  }
+  spawnParticles({ x: pu.mesh.position.x, y: pu.mesh.position.y, z: pu.mesh.position.z }, pu.color, 14);
+  showStatChange(`${pu.icon} ${pu.name}${pu.duration > 0 ? ` (${pu.duration}s)` : ''}`);
+  if (pu.duration > 0) {
+    _activePowerUps.push({
+      id: pu.id, icon: pu.icon, name: pu.name, color: _toCssHexColor(pu.color),
+      duration: pu.duration, expiresAt: Date.now() + pu.duration * 1000
+    });
+  }
+}
+
+function _expirePowerUp(ap) {
+  if (!ap) return;
+  if (ap.id === 'speed_rush') playerStats.walkSpeed /= 1.4;
+  if (ap.id === 'damage_surge') playerStats.strength = (playerStats.strength || 1) / 1.5;
+}
+
+function _spawnPowerUpAt(x, z) {
+  if (!scene) return;
+  const type = _POWERUP_TYPES[(Math.random() * _POWERUP_TYPES.length) | 0];
+  if (!_powerUpGeo) _powerUpGeo = new THREE.SphereGeometry(0.4, 14, 14);
+  const mat = new THREE.MeshStandardMaterial({ color: type.color, emissive: type.color, emissiveIntensity: 0.7, metalness: 0.35, roughness: 0.35 });
+  const mesh = new THREE.Mesh(_powerUpGeo, mat);
+  mesh.position.set(x, 0.8, z);
+  const light = new THREE.PointLight(type.color, 2, 5);
+  light.position.copy(mesh.position);
+  scene.add(mesh);
+  scene.add(light);
+  _powerUps.push({ ...type, mesh, light, spawnAt: Date.now(), t: Math.random() * Math.PI * 2 });
+}
+
+function _updatePowerUps() {
+  if (!scene || !player || !player.mesh) return;
+  const now = Date.now();
+  for (let i = _powerUps.length - 1; i >= 0; i--) {
+    const pu = _powerUps[i];
+    pu.t += 0.08;
+    pu.mesh.position.y = 0.8 + Math.sin(pu.t) * 0.15;
+    pu.mesh.rotation.y += 0.035;
+    pu.light.position.copy(pu.mesh.position);
+    const dx = player.mesh.position.x - pu.mesh.position.x;
+    const dz = player.mesh.position.z - pu.mesh.position.z;
+    if (dx * dx + dz * dz <= _POWERUP_PICKUP_RADIUS * _POWERUP_PICKUP_RADIUS) {
+      _applyPowerUp(pu);
+      scene.remove(pu.mesh); scene.remove(pu.light);
+      pu.mesh.geometry = null;
+      pu.mesh.material.dispose();
+      _powerUps.splice(i, 1);
+      continue;
+    }
+    if (now - pu.spawnAt >= _POWERUP_DESPAWN_MS) {
+      scene.remove(pu.mesh); scene.remove(pu.light);
+      pu.mesh.material.dispose();
+      _powerUps.splice(i, 1);
+    }
+  }
+  for (let i = _activePowerUps.length - 1; i >= 0; i--) {
+    const ap = _activePowerUps[i];
+    if (ap.duration > 0 && now >= ap.expiresAt) {
+      _expirePowerUp(ap);
+      _activePowerUps.splice(i, 1);
+    }
+  }
+  _renderPowerUpHud();
+}
+
+window.PowerUpSystem = window.PowerUpSystem || {
+  onEnemyKilled(pos) {
+    if (!pos || Math.random() > _POWERUP_DROP_CHANCE) return;
+    _spawnPowerUpAt(pos.x, pos.z);
+  },
+  update: _updatePowerUps
+};
 
 function init() {
   console.log('[Init] Starting game initialization...');
@@ -36,12 +156,18 @@ function init() {
   );
 
   if (typeof window._ensureEntityPools === 'function') window._ensureEntityPools();
+  window.BloodV2 = null;
+  window.GoreSim = null;
+  window.GoreSimulator = null;
+  window.TraumaSystem = null;
   if (window.BloodSimulatorV21 && typeof THREE !== 'undefined') {
     window.BloodSimulatorV21.init(scene, null, null);
-  } else if (window.BloodV2 && typeof window.BloodV2.init === 'function') {
-    window.BloodV2.init(scene);
   }
   if (window.GameObjectPool) window.GameObjectPool.prewarm();
+  if (_powerUpUpdateTimer) clearInterval(_powerUpUpdateTimer);
+  _powerUpUpdateTimer = setInterval(() => {
+    try { _updatePowerUps(); } catch (_e) {}
+  }, 50);
   console.log('[Init] Scene created OK');
 
   const aspect = window.innerWidth / window.innerHeight;
@@ -726,6 +852,11 @@ function init() {
 function setupMenus() {
   var startBtn = document.getElementById('start-game-btn');
   var campBtn  = document.getElementById('camp-btn');
+  var _stopBgm = function () {
+    if (window.GameAudio && window.GameAudio.stopBackgroundMusic) {
+      window.GameAudio.stopBackgroundMusic();
+    }
+  };
 
   function _showCamp() {
     var mainMenu = document.getElementById('main-menu');
@@ -760,6 +891,7 @@ function setupMenus() {
     gotoCampBtn.addEventListener('click', function() {
       var gameoverScreen = document.getElementById('gameover-screen');
       if (gameoverScreen) gameoverScreen.style.display = 'none';
+      _stopBgm();
       window._campFromRun = true; // Flag used by quest-system.js to delay the account level-up curtain by 3s on return from a run
       _showCamp();
     });
@@ -771,6 +903,7 @@ function setupMenus() {
     quitMenuBtn.addEventListener('click', function() {
       var gameoverScreen = document.getElementById('gameover-screen');
       if (gameoverScreen) gameoverScreen.style.display = 'none';
+      _stopBgm();
       _showCamp();
     });
   }
@@ -782,9 +915,19 @@ function setupMenus() {
     restartBtn.addEventListener('click', function() {
       var gameoverScreen = document.getElementById('gameover-screen');
       if (gameoverScreen) gameoverScreen.style.display = 'none';
+      _stopBgm();
       window._campFromRun = true;
       _showCamp();
     });
+  }
+
+  var gameoverScreen = document.getElementById('gameover-screen');
+  if (gameoverScreen && !gameoverScreen._bgmObserver) {
+    gameoverScreen._bgmObserver = new MutationObserver(function() {
+      var shown = gameoverScreen.style.display && gameoverScreen.style.display !== 'none';
+      if (shown) _stopBgm();
+    });
+    gameoverScreen._bgmObserver.observe(gameoverScreen, { attributes: true, attributeFilter: ['style'] });
   }
 }
 
@@ -834,6 +977,9 @@ function hideMainMenu() {
 
 function startGame() {
   if (window.CampWorld) window.CampWorld.exit();
+  if (window.GameAudio && window.GameAudio.playBackgroundMusic) {
+    window.GameAudio.playBackgroundMusic(SANDBOX_BGM_TRACK, SANDBOX_BGM_VOLUME);
+  }
   const campScreenEl = document.getElementById('camp-screen');
   if (campScreenEl) campScreenEl.classList.remove('camp-3d-mode');
   document.getElementById('main-menu').style.display = 'none';
@@ -2611,7 +2757,7 @@ function levelUp(freeLevel = false) {
   setTimeout(() => {
     try {
       createLevelUpEffects();
-      playSound('levelup');
+      playSound('upgrade');
     } catch(e) {
       console.error('[LevelUp] Effects error:', e);
     }
@@ -2936,3 +3082,13 @@ function createFloatingText(text, pos, color) {
     try { _orig(); } catch(e) { console.error('[CampWorld] updateCampScreen error:', e); }
   };
 })();
+
+if (typeof window.showRunEndScreen !== 'function') {
+  window.showRunEndScreen = function(finalStats) {
+    if (window.RunEndScreen && typeof window.RunEndScreen.show === 'function') {
+      window.RunEndScreen.show(finalStats || {});
+      return true;
+    }
+    return false;
+  };
+}

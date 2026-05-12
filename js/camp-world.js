@@ -23,6 +23,8 @@
   const PLAYER_SPEED = 7.0;                    // units per second
   const PLAYER_RADIUS = 0.55;
   const INTERACTION_RADIUS = 5.5;             // proximity to trigger interact
+  const CAMP_BGM_TRACK = 'Waterdrop survivor .mp3';
+  const CAMP_BGM_VOLUME = 0.3;
 
   // Building layout (id → world position + label)
   const BUILDING_DEFS = [
@@ -2082,6 +2084,7 @@
   function _insertAidaChip() {
     if (!_aidaIntroState.chipPickedUp || _aidaIntroState.chipInserted) return;
     _aidaIntroState.chipInserted = true;
+    if (window.GameAudio && window.GameAudio.playSound) window.GameAudio.playSound('aida_chip_insert');
 
     const sd = (typeof saveData !== 'undefined') ? saveData : null;
     if (sd) {
@@ -4955,8 +4958,8 @@
     // is teleported to a known-good location rather than world origin.
     if (!Number.isFinite(_playerVel.x)) _playerVel.x = 0;
     if (!Number.isFinite(_playerVel.z)) _playerVel.z = 0;
-    if (!Number.isFinite(_playerPos.x)) _playerPos.x = SPAWN_POS.x;
-    if (!Number.isFinite(_playerPos.z)) _playerPos.z = SPAWN_POS.z;
+    if (!Number.isFinite(_playerPos.x)) _playerPos.x = _lastValidPlayerX;
+    if (!Number.isFinite(_playerPos.z)) _playerPos.z = _lastValidPlayerZ;
 
     // Clamp
     _playerPos.x = Math.max(-38, Math.min(38, _playerPos.x));
@@ -4971,8 +4974,8 @@
     }
 
     // Apply position to mesh — NaN-guarded so no corrupt value ever reaches WebGL
-    _playerMesh.position.x = isFinite(_playerPos.x) ? _playerPos.x : SPAWN_POS.x;
-    _playerMesh.position.z = isFinite(_playerPos.z) ? _playerPos.z : SPAWN_POS.z;
+    _playerMesh.position.x = isFinite(_playerPos.x) ? _playerPos.x : _lastValidPlayerX;
+    _playerMesh.position.z = isFinite(_playerPos.z) ? _playerPos.z : _lastValidPlayerZ;
 
     // Rotation toward movement direction — crisp and responsive
     const speed = Math.sqrt(_playerVel.x * _playerVel.x + _playerVel.z * _playerVel.z);
@@ -7317,6 +7320,9 @@
     }
 
     _isActive = true;
+    if (window.GameAudio && window.GameAudio.playBackgroundMusic) {
+      window.GameAudio.playBackgroundMusic(CAMP_BGM_TRACK, CAMP_BGM_VOLUME);
+    }
     if (typeof window._syncJoystickZone === 'function') window._syncJoystickZone();
   }
 
@@ -7326,6 +7332,9 @@
    */
   function exit() {
     _isActive = false;
+    if (window.GameAudio && window.GameAudio.stopBackgroundMusic) {
+      window.GameAudio.stopBackgroundMusic();
+    }
     _aidaCinematicLock = false; // always clear on exit — prevents phantom freeze next visit
     _aidaOrbitWaitingForDialogue = false; // clear deferred dialogue flag on exit
     // Reset robot orbit/walk state machines so mid-orbit exits don't leave stale

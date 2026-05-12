@@ -13,6 +13,12 @@ try {
 }
 let musicOscillators = [];
 let musicGain = null;
+const _loadedBuffers = new Map();
+const PISTOL_WAV = "ES_Guns, Pistol, Handgun, Glock, Shots, Burst, Perspective 2, Low Frequency Details - Epidemic Sound.wav";
+let _pistolBuffer = null;
+let _uiInteractionSoundBound = false;
+let _bgmAudio = null;
+let _bgmCurrentUrl = null;
 
     // Combo tracking for exp_pickup pitch-up effect
     const EXP_COMBO_WINDOW = 0.4;  // seconds — rapid collection combo window
@@ -63,6 +69,89 @@ function createNoise(duration) {
   const source = audioCtx.createBufferSource();
   source.buffer = createNoiseBuffer(Math.max(duration, 0.05));
   return source;
+}
+
+async function _loadBuffer(url) {
+  if (!audioCtx) return null;
+  if (_loadedBuffers.has(url)) return _loadedBuffers.get(url);
+  try {
+    const resp = await fetch(url);
+    const arr = await resp.arrayBuffer();
+    const buf = await audioCtx.decodeAudioData(arr);
+    _loadedBuffers.set(url, buf);
+    return buf;
+  } catch (e) {
+    console.warn('[Audio] Failed to load:', url, e);
+    return null;
+  }
+}
+
+function _playBuffer(buffer, volume = 1.0, pitchVariance = 0) {
+  if (!buffer || !audioCtx) return;
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const src = audioCtx.createBufferSource();
+  src.buffer = buffer;
+  src.playbackRate.value = 1.0 + (Math.random() - 0.5) * pitchVariance;
+  const g = audioCtx.createGain();
+  g.gain.value = volume;
+  src.connect(g);
+  g.connect(audioCtx.destination);
+  src.start();
+}
+
+function _ensurePistolLoaded() {
+  if (_pistolBuffer || !audioCtx) return;
+  _loadBuffer(PISTOL_WAV).then((b) => { _pistolBuffer = b; });
+}
+
+function _bindPistolOnFirstGesture() {
+  if (typeof document === 'undefined') return;
+  const loadOnce = () => {
+    _ensurePistolLoaded();
+    document.removeEventListener('pointerdown', loadOnce, true);
+    document.removeEventListener('keydown', loadOnce, true);
+  };
+  document.addEventListener('pointerdown', loadOnce, true);
+  document.addEventListener('keydown', loadOnce, true);
+}
+
+function _bindUiInteractionSounds() {
+  if (_uiInteractionSoundBound || typeof document === 'undefined') return;
+  _uiInteractionSoundBound = true;
+  const selector = [
+    'button',
+    '[role="button"]',
+    '.btn',
+    '.btn-small',
+    '.menu-btn',
+    '.back-btn',
+    '.camp-util-icon',
+    '.camp-corner-btn',
+    '.comic-action',
+    '.overlay-close-x',
+    '#sleep-day-option',
+    '#sleep-night-option',
+    '#unspent-tab'
+  ].join(',');
+
+  document.addEventListener('pointerdown', (ev) => {
+    if (!ev || !ev.target || !ev.target.closest) return;
+    const target = ev.target.closest(selector);
+    if (!target || target.disabled) return;
+    playSound('button_click');
+  }, true);
+}
+
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      _bindPistolOnFirstGesture();
+      _bindUiInteractionSounds();
+    }, { once: true });
+  } else {
+    _bindPistolOnFirstGesture();
+    _bindUiInteractionSounds();
+  }
 }
 
 function playSound(type) {
@@ -167,6 +256,11 @@ function playSound(type) {
   // ── Combat (Crisp & Punchy) ──
 
   } else if (type === 'shoot' || type === 'gun_shoot') {
+    _ensurePistolLoaded();
+    if (_pistolBuffer) {
+      _playBuffer(_pistolBuffer, 0.7, 0.15);
+      return;
+    }
     // gun_shoot.mp3: Sharp high-velocity water spit (pt-pt-pt)
     const noise = createNoise(0.06);
     const noiseGain = audioCtx.createGain();
@@ -189,6 +283,241 @@ function playSound(type) {
     popG.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
     pop.connect(popG); popG.connect(audioCtx.destination);
     pop.start(now); pop.stop(now + 0.04);
+
+  } else if (type === 'slime_hop') {
+    const thud = audioCtx.createOscillator();
+    const thudG = audioCtx.createGain();
+    thud.type = 'sine';
+    thud.frequency.setValueAtTime(120, now);
+    thud.frequency.exponentialRampToValueAtTime(40, now + 0.12);
+    thudG.gain.setValueAtTime(0.5, now);
+    thudG.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+    thud.connect(thudG); thudG.connect(audioCtx.destination);
+    thud.start(now); thud.stop(now + 0.14);
+
+    const squelch = createNoise(0.08);
+    const sqG = audioCtx.createGain();
+    const bp = audioCtx.createBiquadFilter();
+    bp.type = 'bandpass'; bp.frequency.value = 600; bp.Q.value = 3;
+    sqG.gain.setValueAtTime(0.3, now);
+    sqG.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+    squelch.connect(bp); bp.connect(sqG); sqG.connect(audioCtx.destination);
+    squelch.start(now); squelch.stop(now + 0.08);
+
+  } else if (type === 'slime_die') {
+    const splat = createNoise(0.25);
+    const splatG = audioCtx.createGain();
+    const lp = audioCtx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 500;
+    splatG.gain.setValueAtTime(0.7, now);
+    splatG.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+    splat.connect(lp); lp.connect(splatG); splatG.connect(audioCtx.destination);
+    splat.start(now); splat.stop(now + 0.25);
+
+    const pop = audioCtx.createOscillator();
+    const popG = audioCtx.createGain();
+    pop.type = 'sine';
+    pop.frequency.setValueAtTime(200, now);
+    pop.frequency.exponentialRampToValueAtTime(40, now + 0.18);
+    popG.gain.setValueAtTime(0.6, now);
+    popG.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    pop.connect(popG); popG.connect(audioCtx.destination);
+    pop.start(now); pop.stop(now + 0.2);
+
+  } else if (type === 'slime_hit') {
+    const n = createNoise(0.06);
+    const ng = audioCtx.createGain();
+    const bp = audioCtx.createBiquadFilter();
+    bp.type = 'bandpass'; bp.frequency.value = 800; bp.Q.value = 2;
+    ng.gain.setValueAtTime(0.4, now);
+    ng.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+    n.connect(bp); bp.connect(ng); ng.connect(audioCtx.destination);
+    n.start(now); n.stop(now + 0.06);
+
+  } else if (type === 'skinwalker_growl') {
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    const dist = audioCtx.createWaveShaper();
+    const curve = new Float32Array(256);
+    for (let i = 0; i < 256; i++) {
+      const x = (i * 2) / 256 - 1;
+      curve[i] = (3 + 80) * x / (Math.PI + 80 * Math.abs(x));
+    }
+    dist.curve = curve;
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(55, now);
+    osc.frequency.setValueAtTime(40, now + 0.1);
+    osc.frequency.setValueAtTime(65, now + 0.25);
+    g.gain.setValueAtTime(0.0, now);
+    g.gain.linearRampToValueAtTime(0.22, now + 0.05);
+    g.gain.linearRampToValueAtTime(0.18, now + 0.3);
+    g.gain.linearRampToValueAtTime(0.0, now + 0.5);
+    osc.connect(dist); dist.connect(g); g.connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + 0.5);
+
+  } else if (type === 'skinwalker_screech') {
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(600, now);
+    osc.frequency.exponentialRampToValueAtTime(1800, now + 0.12);
+    osc.frequency.exponentialRampToValueAtTime(400, now + 0.3);
+    g.gain.setValueAtTime(0.0, now);
+    g.gain.linearRampToValueAtTime(0.18, now + 0.02);
+    g.gain.linearRampToValueAtTime(0.0, now + 0.35);
+    osc.connect(g); g.connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + 0.35);
+
+  } else if (type === 'elevator_rise') {
+    const dur = 1.8;
+    const hum = audioCtx.createOscillator();
+    const humG = audioCtx.createGain();
+    hum.type = 'sawtooth';
+    hum.frequency.setValueAtTime(80, now);
+    hum.frequency.linearRampToValueAtTime(120, now + dur);
+    humG.gain.setValueAtTime(0.0, now);
+    humG.gain.linearRampToValueAtTime(0.12, now + 0.2);
+    humG.gain.linearRampToValueAtTime(0.08, now + dur - 0.2);
+    humG.gain.linearRampToValueAtTime(0.0, now + dur);
+    hum.connect(humG); humG.connect(audioCtx.destination);
+    hum.start(now); hum.stop(now + dur);
+
+    const groan = createNoise(dur);
+    const groanG = audioCtx.createGain();
+    const bp = audioCtx.createBiquadFilter();
+    bp.type = 'bandpass'; bp.frequency.value = 300; bp.Q.value = 4;
+    groanG.gain.setValueAtTime(0.0, now);
+    groanG.gain.linearRampToValueAtTime(0.08, now + 0.3);
+    groanG.gain.linearRampToValueAtTime(0.0, now + dur);
+    groan.connect(bp); bp.connect(groanG); groanG.connect(audioCtx.destination);
+    groan.start(now); groan.stop(now + dur);
+
+  } else if (type === 'elevator_open') {
+    const rumble = createNoise(0.5);
+    const rG = audioCtx.createGain();
+    const lp = audioCtx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 250;
+    rG.gain.setValueAtTime(0.5, now);
+    rG.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+    rumble.connect(lp); lp.connect(rG); rG.connect(audioCtx.destination);
+    rumble.start(now); rumble.stop(now + 0.5);
+
+  } else if (type === 'elevator_close') {
+    const slam = createNoise(0.3);
+    const sG = audioCtx.createGain();
+    const lp = audioCtx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 300;
+    sG.gain.setValueAtTime(0.8, now);
+    sG.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+    slam.connect(lp); lp.connect(sG); sG.connect(audioCtx.destination);
+    slam.start(now); slam.stop(now + 0.3);
+
+    const thud = audioCtx.createOscillator();
+    const tG = audioCtx.createGain();
+    thud.type = 'sine';
+    thud.frequency.setValueAtTime(60, now);
+    thud.frequency.exponentialRampToValueAtTime(20, now + 0.2);
+    tG.gain.setValueAtTime(0.6, now);
+    tG.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+    thud.connect(tG); tG.connect(audioCtx.destination);
+    thud.start(now); thud.stop(now + 0.22);
+
+  } else if (type === 'button_click') {
+    const n = createNoise(0.03);
+    const ng = audioCtx.createGain();
+    const hp = audioCtx.createBiquadFilter();
+    hp.type = 'highpass'; hp.frequency.value = 4000;
+    ng.gain.setValueAtTime(0.25, now);
+    ng.gain.exponentialRampToValueAtTime(0.001, now + 0.025);
+    n.connect(hp); hp.connect(ng); ng.connect(audioCtx.destination);
+    n.start(now); n.stop(now + 0.03);
+
+    const tick = audioCtx.createOscillator();
+    const tg = audioCtx.createGain();
+    tick.type = 'sine';
+    tick.frequency.setValueAtTime(3200, now);
+    tick.frequency.exponentialRampToValueAtTime(1600, now + 0.018);
+    tg.gain.setValueAtTime(0.18, now);
+    tg.gain.exponentialRampToValueAtTime(0.001, now + 0.025);
+    tick.connect(tg); tg.connect(audioCtx.destination);
+    tick.start(now); tick.stop(now + 0.025);
+
+  } else if (type === 'card_flip') {
+    const n = createNoise(0.12);
+    const ng = audioCtx.createGain();
+    const bp = audioCtx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.setValueAtTime(3000, now);
+    bp.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+    bp.Q.value = 1.2;
+    ng.gain.setValueAtTime(0.3, now);
+    ng.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+    n.connect(bp); bp.connect(ng); ng.connect(audioCtx.destination);
+    n.start(now); n.stop(now + 0.12);
+
+  } else if (type === 'card_select') {
+    const thud = audioCtx.createOscillator();
+    const tg = audioCtx.createGain();
+    thud.type = 'sine';
+    thud.frequency.setValueAtTime(160, now);
+    thud.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+    tg.gain.setValueAtTime(0.55, now);
+    tg.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+    thud.connect(tg); tg.connect(audioCtx.destination);
+    thud.start(now); thud.stop(now + 0.16);
+
+    const sparkle = audioCtx.createOscillator();
+    const sg = audioCtx.createGain();
+    sparkle.type = 'sine';
+    sparkle.frequency.setValueAtTime(1800, now + 0.04);
+    sparkle.frequency.exponentialRampToValueAtTime(3600, now + 0.18);
+    sg.gain.setValueAtTime(0.12, now + 0.04);
+    sg.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+    sparkle.connect(sg); sg.connect(audioCtx.destination);
+    sparkle.start(now + 0.04); sparkle.stop(now + 0.25);
+
+  } else if (type === 'aida_chip_insert') {
+    const click = createNoise(0.04);
+    const cg = audioCtx.createGain();
+    const hp = audioCtx.createBiquadFilter();
+    hp.type = 'highpass'; hp.frequency.value = 5000;
+    cg.gain.setValueAtTime(0.4, now);
+    cg.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+    click.connect(hp); hp.connect(cg); cg.connect(audioCtx.destination);
+    click.start(now); click.stop(now + 0.04);
+
+    const sweep = audioCtx.createOscillator();
+    const sg = audioCtx.createGain();
+    sweep.type = 'sine';
+    sweep.frequency.setValueAtTime(200, now + 0.02);
+    sweep.frequency.exponentialRampToValueAtTime(2400, now + 0.35);
+    sg.gain.setValueAtTime(0.0, now + 0.02);
+    sg.gain.linearRampToValueAtTime(0.18, now + 0.1);
+    sg.gain.linearRampToValueAtTime(0.0, now + 0.4);
+    sweep.connect(sg); sg.connect(audioCtx.destination);
+    sweep.start(now + 0.02); sweep.stop(now + 0.4);
+
+  } else if (type === 'camp_build') {
+    const thud = createNoise(0.12);
+    const tg = audioCtx.createGain();
+    const lp = audioCtx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 400;
+    tg.gain.setValueAtTime(0.6, now);
+    tg.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+    thud.connect(lp); lp.connect(tg); tg.connect(audioCtx.destination);
+    thud.start(now); thud.stop(now + 0.12);
+
+    [880, 1320, 1760].forEach((f, i) => {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'sine';
+      o.frequency.value = f;
+      g.gain.setValueAtTime(0.0, now + 0.05 + i * 0.04);
+      g.gain.linearRampToValueAtTime(0.07, now + 0.07 + i * 0.04);
+      g.gain.linearRampToValueAtTime(0.0, now + 0.22 + i * 0.04);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(now + 0.05 + i * 0.04); o.stop(now + 0.25 + i * 0.04);
+    });
 
   } else if (type === 'sword' || type === 'sword_slash') {
     // sword_slash.mp3: Thick liquid whip cracking through the air
@@ -399,7 +728,7 @@ function playSound(type) {
     osc.connect(gain); gain.connect(audioCtx.destination);
     osc.start(now); osc.stop(now + 0.06);
 
-  } else if (type === 'ui_click') {
+  } else if (type === 'ui_click' || type === 'click') {
     // ui_click.mp3: Sharp dry click (two smooth stones tapping)
     const noise = createNoise(0.03);
     const noiseGain = audioCtx.createGain();
@@ -739,6 +1068,48 @@ function resetExpCombo() {
   _expPickupCombo = 0;
 }
 
+function playBackgroundMusic(url, volume = 0.35, loop = true) {
+  if (!url) return;
+  if (window.gameSettings && window.gameSettings.musicEnabled === false) return;
+  if (_bgmCurrentUrl === url && _bgmAudio && !_bgmAudio.paused) return;
+  stopBackgroundMusic();
+  try {
+    _bgmAudio = new Audio(url);
+    _bgmAudio.loop = loop;
+    _bgmAudio.volume = Math.max(0, Math.min(1, volume));
+    _bgmCurrentUrl = url;
+    const playPromise = _bgmAudio.play();
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch(() => {
+        const resume = () => {
+          if (_bgmAudio) {
+            _bgmAudio.play().catch((err) => {
+              console.warn('[Audio] BGM resume blocked:', err);
+            });
+          }
+          document.removeEventListener('pointerdown', resume);
+        };
+        document.addEventListener('pointerdown', resume);
+      });
+    }
+  } catch (e) {
+    console.warn('[Audio] BGM failed:', e);
+  }
+}
+
+function stopBackgroundMusic() {
+  if (_bgmAudio) {
+    _bgmAudio.pause();
+    _bgmAudio.currentTime = 0;
+    _bgmAudio = null;
+    _bgmCurrentUrl = null;
+  }
+}
+
+function setBgmVolume(v) {
+  if (_bgmAudio) _bgmAudio.volume = Math.max(0, Math.min(1, v));
+}
+
 window.GameAudio = {
   audioCtx,
   playSound,
@@ -746,5 +1117,8 @@ window.GameAudio = {
   updateBackgroundMusic,
   startDroneHum,
   stopDroneHum,
-  resetExpCombo
+  resetExpCombo,
+  playBackgroundMusic,
+  stopBackgroundMusic,
+  setBgmVolume
 };

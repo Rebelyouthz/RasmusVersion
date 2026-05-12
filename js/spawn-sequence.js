@@ -11,8 +11,8 @@
 
   // ─── Config ──────────────────────────────────────────────────────────────────
   const PLAYER_SPAWN       = { x: 12, y: 0, z: 0 };  // Where the player materialises
-  const ELEVATOR_START_Y   = -8;                      // Starting depth underground
-  const ELEVATOR_RISE_TIME = 1800;                    // Duration in ms for elevator rise
+  const ELEVATOR_START_Y   = -14;                     // Starting depth underground
+  const ELEVATOR_RISE_TIME = 3200;                    // Duration in ms for elevator rise
   const HOLE_OPEN_TIME     = 600;                     // Duration in ms for hole opening
   const HOLE_CLOSE_TIME    = 800;                     // Duration in ms for hole closing
   const HOLE_MAX_RADIUS    = 2.2;                     // Maximum radius of the hole
@@ -46,7 +46,9 @@
       roughness: 0.6,
       metalness: 0.7,
       emissive: 0x1a1a1a,
-      emissiveIntensity: 0.2
+      emissiveIntensity: 0.2,
+      transparent: true,
+      opacity: 1.0
     });
 
     _elevatorPlatform = new THREE.Mesh(platformGeo, platformMat);
@@ -65,7 +67,9 @@
       const cableMat = new THREE.MeshStandardMaterial({
         color: 0x3A3A3A,
         roughness: 0.7,
-        metalness: 0.8
+        metalness: 0.8,
+        transparent: true,
+        opacity: 1.0
       });
 
       const cable = new THREE.Mesh(cableGeo, cableMat);
@@ -303,28 +307,31 @@
     // Phase 1 – Hole Opening (0-600ms)
     _startPhase(1);
     _spawnDustParticles(30);
+    if (window.GameAudio && window.GameAudio.playSound) window.GameAudio.playSound('elevator_open');
 
-    // Phase 2 – Elevator Rising (600-2400ms)
+    // Phase 2 – Elevator Rising (600-3800ms)
     setTimeout(() => {
       _startPhase(2);
+      if (window.GameAudio && window.GameAudio.playSound) window.GameAudio.playSound('elevator_rise');
     }, HOLE_OPEN_TIME);
 
-    // Phase 3 – Player Materializing (2400-3000ms)
+    // Phase 3 – Ground Closing (3800-4600ms)
     setTimeout(() => {
       _startPhase(3);
+      if (window.GameAudio && window.GameAudio.playSound) window.GameAudio.playSound('elevator_close');
     }, HOLE_OPEN_TIME + ELEVATOR_RISE_TIME);
 
-    // Phase 4 – Hole Closing (3000-3800ms)
+    // Phase 4 – Elevator Descends (4600-5400ms)
     setTimeout(() => {
       _startPhase(4);
-    }, HOLE_OPEN_TIME + ELEVATOR_RISE_TIME + 600);
+    }, HOLE_OPEN_TIME + ELEVATOR_RISE_TIME + HOLE_CLOSE_TIME);
 
-    // Phase 5 – Done (3800ms+)
+    // Phase 5 – Done (5400ms+)
     setTimeout(() => {
       _startPhase(5);
       _cleanup();
       _active = false;
-    }, HOLE_OPEN_TIME + ELEVATOR_RISE_TIME + 600 + HOLE_CLOSE_TIME);
+    }, HOLE_OPEN_TIME + ELEVATOR_RISE_TIME + HOLE_CLOSE_TIME + HOLE_CLOSE_TIME);
   }
 
   /**
@@ -382,9 +389,11 @@
         _elevatorPlatform.position.y = currentY;
       }
 
-      // Move player with elevator
+      // Move player with elevator and grow scale proportionally
       if (_playerMesh) {
         _playerMesh.position.y = currentY + 0.5;
+        const scale = 0.01 + (1.0 - 0.01) * easeProgress;
+        _playerMesh.scale.set(scale, scale, scale);
       }
 
       // Adjust cables to stay connected
@@ -401,24 +410,14 @@
       _lastTick = now;
     }
 
-    // ── Phase 3: Player Materializing ──────────────────────────────────────
+    // ── Phase 3: Ground Closing — player stays on surface ─────────────────
     if (_phase === 3) {
-      // Grow player from tiny to full size with slight overshoot
+      // Player remains at Y 0.5 on the surface; only close the ground
       if (_playerMesh) {
-        const current = _playerMesh.scale.x;
-        if (current < 1.0) {
-          const next = Math.min(current + dt * 2.0, 1.12); // Overshoot to 1.12
-          _playerMesh.scale.set(next, next, next);
-        } else if (_playerMesh.scale.x > 1.0) {
-          // Settle back to 1.0
-          const next = Math.max(_playerMesh.scale.x - dt * 0.8, 1.0);
-          _playerMesh.scale.set(next, next, next);
-        }
+        _playerMesh.position.y = 0.5;
+        _playerMesh.scale.set(1, 1, 1);
       }
-    }
 
-    // ── Phase 4: Hole Closing ──────────────────────────────────────────────
-    if (_phase === 4) {
       const progress = Math.min(_phaseTime / HOLE_CLOSE_TIME, 1.0);
       const easeProgress = 1 - Math.pow(1 - progress, 2); // Ease out
 
@@ -438,11 +437,26 @@
         cover.position.x = cover.userData.initialPos.x + offsetX;
         cover.position.z = cover.userData.initialPos.z + offsetZ;
         cover.rotation.z = (1.0 - easeProgress) * 0.3;
-        // Fade out as closing completes
         cover.material.opacity = 1.0 - easeProgress * 0.5;
       });
 
-      // Lower elevator back down
+      // Update phase time
+      const now = performance.now();
+      _phaseTime += (now - _lastTick);
+      _lastTick = now;
+    }
+
+    // ── Phase 4: Elevator Descends — player stays standing on ground ───────
+    if (_phase === 4) {
+      // Player stays at Y 0.5 — do not move them
+      if (_playerMesh) {
+        _playerMesh.position.y = 0.5;
+      }
+
+      const progress = Math.min(_phaseTime / HOLE_CLOSE_TIME, 1.0);
+      const easeProgress = 1 - Math.pow(1 - progress, 2); // Ease out
+
+      // Lower elevator back underground without taking player
       if (_elevatorPlatform) {
         const startY = 0.15;
         const currentY = startY - (startY - ELEVATOR_START_Y) * easeProgress;

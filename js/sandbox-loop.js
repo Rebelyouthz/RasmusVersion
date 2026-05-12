@@ -242,14 +242,12 @@
   if (typeof spawnWaterDroplet === 'undefined') {
     window.spawnWaterDroplet = function (pos) {
       if (!pos) return;
-      if (window.BloodSystem && typeof BloodSystem.emitWaterBurst === 'function') {
-        BloodSystem.emitWaterBurst({ x: pos.x, y: pos.y, z: pos.z }, 1, { spreadXZ: 0.3, spreadY: 0.2 });
+      if (window.BloodSimulatorV21 && typeof window.BloodSimulatorV21.spawnMist === 'function') {
+        window.BloodSimulatorV21.spawnMist(pos.x, (pos.y || 0) + 0.5, pos.z, 3, 0x5DADE2);
       }
     };
   }
-  // gameOver — called by player-class.js when the player dies.  In the sandbox
-  // we simply reload the page so the user can test again without a full game-over
-  // screen from the main game (which requires systems not loaded here).
+  // gameOver — called by player-class.js when the player dies.
   if (typeof gameOver === 'undefined') {
     window.gameOver = function () {
       // Evaluate run quests before showing death screen (CHANGE 3) — pass endOfRun=true
@@ -289,8 +287,28 @@
         }
       }, 800); // brief delay so blood/gore stays visible for dramatic effect
 
-      // Reload page after the full delay
-      setTimeout(function () { location.reload(); }, GAME_OVER_RELOAD_DELAY_MS);
+      // Show the full run-end screen instead of reloading the page
+      setTimeout(function () {
+        const _stats = {
+          kills: playerStats ? (playerStats.kills || 0) : 0,
+          eliteKills: (window.currentRunStats && window.currentRunStats.eliteKills) || 0,
+          bossKills: (window.currentRunStats && window.currentRunStats.bossKills) || 0,
+          timeSurvived: Math.floor(_elapsedSec || 0),
+          maxCombo: window._runMaxCombo || 0,
+          xpAccumulated: (window.currentRunStats && window.currentRunStats.xpAccumulated) || 0,
+          questCompleted: false,
+          questActive: false,
+          questName: ''
+        };
+        window._resCurrentStats = _stats;
+        if (typeof window.showRunEndScreen === 'function' && window.showRunEndScreen(_stats)) return;
+        if (window.RunEndScreen && typeof window.RunEndScreen.show === 'function') {
+          window.RunEndScreen.show(_stats);
+          return;
+        }
+        // Hard fallback only if run-end UI is unavailable
+        location.reload();
+      }, GAME_OVER_RELOAD_DELAY_MS);
     };
   }
 
