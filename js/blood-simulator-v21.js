@@ -809,7 +809,7 @@ window.BloodV2 = Object.create(BloodSimulatorV21);
 // but actual re-initialisation is blocked (initialised via window.BloodSimulatorV21.init).
 Object.defineProperty(window.BloodV2, 'init', {
   value: function() { console.warn('[BloodV2] Use window.BloodSimulatorV21.init(scene) to initialise.'); },
-  writable: true, configurable: true, enumerable: false
+  writable: false, configurable: true, enumerable: false
 });
 window.BloodV2.ENEMY_BLOOD = {};
 Object.keys(_BSV21_BLOOD).forEach((enemyType) => {

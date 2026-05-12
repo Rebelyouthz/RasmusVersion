@@ -1663,20 +1663,24 @@ case 'melee_spin':
 
 case 'plasma_melt': {
   // Scale X and Z grow from 1→2, scale Y shrinks from 1→0 over 0.8 s
-  data.meltProgress = (data.meltProgress || 0) + dt / 0.8;
+  var MELT_TOTAL    = 0.8;  // seconds for full melt
+  var FADE_START    = 0.625; // normalised progress when opacity fade begins (last 0.3 s of 0.8 s)
+  var FADE_RANGE    = 0.375; // remaining normalised duration for the fade (1.0 - FADE_START)
+  data.meltProgress = (data.meltProgress || 0) + dt / MELT_TOTAL;
   var mp = Math.min(1.0, data.meltProgress);
+  var expandedScale = this.scale * (1.0 + mp);
   this.mesh.scale.set(
-    this.scale * (1.0 + mp),
+    expandedScale,
     Math.max(0.02, this.scale * (1.0 - mp)),
-    this.scale * (1.0 + mp)
+    expandedScale
   );
-  // During last 0.3 s (mp > 0.625) fade material opacity to 0
-  if (mp > 0.625) {
+  // During last 0.3 s fade material opacity to 0
+  if (mp > FADE_START) {
     if (!this.mesh.material.transparent) {
       this.mesh.material.transparent = true;
       this.mesh.material.needsUpdate = true;
     }
-    this.mesh.material.opacity = Math.max(0, 1.0 - (mp - 0.625) / 0.375);
+    this.mesh.material.opacity = Math.max(0, 1.0 - (mp - FADE_START) / FADE_RANGE);
   }
   if (mp >= 1.0) {
     // Leave a green ground decal
