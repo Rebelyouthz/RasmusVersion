@@ -1169,6 +1169,13 @@ return;
 }
 };
 
+// Delegate rawBurst calls to the global blood system (used by death animations)
+SlimeEnemy.prototype.rawBurst = function(x, y, z, count, opts) {
+  if (window.BloodSimulatorV21 && typeof window.BloodSimulatorV21.rawBurst === 'function') {
+    window.BloodSimulatorV21.rawBurst(x, y, z, count, opts);
+  }
+};
+
 // ════════════════════════════════════════════════
 //  18 KILL ANIMATIONS
 // ════════════════════════════════════════════════

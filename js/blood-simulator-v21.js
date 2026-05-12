@@ -697,12 +697,22 @@ const BloodSimulatorV21 = {
 
   onEnemyHit(enemy, hitPoint, damageType) {
     const isProjectile = (typeof damageType === 'string') && damageType !== 'melee';
+    const enemyType = (enemy && enemy.enemyType) ? enemy.enemyType : 'human';
+
+    // Slimes get a smaller, melee-style burst to avoid excessive green particles
+    if (enemy && enemy.enemyType === 'slime') {
+      this.emit(hitPoint.x, hitPoint.y, hitPoint.z, 8, {
+        shotType: 'melee', enemyType, viscosity: 0.62
+      });
+      const mistColor = _BSV21_MIST.slime || 0x55ff66;
+      this.spawnMist(hitPoint.x, hitPoint.y + 0.3, hitPoint.z, 2, mistColor, 'slime');
+      return;
+    }
+
     // More blood drops on every hit — fewer mist particles to keep the look clean.
     const burstCount   = isProjectile ? 350 : 250;
     const mistColor    = (enemy && enemy.enemyType && _BSV21_MIST[enemy.enemyType])
       ? _BSV21_MIST[enemy.enemyType]  : 0xee2200;
-
-    const enemyType = (enemy && enemy.enemyType) ? enemy.enemyType : 'human';
     this.emit(hitPoint.x, hitPoint.y, hitPoint.z, burstCount, {
       shotType: damageType === 'shotgun' ? 'shotgun' : (damageType === 'sniper' ? 'sniper' : (damageType === 'melee' ? 'melee' : (damageType === 'uzi' ? 'uzi' : 'pistol'))),
       enemyType,
@@ -791,8 +801,17 @@ const BloodSimulatorV21 = {
 };
 
 window.BloodSimulatorV21 = BloodSimulatorV21;
-window.BloodV2 = BloodSimulatorV21;
-window.BloodV2.ENEMY_BLOOD = window.BloodV2.ENEMY_BLOOD || {};
+// BloodV2 shim — inherits all BloodSimulatorV21 methods via prototype but hides
+// init() to prevent accidental re-initialisation via window.BloodV2.init(scene).
+// window.BloodSimulatorV21.init(scene) remains the canonical initialisation path.
+window.BloodV2 = Object.create(BloodSimulatorV21);
+// Override init with a no-op warning so sandbox-loop typeof check returns 'function'
+// but actual re-initialisation is blocked (initialised via window.BloodSimulatorV21.init).
+Object.defineProperty(window.BloodV2, 'init', {
+  value: function() { console.warn('[BloodV2] Use window.BloodSimulatorV21.init(scene) to initialise.'); },
+  writable: true, configurable: true, enumerable: false
+});
+window.BloodV2.ENEMY_BLOOD = {};
 Object.keys(_BSV21_BLOOD).forEach((enemyType) => {
   const base = _BSV21_BLOOD[enemyType];
   const mist = _BSV21_MIST[enemyType] || base;
