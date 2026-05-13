@@ -14,8 +14,15 @@ try {
 let musicOscillators = [];
 let musicGain = null;
 const _loadedBuffers = new Map();
+const BGM_TRACK_MP3 = 'guitarbagpipe-synapse.mp3';
 const PISTOL_WAV = "ES_Guns, Pistol, Handgun, Glock, Shots, Burst, Perspective 2, Low Frequency Details - Epidemic Sound.wav";
+const GUNSHOT_SOURCES = ['gun-shot.mp3', 'gunshot.mp3', PISTOL_WAV];
+const SLIME_SOURCES = ['slime-enemy.mp3', 'slime.mp3', 'slime-sfx.mp3'];
 let _pistolBuffer = null;
+let _gunshotBuffer = null;
+let _slimeBuffer = null;
+let _gunshotLoadPromise = null;
+let _slimeLoadPromise = null;
 let _uiInteractionSoundBound = false;
 let _bgmAudio = null;
 let _bgmCurrentUrl = null;
@@ -86,6 +93,17 @@ async function _loadBuffer(url) {
   }
 }
 
+async function _loadFirstAvailable(urls) {
+  if (!Array.isArray(urls)) return null;
+  for (let i = 0; i < urls.length; i++) {
+    const u = urls[i];
+    if (!u) continue;
+    const b = await _loadBuffer(u);
+    if (b) return b;
+  }
+  return null;
+}
+
 function _playBuffer(buffer, volume = 1.0, pitchVariance = 0) {
   if (!buffer || !audioCtx) return;
   if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -104,10 +122,33 @@ function _ensurePistolLoaded() {
   _loadBuffer(PISTOL_WAV).then((b) => { _pistolBuffer = b; });
 }
 
+function _ensureCombatSamplesLoaded() {
+  if (!audioCtx) return;
+  if (!_gunshotBuffer && !_gunshotLoadPromise) {
+    _gunshotLoadPromise = _loadFirstAvailable(GUNSHOT_SOURCES).then((b) => {
+      _gunshotBuffer = b;
+      if (!_pistolBuffer) _pistolBuffer = b;
+      return b;
+    }).catch(() => null).finally(() => {
+      _gunshotLoadPromise = null;
+    });
+  }
+  if (!_slimeBuffer && !_slimeLoadPromise) {
+    _slimeLoadPromise = _loadFirstAvailable(SLIME_SOURCES).then((b) => {
+      _slimeBuffer = b;
+      return b;
+    }).catch(() => null).finally(() => {
+      _slimeLoadPromise = null;
+    });
+  }
+}
+
 function _bindPistolOnFirstGesture() {
   if (typeof document === 'undefined') return;
   const loadOnce = () => {
     _ensurePistolLoaded();
+    _ensureCombatSamplesLoaded();
+    _loadBuffer(BGM_TRACK_MP3);
     document.removeEventListener('pointerdown', loadOnce, true);
     document.removeEventListener('keydown', loadOnce, true);
   };
@@ -256,6 +297,11 @@ function playSound(type) {
   // ── Combat (Crisp & Punchy) ──
 
   } else if (type === 'shoot' || type === 'gun_shoot') {
+    _ensureCombatSamplesLoaded();
+    if (_gunshotBuffer) {
+      _playBuffer(_gunshotBuffer, 0.7, 0.15);
+      return;
+    }
     _ensurePistolLoaded();
     if (_pistolBuffer) {
       _playBuffer(_pistolBuffer, 0.7, 0.15);
@@ -285,6 +331,11 @@ function playSound(type) {
     pop.start(now); pop.stop(now + 0.04);
 
   } else if (type === 'slime_hop') {
+    _ensureCombatSamplesLoaded();
+    if (_slimeBuffer) {
+      _playBuffer(_slimeBuffer, 0.38, 0.16);
+      return;
+    }
     const thud = audioCtx.createOscillator();
     const thudG = audioCtx.createGain();
     thud.type = 'sine';
@@ -305,6 +356,11 @@ function playSound(type) {
     squelch.start(now); squelch.stop(now + 0.08);
 
   } else if (type === 'slime_die') {
+    _ensureCombatSamplesLoaded();
+    if (_slimeBuffer) {
+      _playBuffer(_slimeBuffer, 0.55, 0.05);
+      return;
+    }
     const splat = createNoise(0.25);
     const splatG = audioCtx.createGain();
     const lp = audioCtx.createBiquadFilter();
@@ -325,6 +381,11 @@ function playSound(type) {
     pop.start(now); pop.stop(now + 0.2);
 
   } else if (type === 'slime_hit') {
+    _ensureCombatSamplesLoaded();
+    if (_slimeBuffer) {
+      _playBuffer(_slimeBuffer, 0.28, 0.22);
+      return;
+    }
     const n = createNoise(0.06);
     const ng = audioCtx.createGain();
     const bp = audioCtx.createBiquadFilter();
