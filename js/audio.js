@@ -14,7 +14,7 @@ try {
 let musicOscillators = [];
 let musicGain = null;
 const _loadedBuffers = new Map();
-const GUITAR_BGM_MP3 = 'guitarbagpipe-synapse.mp3';
+const BGM_TRACK_MP3 = 'guitarbagpipe-synapse.mp3';
 const PISTOL_WAV = "ES_Guns, Pistol, Handgun, Glock, Shots, Burst, Perspective 2, Low Frequency Details - Epidemic Sound.wav";
 const GUNSHOT_SOURCES = ['gun-shot.mp3', 'gunshot.mp3', PISTOL_WAV];
 const SLIME_SOURCES = ['slime-enemy.mp3', 'slime.mp3', 'slime-sfx.mp3'];
@@ -138,7 +138,7 @@ function _bindPistolOnFirstGesture() {
   const loadOnce = () => {
     _ensurePistolLoaded();
     _ensureCombatSamplesLoaded();
-    _loadBuffer(GUITAR_BGM_MP3);
+    _loadBuffer(BGM_TRACK_MP3);
     document.removeEventListener('pointerdown', loadOnce, true);
     document.removeEventListener('keydown', loadOnce, true);
   };
@@ -289,7 +289,7 @@ function playSound(type) {
   } else if (type === 'shoot' || type === 'gun_shoot') {
     _ensureCombatSamplesLoaded();
     if (_gunshotBuffer) {
-      _playBuffer(_gunshotBuffer, 0.74, 0.09);
+      _playBuffer(_gunshotBuffer, 0.7, 0.15);
       return;
     }
     _ensurePistolLoaded();

@@ -6,8 +6,8 @@
   const BASE_COST = 5;
   const COST_MULTIPLIER = 1.3;
   const ROLL_STEPS = 18;
-  const ROLL_STEP_MS_START = 55;
-  const ROLL_STEP_MS_END = 150;
+  const ROLL_STEP_MS_MIN = 55;
+  const ROLL_STEP_MS_MAX = 150;
 
   const STAT_TYPES = [
     { id: 'maxHp', name: 'Max HP', icon: '❤️', color: '#ff4444', baseValue: 20 },
@@ -34,8 +34,7 @@
     currentCost: BASE_COST,
     isAnimating: false,
     rollToken: 0,
-    highlightedIndex: -1,
-    pendingRarity: null
+    highlightedIndex: -1
   };
 
   function _getSave() {
@@ -103,7 +102,7 @@
 
   function _isPercentStat(statId) {
     return statId.includes('Chance') || statId.includes('Reduction') || statId.includes('Speed') ||
-      statId.includes('Gain') || statId === 'lifeSteal' || statId === 'cooldownReduction';
+      statId.includes('Gain') || statId === 'lifeSteal';
   }
 
   function _formatValue(v, statId) {
@@ -214,12 +213,12 @@
         return;
       }
 
-      idx = (idx + 1 + ((Math.random() * 2) | 0)) % CARD_COUNT;
+      idx = (idx + 1) % CARD_COUNT;
       cardState.highlightedIndex = idx;
       _render();
 
-      const t = step / Math.max(1, ROLL_STEPS - 1);
-      const delay = Math.floor(ROLL_STEP_MS_START + (ROLL_STEP_MS_END - ROLL_STEP_MS_START) * t);
+      const t = step / (ROLL_STEPS - 1);
+      const delay = Math.floor(ROLL_STEP_MS_MIN + (ROLL_STEP_MS_MAX - ROLL_STEP_MS_MIN) * t);
       step += 1;
       setTimeout(tick, delay);
     };
