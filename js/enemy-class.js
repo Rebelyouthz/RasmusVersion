@@ -121,9 +121,14 @@
 
     // Helper: get the base blood color for an enemy instance (reads BloodV2 table if available)
     function _getEnemyBloodColor(enemy) {
-      if (enemy && enemy.enemyType && window.BloodV2 && window.BloodV2.ENEMY_BLOOD) {
-        var _eb = window.BloodV2.ENEMY_BLOOD[enemy.enemyType];
-        if (_eb) return _eb.base;
+      var _type = enemy && enemy.enemyType ? enemy.enemyType : 'human';
+      if (window.BloodV2 && window.BloodV2.ENEMY_BLOOD) {
+        var _eb = window.BloodV2.ENEMY_BLOOD[_type];
+        if (_eb && _eb.base) return _eb.base;
+      }
+      if (window.BloodSimulatorV21 && typeof window.BloodSimulatorV21.getEnemyBloodColor === 'function') {
+        var _c = window.BloodSimulatorV21.getEnemyBloodColor(_type);
+        if (Number.isFinite(_c)) return _c;
       }
       return 0xcc1100;
     }

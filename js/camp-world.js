@@ -1578,8 +1578,10 @@
     grp.traverse(function (child) {
       if (child && child.isMesh) {
         child.renderOrder = PLAYER_RENDER_ORDER;
+        child.frustumCulled = false;
       }
     });
+    grp.frustumCulled = false;
     grp.position.set(_playerPos.x, PLAYER_RADIUS, _playerPos.z);
     _playerMesh = grp;
     _campScene.add(grp);
@@ -1737,64 +1739,89 @@
     const sd = window.saveData;
     const introState = (sd && sd.aidaIntroState) || {};
 
-    // ─ Broken Robot ─────────────────────────────────────────
+    // ─ Broken Robot (rewritten mesh; robust and cull-safe) ────────────────
     const robotGrp = new THREE.Group();
-    const metalMat  = new THREE.MeshStandardMaterial({ color: 0x445566, roughness: 0.55, metalness: 0.75 });
-    const darkMat   = new THREE.MeshStandardMaterial({ color: 0x1a2233, roughness: 0.7, metalness: 0.5 });
+    const shellMat = new THREE.MeshStandardMaterial({ color: 0x3a4658, roughness: 0.48, metalness: 0.82 });
+    const plateMat = new THREE.MeshStandardMaterial({ color: 0x1a2233, roughness: 0.65, metalness: 0.58 });
 
-    // Body (slightly tilted — looks broken/slumped)
-    const bodyGeo = new THREE.BoxGeometry(0.7, 0.9, 0.45);
-    const body = new THREE.Mesh(bodyGeo, metalMat);
-    body.position.set(0, 0.55, 0);
-    body.rotation.z = 0.18; // slump to the side
-    body.castShadow = true;
-    robotGrp.add(body);
+    const baseRing = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.46, 0.56, 0.22, 14),
+      plateMat
+    );
+    baseRing.position.y = 0.11;
+    baseRing.castShadow = true;
+    robotGrp.add(baseRing);
 
-    // Head
-    const headGeo = new THREE.BoxGeometry(0.45, 0.4, 0.42);
-    const head = new THREE.Mesh(headGeo, metalMat);
-    head.position.set(0.08, 1.18, 0);
-    head.rotation.z = 0.25; // drooping
+    const torso = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.30, 0.34, 0.98, 12),
+      shellMat
+    );
+    torso.position.set(0, 0.62, 0);
+    torso.rotation.z = 0.08;
+    torso.castShadow = true;
+    robotGrp.add(torso);
+
+    const chestPlate = new THREE.Mesh(
+      new THREE.BoxGeometry(0.46, 0.38, 0.12),
+      new THREE.MeshStandardMaterial({ color: 0x243147, roughness: 0.35, metalness: 0.9 })
+    );
+    chestPlate.position.set(0.02, 0.76, 0.24);
+    chestPlate.rotation.z = 0.05;
+    chestPlate.castShadow = true;
+    robotGrp.add(chestPlate);
+
+    const head = new THREE.Mesh(
+      new THREE.BoxGeometry(0.48, 0.34, 0.36),
+      shellMat
+    );
+    head.position.set(0.06, 1.12, 0.02);
+    head.rotation.z = 0.16;
     head.castShadow = true;
     robotGrp.add(head);
 
-    // Eye sockets (dark — offline)
-    const eyeGeo  = new THREE.BoxGeometry(0.09, 0.06, 0.05);
-    const eyeMat  = new THREE.MeshBasicMaterial({ color: 0x110011 }); // eyes are off
-    [-0.1, 0.1].forEach(ox => {
-      const eye = new THREE.Mesh(eyeGeo, eyeMat);
-      eye.position.set(0.08 + ox, 1.2, 0.22);
+    // Eye sockets (offline by default; _aidaRobotEyesOn toggles color/emissive)
+    const eyeGeo = new THREE.BoxGeometry(0.10, 0.06, 0.04);
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x110011 });
+    [-0.115, 0.115].forEach(function (ox) {
+      const eye = new THREE.Mesh(eyeGeo, eyeMat.clone());
+      eye.position.set(0.06 + ox, 1.14, 0.215);
+      eye.frustumCulled = false;
       robotGrp.add(eye);
     });
 
-    // Left arm (fallen to ground)
-    const armGeo = new THREE.BoxGeometry(0.2, 0.65, 0.2);
-    const leftArm = new THREE.Mesh(armGeo, darkMat);
-    leftArm.position.set(-0.55, 0.25, 0);
-    leftArm.rotation.z = -1.2;
+    const armGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.46, 10);
+    const leftArm = new THREE.Mesh(armGeo, plateMat);
+    leftArm.position.set(-0.40, 0.55, 0.01);
+    leftArm.rotation.set(0.1, 0.1, -1.25);
     leftArm.castShadow = true;
     robotGrp.add(leftArm);
 
-    // Right arm (hanging)
-    const rightArm = new THREE.Mesh(armGeo, darkMat);
-    rightArm.position.set(0.55, 0.45, 0);
-    rightArm.rotation.z = 0.8;
+    const rightArm = new THREE.Mesh(armGeo, plateMat);
+    rightArm.position.set(0.45, 0.57, -0.02);
+    rightArm.rotation.set(-0.12, -0.2, 1.02);
     rightArm.castShadow = true;
     robotGrp.add(rightArm);
 
-    // Legs
-    const legGeo = new THREE.BoxGeometry(0.22, 0.55, 0.22);
-    [-0.2, 0.2].forEach((ox, i) => {
-      const leg = new THREE.Mesh(legGeo, darkMat);
-      leg.position.set(ox, 0.12, 0);
-      leg.rotation.z = i === 0 ? -0.1 : 0.15;
-      leg.castShadow = true;
-      robotGrp.add(leg);
-    });
+    const legGeo = new THREE.CylinderGeometry(0.09, 0.09, 0.38, 10);
+    const leftLeg = new THREE.Mesh(legGeo, plateMat);
+    leftLeg.position.set(-0.16, 0.18, 0.02);
+    leftLeg.rotation.z = -0.10;
+    leftLeg.castShadow = true;
+    robotGrp.add(leftLeg);
+
+    const rightLeg = new THREE.Mesh(legGeo, plateMat);
+    rightLeg.position.set(0.18, 0.17, -0.01);
+    rightLeg.rotation.z = 0.14;
+    rightLeg.castShadow = true;
+    robotGrp.add(rightLeg);
 
     robotGrp.position.set(AIDA_ROBOT_POS.x, 0, AIDA_ROBOT_POS.z);
     robotGrp.scale.set(0.65, 0.65, 0.65); // Scaled down to fit scene better
     robotGrp._isAidaRobot = true;
+    robotGrp.frustumCulled = false;
+    robotGrp.traverse(function (child) {
+      if (child && child.isMesh) child.frustumCulled = false;
+    });
     _aidaRobotMesh = robotGrp;
     _robotMesh = robotGrp;
     _campScene.add(robotGrp);
@@ -1876,6 +1903,19 @@
     });
   }
 
+  function _stabilizeCampPlayerVisual() {
+    if (!_playerMesh) return;
+    if (!_playerMesh.position) return;
+    _playerMesh.visible = true;
+    if (!Number.isFinite(_playerMesh.position.x)) _playerMesh.position.x = Number.isFinite(_playerPos.x) ? _playerPos.x : SPAWN_POS.x;
+    if (!Number.isFinite(_playerMesh.position.z)) _playerMesh.position.z = Number.isFinite(_playerPos.z) ? _playerPos.z : SPAWN_POS.z;
+    if (!Number.isFinite(_playerMesh.position.y) || _playerMesh.position.y <= 0.02) _playerMesh.position.y = PLAYER_RADIUS;
+    _playerMesh.frustumCulled = false;
+    _playerMesh.traverse(function (child) {
+      if (child && child.isMesh) child.frustumCulled = false;
+    });
+  }
+
   // Floating speech bubbles over heads have been removed per design update.
   // These stubs prevent call-site errors.
   function _ensureRobotBubble() { /* disabled — no floating bubbles */ }
@@ -1889,6 +1929,7 @@
     }
 
     function _onArrivalComplete() {
+      _stabilizeCampPlayerVisual();
       _aidaCinematicLock = false;
       _aidaOrbitWaitingForDialogue = false;
       _aidaGrantStarterMaterials();
@@ -2059,6 +2100,7 @@
   function _pickUpAidaChip() {
     if (_aidaIntroState.chipPickedUp) return;
     _aidaIntroState.chipPickedUp = true;
+    _stabilizeCampPlayerVisual();
 
     const sd = (typeof saveData !== 'undefined') ? saveData : null;
     if (sd) {
@@ -2071,7 +2113,7 @@
 
     const DS = window.DialogueSystem;
     if (DS) {
-      DS.show(DS.DIALOGUES.aidaChipFound, { onComplete: function () { _resumeInput(); } });
+      DS.show(DS.DIALOGUES.aidaChipFound, { onComplete: function () { _stabilizeCampPlayerVisual(); _resumeInput(); } });
       _openMenu();
     }
 
@@ -2084,6 +2126,7 @@
   function _insertAidaChip() {
     if (!_aidaIntroState.chipPickedUp || _aidaIntroState.chipInserted) return;
     _aidaIntroState.chipInserted = true;
+    _stabilizeCampPlayerVisual();
     if (window.GameAudio && window.GameAudio.playSound) window.GameAudio.playSound('aida_chip_insert');
 
     const sd = (typeof saveData !== 'undefined') ? saveData : null;
@@ -7780,6 +7823,9 @@
       _aidaOrbitWaitingForDialogue = false;
       console.warn('[CampWorld] _aidaCinematicLock failsafe cleared after 30 s');
     }
+
+    const _dialogueActive = !!(window.DialogueSystem && typeof window.DialogueSystem.isActive === 'function' && window.DialogueSystem.isActive());
+    if (_menuOpen || _aidaCinematicLock || _dialogueActive) _stabilizeCampPlayerVisual();
 
     if (!_menuOpen && !_aidaCinematicLock) {
       _updatePlayer(dt);
