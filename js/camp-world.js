@@ -1911,9 +1911,6 @@
     if (!Number.isFinite(_playerMesh.position.z)) _playerMesh.position.z = Number.isFinite(_playerPos.z) ? _playerPos.z : SPAWN_POS.z;
     if (!Number.isFinite(_playerMesh.position.y) || _playerMesh.position.y <= 0.02) _playerMesh.position.y = PLAYER_RADIUS;
     _playerMesh.frustumCulled = false;
-    _playerMesh.traverse(function (child) {
-      if (child && child.isMesh) child.frustumCulled = false;
-    });
   }
 
   // Floating speech bubbles over heads have been removed per design update.

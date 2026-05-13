@@ -176,7 +176,7 @@
       '<div class="stat-cards-container">' +
         '<div class="stat-cards-header">' +
           '<h2>🎰 Stat Cards</h2>' +
-          '<button class="close-button" id="stat-cards-close-btn">✕</button>' +
+          '<button class="close-button" id="stat-cards-close-btn" ' + (cardState.isAnimating ? 'disabled aria-disabled="true"' : '') + '>✕</button>' +
         '</div>' +
         '<div class="stat-cards-info">' +
           '<div class="info-item"><span class="info-label">Current Cost:</span><span class="info-value">💰 ' + cardState.currentCost + ' Gold</span></div>' +
@@ -311,9 +311,8 @@
   }
 
   function close() {
+    if (cardState.isAnimating) return;
     cardState.highlightedIndex = -1;
-    cardState.isAnimating = false;
-    cardState.rollToken += 1;
     const overlay = document.getElementById('stat-cards-overlay');
     if (overlay) overlay.style.display = 'none';
   }

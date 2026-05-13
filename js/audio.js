@@ -21,6 +21,8 @@ const SLIME_SOURCES = ['slime-enemy.mp3', 'slime.mp3', 'slime-sfx.mp3'];
 let _pistolBuffer = null;
 let _gunshotBuffer = null;
 let _slimeBuffer = null;
+let _gunshotLoadPromise = null;
+let _slimeLoadPromise = null;
 let _uiInteractionSoundBound = false;
 let _bgmAudio = null;
 let _bgmCurrentUrl = null;
@@ -122,14 +124,22 @@ function _ensurePistolLoaded() {
 
 function _ensureCombatSamplesLoaded() {
   if (!audioCtx) return;
-  if (!_gunshotBuffer) {
-    _loadFirstAvailable(GUNSHOT_SOURCES).then((b) => {
+  if (!_gunshotBuffer && !_gunshotLoadPromise) {
+    _gunshotLoadPromise = _loadFirstAvailable(GUNSHOT_SOURCES).then((b) => {
       _gunshotBuffer = b;
       if (!_pistolBuffer) _pistolBuffer = b;
+      return b;
+    }).catch(() => null).finally(() => {
+      _gunshotLoadPromise = null;
     });
   }
-  if (!_slimeBuffer) {
-    _loadFirstAvailable(SLIME_SOURCES).then((b) => { _slimeBuffer = b; });
+  if (!_slimeBuffer && !_slimeLoadPromise) {
+    _slimeLoadPromise = _loadFirstAvailable(SLIME_SOURCES).then((b) => {
+      _slimeBuffer = b;
+      return b;
+    }).catch(() => null).finally(() => {
+      _slimeLoadPromise = null;
+    });
   }
 }
 
