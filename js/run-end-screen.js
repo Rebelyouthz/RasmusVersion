@@ -850,7 +850,7 @@ window.RunEndScreen = (function () {
         // Show gameover screen briefly (with only the restart button) and click it
         var go = document.getElementById('gameover-screen');
         if (go) {
-          go.style.display = 'flex';
+          go.style.display = 'none';
           var rb = document.getElementById('restart-btn');
           if (rb) {
             rb.click();

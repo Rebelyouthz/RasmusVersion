@@ -162,6 +162,10 @@ function init() {
   window.TraumaSystem = null;
   if (window.BloodSimulatorV21 && typeof THREE !== 'undefined') {
     window.BloodSimulatorV21.init(scene, null, null);
+    if (window.BloodV2) {
+      window.BloodV2._dropData = window.BloodSimulatorV21._pool;
+      window.BloodV2._dropIM = window.BloodSimulatorV21.dropIM;
+    }
   }
   if (window.GameObjectPool) window.GameObjectPool.prewarm();
   if (_powerUpUpdateTimer) clearInterval(_powerUpUpdateTimer);

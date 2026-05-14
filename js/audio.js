@@ -26,6 +26,7 @@ let _slimeLoadPromise = null;
 let _uiInteractionSoundBound = false;
 let _bgmAudio = null;
 let _bgmCurrentUrl = null;
+let _gameGuitarMusic = null;
 
     // Combo tracking for exp_pickup pitch-up effect
     const EXP_COMBO_WINDOW = 0.4;  // seconds — rapid collection combo window
@@ -45,6 +46,16 @@ function initMusic() {
     musicGain.gain.value = 0.05;
     musicGain.connect(audioCtx.destination);
   }
+}
+
+function _ensureGameGuitarMusic() {
+  if (!_gameGuitarMusic) {
+    _gameGuitarMusic = new Audio(BGM_TRACK_MP3);
+    _gameGuitarMusic.loop = true;
+    _gameGuitarMusic.volume = 0.55;
+    window._gameGuitarMusic = _gameGuitarMusic;
+  }
+  return _gameGuitarMusic;
 }
 
 function updateBackgroundMusic() {
@@ -196,7 +207,8 @@ if (typeof document !== 'undefined') {
 }
 
 function playSound(type) {
-  if (!audioCtx || !isSoundEnabled()) return;
+  if (!audioCtx) return;
+  if (window.gameSettings && window.gameSettings.soundEnabled === false) return;
   if (audioCtx.state === 'suspended') audioCtx.resume();
 
   const now = audioCtx.currentTime;
@@ -1132,6 +1144,19 @@ function resetExpCombo() {
 function playBackgroundMusic(url, volume = 0.35, loop = true) {
   if (!url) return;
   if (window.gameSettings && window.gameSettings.musicEnabled === false) return;
+  if (url === BGM_TRACK_MP3 || /guitar/i.test(url)) {
+    stopBackgroundMusic();
+    const gm = _ensureGameGuitarMusic();
+    gm.loop = true;
+    gm.volume = 0.55;
+    if (gm.paused) {
+      try {
+        const p = gm.play();
+        if (p && typeof p.catch === 'function') p.catch(() => {});
+      } catch (e) {}
+    }
+    return;
+  }
   if (_bgmCurrentUrl === url && _bgmAudio && !_bgmAudio.paused) return;
   stopBackgroundMusic();
   try {
@@ -1165,11 +1190,17 @@ function stopBackgroundMusic() {
     _bgmAudio = null;
     _bgmCurrentUrl = null;
   }
+  if (_gameGuitarMusic) {
+    _gameGuitarMusic.pause();
+    _gameGuitarMusic.currentTime = 0;
+  }
 }
 
 function setBgmVolume(v) {
   if (_bgmAudio) _bgmAudio.volume = Math.max(0, Math.min(1, v));
 }
+
+window.playSound = playSound;
 
 window.GameAudio = {
   audioCtx,

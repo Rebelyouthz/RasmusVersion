@@ -318,6 +318,8 @@
     chipPickedUp: false,
     chipInserted: false,
   };
+  let _introResourceDrop = null;
+  let _introResourceOverlayActive = false;
   let _robotBubbleEl  = null;  // floating speech bubble DOM element above robot
 
   // Keyboard state (managed inside this module)
@@ -1734,6 +1736,93 @@
   }
 
   // ── A.I.D.A Intro — Broken Robot + Glowing Chip ─────────
+
+  function _createIntroResourceDrop() {
+    if (!_campScene || _introResourceDrop) return;
+    const THREE = T();
+    if (!THREE) return;
+    const grp = new THREE.Group();
+    const g = new THREE.BoxGeometry(0.3, 0.3, 0.3);
+    const m = new THREE.MeshStandardMaterial({ color: 0xFFD700, emissive: 0x8B6914, emissiveIntensity: 0.8, roughness: 0.3, metalness: 0.7, transparent: true, opacity: 1 });
+    [[0,0,0],[0.2,0.05,-0.15],[-0.2,0.04,0.13]].forEach(function(off){
+      const mesh = new THREE.Mesh(g, m);
+      mesh.position.set(off[0], off[1], off[2]);
+      mesh.castShadow = true;
+      grp.add(mesh);
+    });
+    const light = new THREE.PointLight(0xFFD700, 1.5, 4, 2);
+    light.position.set(0, 0.8, 0);
+    grp.add(light);
+    grp.position.set(8, 0.3, 0);
+    _campScene.add(grp);
+    _introResourceDrop = grp;
+  }
+
+  function _collectIntroResources() {
+    const sd = (typeof saveData !== 'undefined') ? saveData : _saveData;
+    if (!sd || sd._introResourcesDropped) return;
+    if (!sd.resources) sd.resources = {};
+    sd.resources.wood = (sd.resources.wood || 0) + 50;
+    sd.resources.stone = (sd.resources.stone || 0) + 50;
+    sd.resources.gold = (sd.resources.gold || 0) + 200;
+    sd._introResourcesDropped = true;
+    if (typeof saveSaveData === 'function') saveSaveData();
+    if (_introResourceDrop && _campScene) _campScene.remove(_introResourceDrop);
+    _introResourceDrop = null;
+    if (typeof showStatusMessage === 'function') showStatusMessage('Resources collected — build the Quest Hall!', 3200);
+  }
+
+  function _showIntroResourceOverlay() {
+    if (_introResourceOverlayActive) return;
+    _introResourceOverlayActive = true;
+    _openMenu();
+    const el = document.createElement('div');
+    el.id = 'camp-intro-resource-overlay';
+    el.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.88);display:flex;align-items:center;justify-content:center;padding:20px;text-align:center;font-family:Bangers,cursive;cursor:pointer;';
+    const box = document.createElement('div');
+    box.style.cssText = 'max-width:780px;color:#fff;letter-spacing:1px;line-height:1.35;font-size:clamp(18px,2.6vw,34px);text-shadow:0 0 10px rgba(201,162,39,0.5);';
+    const lines = [
+      '◈ ANCIENT SIGNAL DETECTED ◈',
+      '',
+      'A cache of resources has materialized near the sacred flame.',
+      '',
+      'Your mission: Collect the resources and construct the',
+      'QUEST HALL — your gateway to the trials ahead.',
+      '',
+      'The universe is watching, Droplet.',
+      '',
+      '[ PRESS ANYWHERE TO CONTINUE ]'
+    ];
+    lines.forEach(function(line, i){
+      const row = document.createElement('div');
+      row.textContent = line;
+      row.style.color = (i === 0 || i === 9) ? '#FFD700' : '#fff';
+      row.style.marginTop = line ? '0' : '10px';
+      box.appendChild(row);
+    });
+    el.appendChild(box);
+    el.addEventListener('click', function(){
+      if (el.parentNode) el.parentNode.removeChild(el);
+      _introResourceOverlayActive = false;
+      _collectIntroResources();
+      _resumeInput();
+    }, { once: true });
+    document.body.appendChild(el);
+  }
+
+  function _updateIntroResourceDrop(dt) {
+    dt = Math.min(Math.max(dt || 0.016, 0.001), 0.05);
+    if (!_introResourceDrop) return;
+    _introResourceDrop.rotation.y += dt * 1.0;
+    _introResourceDrop.position.y = 0.3 + Math.sin(_campTime * 2.2) * 0.08;
+    if (_introResourceOverlayActive) return;
+    const dx = _playerPos.x - 8;
+    const dz = _playerPos.z - 0;
+    if (Math.sqrt(dx * dx + dz * dz) <= 2) {
+      _showIntroResourceOverlay();
+    }
+  }
+
   function _buildAidaIntroProps() {
     const THREE = T();
     const sd = window.saveData;
@@ -7797,6 +7886,7 @@
     _updateIncubator(dt);
     _updateAidaOrbit(dt);
     _updateAidaIntro(dt);
+    _updateIntroResourceDrop(dt);
     // Camp quest arrow removed
     _updatePlayerBubble(dt);
     _updateCampStorylineBar();
