@@ -1662,6 +1662,24 @@ window.spawnBossChest = function(x, z) {
 
         function _applyAndClose(upgrade) {
           try { if (upgrade && typeof upgrade.apply === 'function') upgrade.apply(); } catch (error) { console.error('Error applying LVL UP:', error); }
+          // Check for Double Upgrade Chance bonus (only on first pick, not bonus rounds)
+          if (!isBonusRound && playerStats.doubleUpgradeChance > 0) {
+            const bonusChance = Math.min(1.0, playerStats.doubleUpgradeChance);
+            if (Math.random() < bonusChance) {
+              modal.style.display = 'none';
+              const upgradeList = document.getElementById('upgrade-list');
+              if (upgradeList) upgradeList.innerHTML = '';
+              if (comboState.pausedAt) {
+                const pauseDuration = Date.now() - comboState.pausedAt;
+                comboState.lastKillTime += pauseDuration;
+                comboState.pausedAt = null;
+              }
+              lastHudUpdateMs = 0;
+              updateHUD();
+              showUpgradeModal(true); // open bonus round
+              return;
+            }
+          }
           modal.style.display = 'none';
           const upgradeList = document.getElementById('upgrade-list');
           if (upgradeList) upgradeList.innerHTML = '';

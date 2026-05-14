@@ -1148,7 +1148,7 @@ function playBackgroundMusic(url, volume = 0.35, loop = true) {
     stopBackgroundMusic();
     const gm = _ensureGameGuitarMusic();
     gm.loop = true;
-    gm.volume = 0.55;
+    gm.volume = typeof volume === 'number' ? Math.max(0, Math.min(1, volume)) : 0.55;
     if (gm.paused) {
       try {
         const p = gm.play();
