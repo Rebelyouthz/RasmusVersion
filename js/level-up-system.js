@@ -509,6 +509,8 @@ window.spawnBossChest = function(x, z) {
   font-family: 'Bangers', cursive;
   letter-spacing: 1px;
   flex-shrink: 0;
+  transform-style: preserve-3d;
+  perspective: 900px;
 }
 .upgrade-card.card-visible { opacity: 1; transform: translateY(0) scale(1); }
 .upgrade-card:hover { transform: translateY(-6px) scale(1.05); box-shadow: 0 0 36px rgba(201,162,39,0.75), inset 0 0 16px rgba(201,162,39,0.12); }
@@ -527,9 +529,9 @@ window.spawnBossChest = function(x, z) {
 .uc-desc{ font-size:11px; color:#bbb; text-align:center; line-height:1.5; font-family:'Segoe UI',sans-serif; font-weight:normal; letter-spacing:0; flex-grow:1; }
 .uc-divider{ width:80%; height:1px; background:linear-gradient(90deg, transparent, #C9A227, transparent); margin:7px 0; opacity:0.5; }
 .uc-bottom-bar{ width:100%; height:3px; border-radius:2px; margin-top:10px; background:#C9A227; opacity:0.4; }
-.upgrade-card.selected-card { animation: card-select-slam 0.25s cubic-bezier(0.15,1.5,0.5,1) forwards; pointer-events:none; }
+.upgrade-card.selected-card { animation: card-select-slam 0.45s cubic-bezier(0.15,1.2,0.32,1) forwards; pointer-events:none; }
 .upgrade-card.reject-card { transition: transform 0.38s cubic-bezier(0.55,0,1,0.45), opacity 0.38s ease-in; pointer-events:none; }
-@keyframes card-select-slam { 0%{transform:scale(1);} 40%{transform:scale(1.18);box-shadow:0 0 60px #FFD700;} 100%{transform:scale(0) rotate(15deg);opacity:0;} }
+@keyframes card-select-slam { 0%{transform:translateY(0) scale(1) rotateX(0deg);} 40%{transform:translateY(-34px) scale(1.16) rotateX(14deg);box-shadow:0 0 60px #FFD700;} 72%{transform:translateY(-18px) scale(1.08) rotateX(0deg);} 100%{transform:translateY(-6px) scale(0) rotate(15deg);opacity:0;} }
 #levelup-vortex{ position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:0; height:0; border-radius:50%; background:radial-gradient(circle, rgba(0,0,0,0.96) 0%, transparent 70%); pointer-events:none; z-index:9999; transition:width 0.42s ease-in, height 0.42s ease-in; }`;
       document.head.appendChild(st);
     }
@@ -1700,6 +1702,7 @@ window.spawnBossChest = function(x, z) {
           card.addEventListener('click', () => {
             const cards = Array.from(list.querySelectorAll('.upgrade-card'));
             cards.forEach(c => c.style.pointerEvents = 'none');
+            if (window.GameAudio && window.GameAudio.playSound) window.GameAudio.playSound('card_select');
             let vortex = document.getElementById('levelup-vortex');
             if (!vortex) {
               vortex = document.createElement('div');

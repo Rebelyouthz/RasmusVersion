@@ -62,8 +62,8 @@
     /* ── Top-right HUD row: [💀][kills][XP bar][settings] ──────────────────── */
     #hud-top-right-row {
       position: fixed !important;
-      top: 10px !important;
-      right: 10px !important;
+      top: max(10px, env(safe-area-inset-top)) !important;
+      right: max(10px, env(safe-area-inset-right)) !important;
       z-index: 9995 !important;
       display: flex !important;
       flex-direction: row !important;
@@ -642,8 +642,8 @@
     /* ── Revolver cylinder UI ──────────────────────────────────────────────── */
     #revolver-ui {
       position: fixed;
-      bottom: 20px;
-      left: 20px;
+      bottom: max(92px, calc(env(safe-area-inset-bottom) + 72px));
+      left: max(20px, env(safe-area-inset-left));
       z-index: 9999;
       display: flex;
       flex-direction: column;

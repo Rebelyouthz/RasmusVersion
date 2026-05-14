@@ -50,6 +50,9 @@ const _BSV21_MIST = {
   }
 }());
 
+const _ZERO_MATRIX = new THREE.Matrix4().makeScale(0, 0, 0);
+const _SLIME_HIT_BASE_BURST = 350;
+
 const BloodSimulatorV21 = {
   scene: null,
   terrainMesh: null,
@@ -703,7 +706,7 @@ const BloodSimulatorV21 = {
 
     // Slimes get a smaller, melee-style burst to avoid excessive green particles
     if (enemy && enemy.enemyType === 'slime') {
-      const burstCount = Math.max(2, Math.round(350 * 0.15));
+      const burstCount = Math.max(2, Math.round(_SLIME_HIT_BASE_BURST * 0.15));
       this.emit(hitPoint.x, hitPoint.y, hitPoint.z, burstCount, {
         shotType: 'melee', enemyType, viscosity: 0.62
       });

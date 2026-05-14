@@ -36,7 +36,7 @@ let _gameGuitarMusic = null;
 
 // Returns true only when game.js has initialised and sound is enabled.
 function isSoundEnabled() {
-  return !!(window.gameSettings && window.gameSettings.soundEnabled);
+  return !window.gameSettings || window.gameSettings.soundEnabled !== false;
 }
 
 function initMusic() {
@@ -208,7 +208,7 @@ if (typeof document !== 'undefined') {
 
 function playSound(type) {
   if (!audioCtx) return;
-  if (window.gameSettings && window.gameSettings.soundEnabled === false) return;
+  if (!isSoundEnabled()) return;
   if (audioCtx.state === 'suspended') audioCtx.resume();
 
   const now = audioCtx.currentTime;

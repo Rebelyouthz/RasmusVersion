@@ -1824,8 +1824,18 @@
   }
 
   function _buildAidaIntroProps() {
+    const sd = window.saveData || _saveData || saveData;
+    const qmLevel = (sd && sd.campBuildings && sd.campBuildings.questMission && sd.campBuildings.questMission.level) || 0;
+    if (!window._campEnableAidaIntro) {
+      if (!sd || (!sd._introResourcesDropped && qmLevel <= 0)) {
+        _createIntroResourceDrop();
+      } else if (_introResourceDrop && _campScene) {
+        _campScene.remove(_introResourceDrop);
+        _introResourceDrop = null;
+      }
+      return;
+    }
     const THREE = T();
-    const sd = window.saveData;
     const introState = (sd && sd.aidaIntroState) || {};
 
     // ─ Broken Robot (rewritten mesh; robust and cull-safe) ────────────────
@@ -2416,8 +2426,7 @@
     if (_playerMesh && !_bennyGreeted) {
       const dx = _playerPos.x - _bennyMesh.position.x;
       const dz = _playerPos.z - _bennyMesh.position.z;
-      // Skip greeting until A.I.D.A chip is inserted — terminal is offline until then
-      if (Math.sqrt(dx * dx + dz * dz) < BENNY_GREET_RADIUS && _aidaIntroState.chipInserted) {
+      if (Math.sqrt(dx * dx + dz * dz) < BENNY_GREET_RADIUS) {
         _bennyGreeted = true;
         _triggerBennyGreeting();
       }
@@ -7722,14 +7731,7 @@
     if (cq === 'quest_buildQuesthall') {
       storyText = '📜 Quest 1 — Walk to the Quest Hall and build it (it\'s free!)';
     } else if (cq === 'quest_findingAida') {
-      // Legacy: old saves that still have this quest active
-      if (!_aidaIntroState.chipPickedUp) {
-        storyText = '📜 Quest — Find the glowing chip north of the campfire...';
-      } else if (!_aidaIntroState.chipInserted) {
-        storyText = '📜 Quest — Insert the chip into the broken robot...';
-      } else {
-        storyText = '📜 Quest — Go to the Quest Hall to continue...';
-      }
+      storyText = '📜 Quest — Collect the sacred resource cache and build the Quest Hall.';
     } else if (cq === 'quest_craftAllTools') {
       storyText = '📜 Quest — Craft all tools at the Forge...';
     } else if (cq === 'quest_firstBlood') {
@@ -7772,14 +7774,7 @@
       if (targetId) {
         targetDef = BUILDING_DEFS.find(function(d) { return d.id === targetId; });
       } else if (cq === 'quest_findingAida') {
-        // Phase 1: chip not yet picked up → point to chip
-        // Phase 2: chip picked up but not inserted → point to AIDA robot (live position)
-        if (!_aidaIntroState.chipPickedUp) {
-          targetDef = { x: AIDA_CHIP_POS.x, z: AIDA_CHIP_POS.z };
-        } else {
-          const _rp = _getAidaRobotPos();
-          targetDef = { x: _rp.x, z: _rp.z };
-        }
+        targetDef = _introResourceDrop ? { x: 8, z: 0 } : BUILDING_DEFS.find(function(d) { return d.id === 'questMission'; });
       }
     }
 
