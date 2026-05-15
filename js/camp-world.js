@@ -5821,8 +5821,8 @@
    * If _menuOpen is true but no known overlay is visible, resume camp input.
    */
   function _checkMenuClosed() {
-    if (!_menuOpen) return;
     if (_introResourceOverlayActive) return;
+    if (!_menuOpen) return;
     // Wait at least 350ms after menu opened before checking — avoids race where
     // the overlay hasn't been appended to DOM yet (JS is synchronous but DOM
     // rendering is deferred; empirically 350ms covers one full render cycle).

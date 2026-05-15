@@ -830,14 +830,23 @@ window.BloodV2 = {
     _syncBloodV2Caches(this);
     return BloodSimulatorV21;
   },
-  update: function(dt) { BloodSimulatorV21.update(dt); },
+  update: function(dt) {
+    if (typeof BloodSimulatorV21.update === 'function') BloodSimulatorV21.update(dt);
+  },
   setParticleEffects: function(e) { BloodSimulatorV21.setParticleEffects(e); },
   emitBurst: function(pos, count, opts) { BloodSimulatorV21.emitBurst(pos, count, opts); },
+  emit: function(x, y, z, count, opts) { BloodSimulatorV21.emit(x, y, z, count, opts); },
   rawBurst: function(x, y, z, count, opts) { BloodSimulatorV21.rawBurst(x, y, z, count, opts); },
   rawBurstUpward: function(x, y, z, count, opts) { BloodSimulatorV21.rawBurstUpward(x, y, z, count, opts); },
   hit: function(e, wk, hp) { BloodSimulatorV21.hit(e, wk, hp); },
   kill: function(e, wk, hp) { BloodSimulatorV21.kill(e, wk, hp); },
   spawnMist: function(x,y,z,n,col,et) { BloodSimulatorV21.spawnMist(x,y,z,n,col,et); },
+  arterialJet: function(x,y,z,dx,dy,col) {
+    if (typeof BloodSimulatorV21.arterialJet === 'function') BloodSimulatorV21.arterialJet(x,y,z,dx,dy,col);
+  },
+  addWoundPulse: function(x,y,z,col,r) {
+    if (typeof BloodSimulatorV21.addWoundPulse === 'function') BloodSimulatorV21.addWoundPulse(x,y,z,col,r);
+  },
   reset: function() {
     BloodSimulatorV21.reset();
     _syncBloodV2Caches(this);
