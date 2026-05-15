@@ -5628,8 +5628,6 @@
     'ds-bubble',
     // Build-progress overlay (camp-skill-system.js _showBuildOverlay)
     'camp-build-overlay',
-    // Intro resource overlay
-    'camp-intro-resource-overlay',
   ];
   window._CAMP_OVERLAY_IDS = _OVERLAY_IDS;
 
