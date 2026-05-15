@@ -811,36 +811,44 @@ window.BloodSimulatorV21 = BloodSimulatorV21;
 // BloodV2 shim — inherits all BloodSimulatorV21 methods via prototype but hides
 // init() to prevent accidental re-initialisation via window.BloodV2.init(scene).
 // window.BloodSimulatorV21.init(scene) remains the canonical initialisation path.
+function _syncBloodV2Caches(target) {
+  if (!target) return;
+  target._dropData = BloodSimulatorV21._pool || target._dropData || null;
+  target._dropIM = BloodSimulatorV21.dropIM || target._dropIM || null;
+  target._mistIM = BloodSimulatorV21.mistIM || target._mistIM || null;
+}
+
 window.BloodV2 = {
   ENEMY_BLOOD: {},
   _dropData: BloodSimulatorV21._pool || null,
   _dropIM: null,
-  init: function(scene) {
-    if (BloodSimulatorV21.scene) return;
-    BloodSimulatorV21.init(scene, null, null);
+  _mistIM: null,
+  init: function(scene, terrainMesh, player) {
+    if (!BloodSimulatorV21.scene) {
+      BloodSimulatorV21.init(scene, terrainMesh, player);
+    }
+    _syncBloodV2Caches(this);
+    return BloodSimulatorV21;
   },
-  update: function(dt) {
-    if (typeof BloodSimulatorV21.update === 'function') BloodSimulatorV21.update(dt);
-  },
+  update: function(dt) { BloodSimulatorV21.update(dt); },
   setParticleEffects: function(e) { BloodSimulatorV21.setParticleEffects(e); },
   emitBurst: function(pos, count, opts) { BloodSimulatorV21.emitBurst(pos, count, opts); },
   emit: function(x, y, z, count, opts) { BloodSimulatorV21.emit(x, y, z, count, opts); },
-  hit: function(e, wk, hp, hn) { BloodSimulatorV21.hit(e, wk, hp); },
+  rawBurst: function(x, y, z, count, opts) { BloodSimulatorV21.rawBurst(x, y, z, count, opts); },
+  rawBurstUpward: function(x, y, z, count, opts) { BloodSimulatorV21.rawBurstUpward(x, y, z, count, opts); },
+  hit: function(e, wk, hp) { BloodSimulatorV21.hit(e, wk, hp); },
   kill: function(e, wk, hp) { BloodSimulatorV21.kill(e, wk, hp); },
   spawnMist: function(x,y,z,n,col,et) { BloodSimulatorV21.spawnMist(x,y,z,n,col,et); },
-  rawBurst: function(x,y,z,count,opts) {
-    if (typeof BloodSimulatorV21.rawBurst === 'function') BloodSimulatorV21.rawBurst(x,y,z,count,opts);
-  },
-  rawBurstUpward: function(x,y,z,count,opts) {
-    if (typeof BloodSimulatorV21.rawBurstUpward === 'function') BloodSimulatorV21.rawBurstUpward(x,y,z,count,opts);
-  },
   arterialJet: function(x,y,z,dx,dy,col) {
     if (typeof BloodSimulatorV21.arterialJet === 'function') BloodSimulatorV21.arterialJet(x,y,z,dx,dy,col);
   },
   addWoundPulse: function(x,y,z,col,r) {
     if (typeof BloodSimulatorV21.addWoundPulse === 'function') BloodSimulatorV21.addWoundPulse(x,y,z,col,r);
   },
-  reset: function() { BloodSimulatorV21.reset(); },
+  reset: function() {
+    BloodSimulatorV21.reset();
+    _syncBloodV2Caches(this);
+  },
 };
 Object.keys(_BSV21_BLOOD).forEach((enemyType) => {
   const base = _BSV21_BLOOD[enemyType];

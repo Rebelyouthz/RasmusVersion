@@ -1147,8 +1147,9 @@ function playBackgroundMusic(url, volume = 0.35, loop = true) {
   if (url === BGM_TRACK_MP3 || /guitar/i.test(url)) {
     stopBackgroundMusic();
     const gm = _ensureGameGuitarMusic();
-    gm.loop = true;
+    gm.loop = loop;
     gm.volume = typeof volume === 'number' ? Math.max(0, Math.min(1, volume)) : 0.55;
+    _bgmCurrentUrl = url;
     if (gm.paused) {
       try {
         const p = gm.play();
