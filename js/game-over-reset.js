@@ -71,6 +71,10 @@
       }
       
       stopDroneHum(); // Stop drone sound
+      if (window._gameGuitarMusic) {
+        window._gameGuitarMusic.pause();
+        window._gameGuitarMusic.currentTime = 0;
+      }
       
       // Calculate run stats
       const survivalTime = Math.floor((Date.now() - gameStartTime) / 1000);
@@ -122,10 +126,6 @@
           saveData.tutorialQuests.completedQuests.push('firstRunDeath');
         }
         saveSaveData();
-        // Show "A.I.D.A transfers from robot to head" dialogue on first death
-        setTimeout(() => {
-          window.DialogueSystem?.show(window.DialogueSystem?.DIALOGUES?.aidaChipInstalled);
-        }, 1800);
         setTimeout(() => {
           showComicTutorial('first_death');
         }, 1000);
@@ -254,7 +254,7 @@
         questName:     _activeQuest ? (_activeQuest.title || _activeQuest.id || '') : ''
       };
 
-      // Always use RunEndScreen — shown after YOU DIED banner (3200ms).
+      // Always use RunEndScreen — shown after YOU DIED banner (3400ms).
       // Do NOT hide #you-died-banner here — showYouDiedBanner(3000) above already
       // controls its lifetime.  Only hide the legacy plain game-over div so it
       // cannot overlay the YOU DIED banner during the delay.
@@ -263,11 +263,9 @@
       setTimeout(() => {
         if (window.RunEndScreen && typeof window.RunEndScreen.show === 'function') {
           window.RunEndScreen.show(window._resCurrentStats);
-        } else if (typeof window.showRunEndScreen === 'function') {
-          window.showRunEndScreen(window._resCurrentStats);
         }
         updateGoldDisplays();
-      }, 3200);
+      }, 3400);
       
       // Show deferred mission notification after death (quest completed during run)
       if (saveData.tutorialQuests && saveData.tutorialQuests.pendingMissionNotification === 'quest1_kill3') {

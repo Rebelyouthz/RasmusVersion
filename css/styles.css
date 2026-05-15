@@ -1992,8 +1992,9 @@
       animation: bar-border-alive 3s ease-in-out infinite;
     }
     
-    /* PR #117: Menu button - always visible in right upper corner */
+    /* PR #117: Menu button - legacy duplicate of the settings button, keep hidden */
     #menu-btn {
+      display: none;
       position: absolute;
       top: 10px;
       right: 10px;
@@ -2012,12 +2013,49 @@
         0 0 8px rgba(255,215,0,0.5),
         0 4px 0 #2a1a11;
       transition: all 0.2s;
-      display: flex;
       align-items: center;
       justify-content: center;
       color: #FFD700;
       text-shadow: 0 0 8px rgba(255,215,0,0.6);
       animation: bar-border-alive 3s ease-in-out infinite;
+    }
+
+    #settings-btn {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, rgba(18,18,18,0.96), rgba(8,8,8,0.98) 70%);
+      border: 2px solid rgba(201,162,39,0.9);
+      box-shadow:
+        0 0 0 1px rgba(255,215,0,0.35),
+        0 0 0 4px #000,
+        0 8px 18px rgba(0,0,0,0.55),
+        inset 0 0 10px rgba(201,162,39,0.14);
+      color: transparent !important;
+      font-size: 0 !important;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 !important;
+    }
+    #settings-btn::before {
+      content: '𓂀';
+      color: #FFD700;
+      font-size: 26px;
+      line-height: 1;
+      text-shadow: 0 0 12px rgba(255,215,0,0.65);
+      transform: translateY(-1px);
+    }
+    #settings-btn:hover {
+      transform: translateY(-2px) scale(1.04);
+      filter: brightness(1.08);
+      box-shadow:
+        0 0 0 1px rgba(255,215,0,0.5),
+        0 0 0 4px #000,
+        0 10px 22px rgba(0,0,0,0.6),
+        0 0 18px rgba(201,162,39,0.35),
+        inset 0 0 12px rgba(201,162,39,0.18);
     }
     
     #equipment-btn:hover, #menu-btn:hover {
@@ -5439,14 +5477,17 @@
       padding: 4px 8px;
     }
       
-      /* PR #117: Fix button overlap in portrait mode */
-      /* Hide settings and stats buttons in portrait, show only menu button */
-      #settings-btn, #stats-btn, #equipment-btn {
+      /* Keep only the Eye of Horus settings button for pause/menu access */
+      #stats-btn, #equipment-btn {
         display: none !important;
       }
-      
-      #menu-btn {
+
+      #settings-btn {
         display: flex !important;
+      }
+
+      #menu-btn {
+        display: none !important;
       }
       
       /* Keep day/night clock centered in portrait */
@@ -5595,14 +5636,17 @@
         bottom: 12px !important;
       }
 
-      /* In landscape mode, hide overlapping buttons - only show menu button
-         User accesses these features through the menu button instead */
-      #settings-btn, #stats-btn, #equipment-btn {
+      /* In landscape mode keep only the Horus settings button in the top-right */
+      #stats-btn, #equipment-btn {
         display: none !important;
       }
 
-      #menu-btn {
+      #settings-btn {
         display: flex !important;
+      }
+
+      #menu-btn {
+        display: none !important;
       }
     }
     

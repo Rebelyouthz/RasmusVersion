@@ -395,10 +395,11 @@ describe('BloodSimulatorV21.onEnemyHit() slime branching', () => {
 
   beforeEach(() => { bs = initedSim(); });
 
-  test('slime hit emits exactly 4 drops (8 requested × 0.5 slime scale)', () => {
+  test('slime hit emits reduced burst (~85% fewer drops)', () => {
     bs.onEnemyHit({ enemyType: 'slime' }, hitPoint, 'pistol');
     const alive = bs._pool.filter(d => d.alive).length;
-    expect(alive).toBe(4); // rawBurst applies _slimeScale=0.5 → round(8×0.5)=4
+    expect(alive).toBeGreaterThanOrEqual(8); // optional emit bonus can add one extra drop
+    expect(alive).toBeLessThanOrEqual(9);
   });
 
   test('slime hit emits green drops', () => {

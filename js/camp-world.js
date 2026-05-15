@@ -318,6 +318,8 @@
     chipPickedUp: false,
     chipInserted: false,
   };
+  let _introResourceDrop = null;
+  let _introResourceOverlayActive = false;
   let _robotBubbleEl  = null;  // floating speech bubble DOM element above robot
 
   // Keyboard state (managed inside this module)
@@ -1734,9 +1736,106 @@
   }
 
   // ── A.I.D.A Intro — Broken Robot + Glowing Chip ─────────
-  function _buildAidaIntroProps() {
+
+  function _createIntroResourceDrop() {
+    if (!_campScene || _introResourceDrop) return;
     const THREE = T();
-    const sd = window.saveData;
+    if (!THREE) return;
+    const grp = new THREE.Group();
+    const g = new THREE.BoxGeometry(0.3, 0.3, 0.3);
+    const m = new THREE.MeshStandardMaterial({ color: 0xFFD700, emissive: 0x8B6914, emissiveIntensity: 0.8, roughness: 0.3, metalness: 0.7, transparent: true, opacity: 1 });
+    [[0,0,0],[0.2,0.05,-0.15],[-0.2,0.04,0.13]].forEach(function(off){
+      const mesh = new THREE.Mesh(g, m);
+      mesh.position.set(off[0], off[1], off[2]);
+      mesh.castShadow = true;
+      grp.add(mesh);
+    });
+    const light = new THREE.PointLight(0xFFD700, 1.5, 4, 2);
+    light.position.set(0, 0.8, 0);
+    grp.add(light);
+    grp.position.set(8, 0.3, 0);
+    _campScene.add(grp);
+    _introResourceDrop = grp;
+  }
+
+  function _collectIntroResources() {
+    const sd = (typeof saveData !== 'undefined') ? saveData : _saveData;
+    if (!sd || sd._introResourcesDropped) return;
+    if (!sd.resources) sd.resources = {};
+    sd.resources.wood = (sd.resources.wood || 0) + 50;
+    sd.resources.stone = (sd.resources.stone || 0) + 50;
+    sd.resources.gold = (sd.resources.gold || 0) + 200;
+    sd._introResourcesDropped = true;
+    if (typeof saveSaveData === 'function') saveSaveData();
+    if (_introResourceDrop && _campScene) _campScene.remove(_introResourceDrop);
+    _introResourceDrop = null;
+    if (typeof showStatusMessage === 'function') showStatusMessage('Resources collected — build the Quest Hall!', 3200);
+  }
+
+  function _showIntroResourceOverlay() {
+    if (_introResourceOverlayActive) return;
+    _introResourceOverlayActive = true;
+    _openMenu();
+    const el = document.createElement('div');
+    el.id = 'camp-intro-resource-overlay';
+    el.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.88);display:flex;align-items:center;justify-content:center;padding:20px;text-align:center;font-family:Bangers,cursive;cursor:pointer;';
+    const box = document.createElement('div');
+    box.style.cssText = 'max-width:780px;color:#fff;letter-spacing:1px;line-height:1.35;font-size:clamp(18px,2.6vw,34px);text-shadow:0 0 10px rgba(201,162,39,0.5);';
+    const lines = [
+      '◈ ANCIENT SIGNAL DETECTED ◈',
+      '',
+      'A cache of resources has materialized near the sacred flame.',
+      '',
+      'Your mission: Collect the resources and construct the',
+      'QUEST HALL — your gateway to the trials ahead.',
+      '',
+      'The universe is watching, Droplet.',
+      '',
+      '[ PRESS ANYWHERE TO CONTINUE ]'
+    ];
+    lines.forEach(function(line, i){
+      const row = document.createElement('div');
+      row.textContent = line;
+      row.style.color = (i === 0 || i === 9) ? '#FFD700' : '#fff';
+      row.style.marginTop = line ? '0' : '10px';
+      box.appendChild(row);
+    });
+    el.appendChild(box);
+    el.addEventListener('click', function(){
+      if (el.parentNode) el.parentNode.removeChild(el);
+      _introResourceOverlayActive = false;
+      _collectIntroResources();
+      _resumeInput();
+    }, { once: true });
+    document.body.appendChild(el);
+  }
+
+  function _updateIntroResourceDrop(dt) {
+    dt = Math.min(Math.max(dt || 0.016, 0.001), 0.05);
+    if (!_introResourceDrop) return;
+    _introResourceDrop.rotation.y += dt * 1.0;
+    _introResourceDrop.position.y = 0.3 + Math.sin(_campTime * 2.2) * 0.08;
+    if (_introResourceOverlayActive) return;
+    const dx = _playerPos.x - 8;
+    const dz = _playerPos.z - 0;
+    if (Math.sqrt(dx * dx + dz * dz) <= 2) {
+      _showIntroResourceOverlay();
+    }
+  }
+
+  function _buildAidaIntroProps() {
+    const sd = window.saveData || _saveData || saveData;
+    const qmLevel = (sd && sd.campBuildings && sd.campBuildings.questMission && sd.campBuildings.questMission.level) || 0;
+    if (!window._campEnableAidaIntro) {
+      if (!sd || (!sd._introResourcesDropped && qmLevel <= 0)) {
+        _createIntroResourceDrop();
+      } else if (_introResourceDrop && _campScene) {
+        _campScene.remove(_introResourceDrop);
+        _introResourceDrop = null;
+      }
+      return;
+    }
+    const THREE = T();
     const introState = (sd && sd.aidaIntroState) || {};
 
     // ─ Broken Robot (rewritten mesh; robust and cull-safe) ────────────────
@@ -2327,8 +2426,7 @@
     if (_playerMesh && !_bennyGreeted) {
       const dx = _playerPos.x - _bennyMesh.position.x;
       const dz = _playerPos.z - _bennyMesh.position.z;
-      // Skip greeting until A.I.D.A chip is inserted — terminal is offline until then
-      if (Math.sqrt(dx * dx + dz * dz) < BENNY_GREET_RADIUS && _aidaIntroState.chipInserted) {
+      if (Math.sqrt(dx * dx + dz * dz) < BENNY_GREET_RADIUS) {
         _bennyGreeted = true;
         _triggerBennyGreeting();
       }
@@ -5524,6 +5622,8 @@
     'camp-reward-overlay',
     // Profile modal overlay
     'camp-profile-modal',
+    // Intro resource overlay
+    'camp-intro-resource-overlay',
     // Dialogue system bubble (A.I.D.A speech/cinematic)
     'ds-bubble',
     // Build-progress overlay (camp-skill-system.js _showBuildOverlay)
@@ -5722,6 +5822,7 @@
    */
   function _checkMenuClosed() {
     if (!_menuOpen) return;
+    if (_introResourceOverlayActive) return;
     // Wait at least 350ms after menu opened before checking — avoids race where
     // the overlay hasn't been appended to DOM yet (JS is synchronous but DOM
     // rendering is deferred; empirically 350ms covers one full render cycle).
@@ -7633,14 +7734,7 @@
     if (cq === 'quest_buildQuesthall') {
       storyText = '📜 Quest 1 — Walk to the Quest Hall and build it (it\'s free!)';
     } else if (cq === 'quest_findingAida') {
-      // Legacy: old saves that still have this quest active
-      if (!_aidaIntroState.chipPickedUp) {
-        storyText = '📜 Quest — Find the glowing chip north of the campfire...';
-      } else if (!_aidaIntroState.chipInserted) {
-        storyText = '📜 Quest — Insert the chip into the broken robot...';
-      } else {
-        storyText = '📜 Quest — Go to the Quest Hall to continue...';
-      }
+      storyText = '📜 Quest — Collect the sacred resource cache and build the Quest Hall.';
     } else if (cq === 'quest_craftAllTools') {
       storyText = '📜 Quest — Craft all tools at the Forge...';
     } else if (cq === 'quest_firstBlood') {
@@ -7683,14 +7777,7 @@
       if (targetId) {
         targetDef = BUILDING_DEFS.find(function(d) { return d.id === targetId; });
       } else if (cq === 'quest_findingAida') {
-        // Phase 1: chip not yet picked up → point to chip
-        // Phase 2: chip picked up but not inserted → point to AIDA robot (live position)
-        if (!_aidaIntroState.chipPickedUp) {
-          targetDef = { x: AIDA_CHIP_POS.x, z: AIDA_CHIP_POS.z };
-        } else {
-          const _rp = _getAidaRobotPos();
-          targetDef = { x: _rp.x, z: _rp.z };
-        }
+        targetDef = _introResourceDrop ? { x: 8, z: 0 } : BUILDING_DEFS.find(function(d) { return d.id === 'questMission'; });
       }
     }
 
@@ -7797,6 +7884,7 @@
     _updateIncubator(dt);
     _updateAidaOrbit(dt);
     _updateAidaIntro(dt);
+    _updateIntroResourceDrop(dt);
     // Camp quest arrow removed
     _updatePlayerBubble(dt);
     _updateCampStorylineBar();

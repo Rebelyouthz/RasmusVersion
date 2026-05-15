@@ -50,6 +50,9 @@ const _BSV21_MIST = {
   }
 }());
 
+const _ZERO_MATRIX = new THREE.Matrix4().makeScale(0, 0, 0);
+const _SLIME_HIT_BASE_BURST = 350;
+
 const BloodSimulatorV21 = {
   scene: null,
   terrainMesh: null,
@@ -389,6 +392,7 @@ const BloodSimulatorV21 = {
       this.dropIM.setColorAt(activeDrops, color);
       activeDrops++;
     }
+    for (let i = activeDrops; i < this.MAX_DROPS; i++) { this.dropIM.setMatrixAt(i, _ZERO_MATRIX); }
     this.dropIM.count = activeDrops;
     this.dropIM.instanceMatrix.needsUpdate = true;
     if (this.dropIM.instanceColor) this.dropIM.instanceColor.needsUpdate = true;
@@ -417,6 +421,7 @@ const BloodSimulatorV21 = {
         this.mistIM.setColorAt(activeMist, color);
         activeMist++;
       }
+      for (let i = activeMist; i < this.MAX_MIST; i++) { this.mistIM.setMatrixAt(i, _ZERO_MATRIX); }
       this.mistIM.count = activeMist;
       this.mistIM.instanceMatrix.needsUpdate = true;
       if (this.mistIM.instanceColor) this.mistIM.instanceColor.needsUpdate = true;
@@ -611,7 +616,7 @@ const BloodSimulatorV21 = {
     const spreadY   = options.spreadY   || 14;
     const viscosity = options.viscosity || 0.62;
     const col       = resolvedColor || 0x8B0000;
-    const _slimeScale = enemyType === 'slime' ? 0.5 : 1.0;
+    const _slimeScale = enemyType === 'slime' ? 0.15 : 1.0;
     const n = Math.min(Math.max(1, Math.round(count * _slimeScale)), this.MAX_DROPS);
     for (let i = 0; i < n; i++) {
       const d = this._pool[this._head];
@@ -684,7 +689,7 @@ const BloodSimulatorV21 = {
   spawnMist(x, y, z, count, hexColor, enemyType) {
     const isSlimeMist = enemyType === 'slime' || hexColor === _BSV21_MIST.slime || hexColor === _BSV21_BLOOD.slime;
     const n = isSlimeMist
-      ? Math.min(3, Math.max(1, count || 2))
+      ? Math.min(1, Math.max(1, count || 2))
       : Math.min(count || 6, Math.max(2, Math.floor(this.MAX_MIST / 6)));
     for (let i = 0; i < n; i++) {
       this._spawnMist(
@@ -701,7 +706,8 @@ const BloodSimulatorV21 = {
 
     // Slimes get a smaller, melee-style burst to avoid excessive green particles
     if (enemy && enemy.enemyType === 'slime') {
-      this.emit(hitPoint.x, hitPoint.y, hitPoint.z, 8, {
+      const burstCount = Math.max(2, Math.round(_SLIME_HIT_BASE_BURST * 0.15));
+      this.emit(hitPoint.x, hitPoint.y, hitPoint.z, burstCount, {
         shotType: 'melee', enemyType, viscosity: 0.62
       });
       const mistColor = _BSV21_MIST.slime || 0x55ff66;
@@ -733,16 +739,17 @@ const BloodSimulatorV21 = {
       ? _BSV21_MIST[enemy.enemyType]  : 0xee2200;
 
     const enemyType = (enemy && enemy.enemyType) ? enemy.enemyType : 'human';
-    this.emit(position.x, position.y+0.8, position.z, 600,
+    const emitCount = enemyType === 'slime' ? Math.max(3, Math.round(600 * 0.15)) : 600;
+    const jetCount = enemyType === 'slime' ? 1 : 6;
+    const mistCount = enemyType === 'slime' ? 2 : 10;
+    this.emit(position.x, position.y+0.8, position.z, emitCount,
       { shotType: 'shotgun', spreadXZ: 22, spreadY: 32, viscosity: 0.50, enemyType });
-    // 6 jets spread evenly — fan of arterial sprays
-    for (let jet = 0; jet < 6; jet++) {
-      const ang = (jet / 6) * Math.PI * 2;
+    for (let jet = 0; jet < jetCount; jet++) {
+      const ang = (jet / Math.max(1, jetCount)) * Math.PI * 2;
       this.arterialJet(position.x, position.y+1.0, position.z,
         Math.cos(ang), Math.sin(ang), 0xaa0000);
     }
-    // Minimal mist on death — just enough for atmosphere
-    this.spawnMist(position.x, position.y+0.6, position.z, 10, mistColor, enemyType);
+    this.spawnMist(position.x, position.y+0.6, position.z, mistCount, mistColor, enemyType);
     // Larger, more dramatic ground decal
     this._spawnDecal(position.x, position.z, 2.5+Math.random()*1.2, 0xaa0000, 60);
     this.addWoundPulse(position.x, position.y+0.5, position.z, 0xaa0000, 9.0);
@@ -804,19 +811,38 @@ window.BloodSimulatorV21 = BloodSimulatorV21;
 // BloodV2 shim — inherits all BloodSimulatorV21 methods via prototype but hides
 // init() to prevent accidental re-initialisation via window.BloodV2.init(scene).
 // window.BloodSimulatorV21.init(scene) remains the canonical initialisation path.
-window.BloodV2 = Object.create(BloodSimulatorV21);
-// BloodV2.init delegates to BloodSimulatorV21.init with an idempotent guard so that
-// sandbox-loop.js (which calls window.BloodV2.init(scene)) correctly initialises the
-// blood system while duplicate calls (e.g. from game-screens.js which already called
-// window.BloodSimulatorV21.init) are silently skipped.
-Object.defineProperty(window.BloodV2, 'init', {
-  value: function(scene) {
-    if (BloodSimulatorV21.scene) return; // already initialised — skip
-    BloodSimulatorV21.init(scene, null, null);
+function _syncBloodV2Caches(target) {
+  if (!target) return;
+  target._dropData = BloodSimulatorV21._pool || target._dropData || null;
+  target._dropIM = BloodSimulatorV21.dropIM || target._dropIM || null;
+  target._mistIM = BloodSimulatorV21.mistIM || target._mistIM || null;
+}
+
+window.BloodV2 = {
+  ENEMY_BLOOD: {},
+  _dropData: BloodSimulatorV21._pool || null,
+  _dropIM: null,
+  _mistIM: null,
+  init: function(scene, terrainMesh, player) {
+    if (!BloodSimulatorV21.scene) {
+      BloodSimulatorV21.init(scene, terrainMesh, player);
+    }
+    _syncBloodV2Caches(this);
+    return BloodSimulatorV21;
   },
-  writable: false, configurable: true, enumerable: false
-});
-window.BloodV2.ENEMY_BLOOD = {};
+  update: function(dt) { BloodSimulatorV21.update(dt); },
+  setParticleEffects: function(e) { BloodSimulatorV21.setParticleEffects(e); },
+  emitBurst: function(pos, count, opts) { BloodSimulatorV21.emitBurst(pos, count, opts); },
+  rawBurst: function(x, y, z, count, opts) { BloodSimulatorV21.rawBurst(x, y, z, count, opts); },
+  rawBurstUpward: function(x, y, z, count, opts) { BloodSimulatorV21.rawBurstUpward(x, y, z, count, opts); },
+  hit: function(e, wk, hp) { BloodSimulatorV21.hit(e, wk, hp); },
+  kill: function(e, wk, hp) { BloodSimulatorV21.kill(e, wk, hp); },
+  spawnMist: function(x,y,z,n,col,et) { BloodSimulatorV21.spawnMist(x,y,z,n,col,et); },
+  reset: function() {
+    BloodSimulatorV21.reset();
+    _syncBloodV2Caches(this);
+  },
+};
 Object.keys(_BSV21_BLOOD).forEach((enemyType) => {
   const base = _BSV21_BLOOD[enemyType];
   const mist = _BSV21_MIST[enemyType] || base;

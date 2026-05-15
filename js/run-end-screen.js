@@ -182,9 +182,9 @@ window.RunEndScreen = (function () {
       '}',
       '.res-btn-camp:hover{box-shadow:0 0 28px rgba(201,162,39,0.8);}',
       '.res-btn-run{',
-        'background:linear-gradient(135deg,#1a5c2a,#0d3316);',
+        'background:linear-gradient(135deg,#0d0d10,#1b1408 45%,#2a1c08 100%);',
         'border-color:#C9A227;color:#fff;',
-        'box-shadow:0 0 12px rgba(201,162,39,0.3);',
+        'box-shadow:0 0 12px rgba(201,162,39,0.3), inset 0 0 12px rgba(201,162,39,0.12);',
       '}',
       '.res-btn-run:hover{box-shadow:0 0 28px rgba(201,162,39,0.7);}',
       '.res-btn-quest{',
@@ -774,7 +774,8 @@ window.RunEndScreen = (function () {
     // NEW RUN / RETRY
     var runBtn = document.createElement('button');
     runBtn.className = 'res-btn res-btn-run';
-    runBtn.textContent = stats.questActive && !stats.questCompleted ? '🔄 RETRY QUEST' : '🔄 NEW RUN';
+    runBtn.textContent = stats.questActive && !stats.questCompleted ? '𓂀 RETRY QUEST' : '𓂀 NEW RUN';
+    runBtn.setAttribute('aria-label', stats.questActive && !stats.questCompleted ? 'Retry Quest' : 'New Run');
     runBtn.onclick = function () { _startNewRun(); };
     btnDiv.appendChild(runBtn);
   }
@@ -847,17 +848,11 @@ window.RunEndScreen = (function () {
     hide();
     setTimeout(function () {
       if (typeof resetGame === 'function') {
-        // Show gameover screen briefly (with only the restart button) and click it
-        var go = document.getElementById('gameover-screen');
-        if (go) {
-          go.style.display = 'flex';
-          var rb = document.getElementById('restart-btn');
-          if (rb) {
-            rb.click();
-            go.style.display = 'none';
-            return;
-          }
-          go.style.display = 'none';
+        // Reuse the existing restart button handler without surfacing the legacy screen.
+        var rb = document.getElementById('restart-btn');
+        if (rb) {
+          rb.click();
+          return;
         }
         // Direct reset fallback
         resetGame();
