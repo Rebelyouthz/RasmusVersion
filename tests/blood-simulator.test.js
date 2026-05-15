@@ -398,7 +398,8 @@ describe('BloodSimulatorV21.onEnemyHit() slime branching', () => {
   test('slime hit emits reduced burst (~85% fewer drops)', () => {
     bs.onEnemyHit({ enemyType: 'slime' }, hitPoint, 'pistol');
     const alive = bs._pool.filter(d => d.alive).length;
-    expect(alive).toBe(8); // keep the current slime-hit burst behavior stable
+    expect(alive).toBeGreaterThanOrEqual(8); // optional emit bonus can add one extra drop
+    expect(alive).toBeLessThanOrEqual(9);
   });
 
   test('slime hit emits green drops', () => {

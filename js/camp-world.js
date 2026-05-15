@@ -5622,6 +5622,8 @@
     'camp-reward-overlay',
     // Profile modal overlay
     'camp-profile-modal',
+    // Intro resource overlay
+    'camp-intro-resource-overlay',
     // Dialogue system bubble (A.I.D.A speech/cinematic)
     'ds-bubble',
     // Build-progress overlay (camp-skill-system.js _showBuildOverlay)
@@ -5820,6 +5822,7 @@
    */
   function _checkMenuClosed() {
     if (!_menuOpen) return;
+    if (_introResourceOverlayActive) return;
     // Wait at least 350ms after menu opened before checking — avoids race where
     // the overlay hasn't been appended to DOM yet (JS is synchronous but DOM
     // rendering is deferred; empirically 350ms covers one full render cycle).

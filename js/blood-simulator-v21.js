@@ -811,16 +811,37 @@ window.BloodSimulatorV21 = BloodSimulatorV21;
 // BloodV2 shim — inherits all BloodSimulatorV21 methods via prototype but hides
 // init() to prevent accidental re-initialisation via window.BloodV2.init(scene).
 // window.BloodSimulatorV21.init(scene) remains the canonical initialisation path.
+function _syncBloodV2Caches(target) {
+  if (!target) return;
+  target._dropData = BloodSimulatorV21._pool || target._dropData || null;
+  target._dropIM = BloodSimulatorV21.dropIM || target._dropIM || null;
+  target._mistIM = BloodSimulatorV21.mistIM || target._mistIM || null;
+}
+
 window.BloodV2 = {
   ENEMY_BLOOD: {},
   _dropData: BloodSimulatorV21._pool || null,
   _dropIM: null,
+  _mistIM: null,
+  init: function(scene, terrainMesh, player) {
+    if (!BloodSimulatorV21.scene) {
+      BloodSimulatorV21.init(scene, terrainMesh, player);
+    }
+    _syncBloodV2Caches(this);
+    return BloodSimulatorV21;
+  },
+  update: function(dt) { BloodSimulatorV21.update(dt); },
   setParticleEffects: function(e) { BloodSimulatorV21.setParticleEffects(e); },
   emitBurst: function(pos, count, opts) { BloodSimulatorV21.emitBurst(pos, count, opts); },
-  hit: function(e, wk, hp, hn) { BloodSimulatorV21.hit(e, wk, hp); },
+  rawBurst: function(x, y, z, count, opts) { BloodSimulatorV21.rawBurst(x, y, z, count, opts); },
+  rawBurstUpward: function(x, y, z, count, opts) { BloodSimulatorV21.rawBurstUpward(x, y, z, count, opts); },
+  hit: function(e, wk, hp) { BloodSimulatorV21.hit(e, wk, hp); },
   kill: function(e, wk, hp) { BloodSimulatorV21.kill(e, wk, hp); },
   spawnMist: function(x,y,z,n,col,et) { BloodSimulatorV21.spawnMist(x,y,z,n,col,et); },
-  reset: function() { BloodSimulatorV21.reset(); },
+  reset: function() {
+    BloodSimulatorV21.reset();
+    _syncBloodV2Caches(this);
+  },
 };
 Object.keys(_BSV21_BLOOD).forEach((enemyType) => {
   const base = _BSV21_BLOOD[enemyType];
