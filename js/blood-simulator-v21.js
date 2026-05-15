@@ -830,7 +830,9 @@ window.BloodV2 = {
     _syncBloodV2Caches(this);
     return BloodSimulatorV21;
   },
-  update: function(dt) { BloodSimulatorV21.update(dt); },
+  update: function(dt) {
+    if (typeof BloodSimulatorV21.update === 'function') BloodSimulatorV21.update(dt);
+  },
   setParticleEffects: function(e) { BloodSimulatorV21.setParticleEffects(e); },
   emitBurst: function(pos, count, opts) { BloodSimulatorV21.emitBurst(pos, count, opts); },
   emit: function(x, y, z, count, opts) { BloodSimulatorV21.emit(x, y, z, count, opts); },

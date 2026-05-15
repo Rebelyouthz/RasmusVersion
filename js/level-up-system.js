@@ -1670,20 +1670,23 @@ window.spawnBossChest = function(x, z) {
 
         function _applyAndClose(upgrade) {
           try { if (upgrade && typeof upgrade.apply === 'function') upgrade.apply(); } catch (error) { console.error('Error applying LVL UP:', error); }
-          modal.style.display = 'none';
-          const upgradeList = document.getElementById('upgrade-list');
-          if (upgradeList) upgradeList.innerHTML = '';
           const doubleUpgradeChance = playerStats.doubleUpgradeChance || 0;
           if (!isBonusRound && doubleUpgradeChance > 0) {
             const bonusChance = Math.min(1.0, doubleUpgradeChance);
             if (Math.random() < bonusChance) {
-              showUpgradeModal(true);
+              modal.style.display = 'none';
+              const upgradeList = document.getElementById('upgrade-list');
+              if (upgradeList) upgradeList.innerHTML = '';
               _resumeComboAfterPause();
               lastHudUpdateMs = 0;
               updateHUD();
+              showUpgradeModal(true);
               return;
             }
           }
+          modal.style.display = 'none';
+          const upgradeList = document.getElementById('upgrade-list');
+          if (upgradeList) upgradeList.innerHTML = '';
           forceGameUnpause();
           _resumeComboAfterPause();
           lastHudUpdateMs = 0;
