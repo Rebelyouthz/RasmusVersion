@@ -142,7 +142,8 @@
         neuralMatrix:   { level: 0, maxLevel: 1, unlocked: false },
         astralGateway:  { level: 0, maxLevel: 1, unlocked: false },
         droppletShop:   { level: 0, maxLevel: 1, unlocked: false },  // The Dropplet Shop
-        slotMachine:    { level: 0, maxLevel: 1, unlocked: false }   // Slot Machine
+        slotMachine:    { level: 0, maxLevel: 1, unlocked: false },  // Slot Machine
+        progressionHouse: { level: 0, maxLevel: 1, unlocked: false } // Stat Forge (canonical ID)
       },
       // Neural Matrix unlock state (which nodes the player has activated)
       neuralMatrix: {},

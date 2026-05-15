@@ -5753,6 +5753,27 @@
     if (!sd) return;
     var steps = [];
 
+    // Section 9: Horus contextual message on camp return
+    var runStats = window.currentRunStats;
+    if (window.HorusSystem && !sd._horusTip_postRun_shown) {
+      var horusMsg = null;
+      if (runStats && runStats.wavesCompleted >= 3) {
+        horusMsg = (runStats.isHighScore || runStats.newHighScore)
+          ? 'A new record! Your legend grows. 👑'
+          : 'Impressive resolve. The camp awaits your return.';
+      } else {
+        horusMsg = 'You fell. But death is a teacher. Return stronger.';
+      }
+      sd._horusTip_postRun_shown = true;
+      steps.push(function(next) {
+        window.HorusSystem.say(horusMsg, { delay: 200 });
+        setTimeout(next, 1600);
+      });
+    } else if (sd._horusTip_postRun_shown) {
+      // Reset each run so message shows every time
+      sd._horusTip_postRun_shown = false;
+    }
+
     // 1. Account level-up notification
     var pendingLevelUp = window._pendingAccountLevelUp;
     if (pendingLevelUp && pendingLevelUp.leveledUp) {

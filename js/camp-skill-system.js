@@ -186,7 +186,7 @@
           };
         }
       },
-      progressionCenter: {
+      progressionHouse: {
         name: 'Stat Forge',
         icon: '💪',
         description: 'Forge permanent stat upgrades. Increase damage, health, speed, and more with permanent enhancements!',
@@ -1797,54 +1797,137 @@
     
     // Quest definitions with conditions for dependencies
     const TUTORIAL_QUESTS = {
-      // === QUEST 1: Find A.I.D.A — Discover and insert the chip ===
-      // Pre-activated at game start. After inserting chip, claim reward at Quest Hall.
-      quest_findingAida: {
-        id: 'quest_findingAida',
-        name: 'Finding A.I.D.A',
-        description: 'Visit the Quest Hall to read your first directive. Then find the glowing chip near the campfire, pick it up, and insert it into the broken robot.',
-        objectives: 'Pick up the Aida Chip and insert it into the Broken Robot, then claim at Quest Hall',
-        claim: 'Quest Hall',
-        rewardGold: 50,
-        rewardSkillPoints: 1,
-        rewardAchievement: '1stStoryQuest',
-        autoClaim: false,
-        message: "🤖 <b>A.I.D.A Online!</b><br><br>The robot stirs to life and takes a lap around the fire.<br><br><i>A.I.D.A: 'Chip integration complete. Mission directives are now accessible. Follow my guidance.'</i><br><br>🎯 <b>NEXT:</b> Head out and fight — survive your first run and return.",
-        nextQuest: 'firstRunDeath',
+      // === QUEST 1: Gather Your Strength — Collect the intro resource cache ===
+      // Pre-activated at game start. Auto-claims on resource collect.
+      quest_gatherStrength: {
+        id: 'quest_gatherStrength',
+        name: 'Gather Your Strength',
+        description: 'Welcome, survivor. This camp is yours to build. Start by gathering the resources that lie nearby.',
+        objectives: 'Collect the resource cache near the campfire',
+        claim: 'Auto-Claim',
+        rewardGold: 200,
+        rewardResources: { wood: 50, stone: 50 },
+        autoClaim: true,
+        noRewardPopup: false,
+        message: 'Well done. You have what you need to begin building. Head to the Quest Hall marker and build it.',
+        nextQuest: 'quest_buildQuesthall',
         conditions: []
       },
 
-      // === QUEST 1: Build the Quest Hall ===
-      // First thing the player does on their first camp visit.
-      // Quest Hall is free to build (isFree: true), auto-claims on completion.
+      // === QUEST 2: Raise the Quest Hall ===
+      // First building is always FREE. Auto-claims on build complete.
       quest_buildQuesthall: {
         id: 'quest_buildQuesthall',
-        name: 'Build the Quest Hall',
-        description: 'Welcome to your base camp! Walk to the Quest Hall plot and build it — it\'s free! This is your command centre.',
+        name: 'Raise the Quest Hall',
+        description: 'Walk to the Quest Hall plot and build it — it\'s free! This is your command centre.',
         objectives: 'Build the Quest Hall',
         autoClaim: true,
         noRewardPopup: true,
-        nextQuest: 'quest_harvester',
+        nextQuest: 'quest_firstBlood',
         rewardGold: 0,
         rewardSkillPoints: 0,
+        message: '⚡ Quest Hall complete! This is your command center. Enter it and claim your first quest.',
         conditions: []
       },
 
-      // === QUEST 2: The Awakening — Complete your first run ===
-      firstRunDeath: {
-        id: 'firstRunDeath',
-        name: "First Run",
-        description: "A.I.D.A says: 'Let's go for your first run.' Head out, fight enemies, and return to camp. You will either die or survive — both count!",
+      // === QUEST 3: First Blood — Complete your first run ===
+      quest_firstBlood: {
+        id: 'quest_firstBlood',
+        name: 'First Blood',
+        description: 'Venture out and survive your first run. You don\'t need to win — just fight.',
         objectives: 'Complete a combat run and return to camp',
         claim: 'Quest Hall',
         rewardGold: 100,
         rewardSkillPoints: 1,
-        rewardFreeSpin: 1,
-        unlockBuilding: 'accountBuilding',
+        rewardSlotCoins: 2,
+        rewardAccountXP: 50,
+        unlockBuilding: 'armory',
         triggerOnDeath: true,
-        message: "🏃 <b>First Run Complete!</b><br><br>🎰 <b>Daily Spin</b> and <b>Daily Rewards</b> are now unlocked!<br><br><i>A.I.D.A: 'Impressive. You survived contact. The spin wheel and daily rewards are now operational — use them to gain advantages.'</i><br><br>🎯 <b>NEXT:</b> Visit the Forge and craft all gathering tools.",
+        message: 'You survived... barely. But you\'re learning. The camp grows stronger as you do. Build the Armory to upgrade your arsenal.',
+        nextQuest: 'quest_buildArmory',
+        conditions: []
+      },
+
+      // === QUEST 4: Forge Your Arsenal — Build the Armory ===
+      quest_buildArmory: {
+        id: 'quest_buildArmory',
+        name: 'Forge Your Arsenal',
+        description: 'Build the Armory to begin crafting and upgrading weapons.',
+        objectives: 'Build the Armory (3 Wood, 3 Stone)',
+        claim: 'Quest Hall',
+        rewardGold: 50,
+        rewardSkillPoints: 1,
+        rewardAccountXP: 30,
+        unlockBuilding: 'armory',
+        message: 'The Armory stands ready. Your weapons will grow deadlier here.',
+        nextQuest: 'quest_buildProfile',
+        conditions: ['quest_firstBlood']
+      },
+
+      // === QUEST 5: Know Thyself — Build the Profile Hall ===
+      quest_buildProfile: {
+        id: 'quest_buildProfile',
+        name: 'Know Thyself',
+        description: 'A warrior must know their own strength. Build the Profile Hall to track your journey.',
+        objectives: 'Build the Profile Hall (4 Wood, 4 Stone)',
+        claim: 'Quest Hall',
+        rewardGold: 50,
+        rewardSkillPoints: 1,
+        rewardAccountXP: 50,
+        unlockBuilding: 'accountBuilding',
+        message: 'Your legend is now being written. Check your rank and daily rewards inside.',
+        nextQuest: 'quest_buildSlotMachine',
+        conditions: ['quest_buildArmory']
+      },
+
+      // === QUEST 6: Spin of Fate — Build the Slot Machine ===
+      quest_buildSlotMachine: {
+        id: 'quest_buildSlotMachine',
+        name: 'Spin of Fate',
+        description: 'Fortune favors the bold. Build the Shrine of Fate — your first spin awaits. You have been given Fate Coins to begin.',
+        objectives: 'Build the Shrine of Fate (5 Wood, 5 Stone)',
+        claim: 'Quest Hall',
+        rewardGold: 50,
+        rewardSlotCoins: 3,
+        rewardAccountXP: 40,
+        unlockBuilding: 'slotMachine',
+        message: 'The Shrine of Fate is ready. Step inside and pull the lever. Each spin costs 1 Fate Coin. Jackpot rewards are waiting...',
+        nextQuest: 'quest_buildSkillTree',
+        conditions: ['quest_buildProfile']
+      },
+
+      // === QUEST 7: The Skill Within — Build the Skill Tree ===
+      quest_buildSkillTree: {
+        id: 'quest_buildSkillTree',
+        name: 'The Skill Within',
+        description: 'Raw power needs direction. Build the Skill Tree and unlock your first skill.',
+        objectives: 'Build the Skill Tree (6 Wood, 6 Stone) and unlock 1 skill',
+        claim: 'Quest Hall',
+        rewardGold: 75,
+        rewardSkillPoints: 2,
+        rewardAccountXP: 75,
+        unlockBuilding: 'skillTree',
+        message: 'Each node you unlock changes how you play. Choose wisely — or choose chaos. Unlock your first skill now.',
+        nextQuest: 'quest_secondRun',
+        conditions: ['quest_buildSlotMachine']
+      },
+
+      // === QUEST 8: Prove Yourself — Second run ===
+      quest_secondRun: {
+        id: 'quest_secondRun',
+        name: 'Prove Yourself',
+        description: 'You are stronger now. Head into the field and push further. Survive 3 waves this time.',
+        objectives: 'Complete a run surviving 3+ waves',
+        claim: 'Quest Hall',
+        rewardGold: 150,
+        rewardSkillPoints: 0,
+        rewardAttributePoints: 1,
+        rewardAccountXP: 100,
+        rewardSlotCoins: 1,
+        triggerOnDeath: true,
+        message: 'Impressive. The camp needs more. Keep building.',
         nextQuest: 'quest_harvester',
-        conditions: ['quest_findingAida']
+        conditions: ['quest_buildSkillTree']
       },
 
       // === QUEST 2: The Harvester — Reach Level 3 ===
@@ -1853,13 +1936,13 @@
         name: 'The Harvester',
         description: 'Reach Level 3 in a single run to unlock the Forge. You\'ll receive starter materials and gold to buy gathering tools!',
         objectives: 'Reach Level 3 in a single run',
-        claim: 'Main Building',
+        claim: 'Quest Hall',
         rewardGold: 50,
         rewardSkillPoints: 1,
         rewardResources: { wood: 30, stone: 30 },
         unlockBuilding: 'forge',
         triggerOnDeath: true,
-        message: "🔨 <b>Fabrication Node Unlocked!</b><br><br>You received:<br>&nbsp;🪵 <b>30 Wood</b> · 🪨 <b>30 Stone</b><br>&nbsp;💰 <b>50 Gold</b><br><br><i>A.I.D.A: 'Resource gathering requires tools. Build the Forge and equip yourself.'</i><br><br>🎯 <b>NEXT:</b> Build the Forge, then buy gathering tools (1 Gold each)!",
+        message: '🔨 Forge Unlocked! You received: 🪵 30 Wood · 🪨 30 Stone · 💰 50 Gold. Resource gathering requires tools. Build the Forge and equip yourself.',
         nextQuest: 'quest_craftAllTools',
         conditions: []
       },
@@ -1868,7 +1951,7 @@
       quest_craftAllTools: {
         id: 'quest_craftAllTools',
         name: 'Gear Up: Gathering Tools',
-        description: 'A.I.D.A guides you to the Forge. Craft ALL 6 gathering tools (Axe, Sledgehammer, Pickaxe, Magic Pickaxe, Hunting Knife, Foraging Scoop). Each costs just 1 Gold.',
+        description: 'Head to the Forge. Craft ALL 6 gathering tools (Axe, Sledgehammer, Pickaxe, Magic Pickaxe, Hunting Knife, Foraging Scoop). Each costs just 1 Gold.',
         objectives: 'Buy all 6 gathering tools at the Forge',
         claim: 'Quest Hall',
         rewardGold: 50,
@@ -1877,7 +1960,7 @@
         rewardAchievement: '1stTimeCrafter',
         triggerOnDeath: false,
         autoClaim: false,
-        message: "🛠️ <b>Achievement: 1st Time Crafter!</b><br><br><i>A.I.D.A: 'Tools acquired. Now gather resources for a new building — the Songspire Tree. I need 2 Wood and 2 Stone.'</i><br><br>🎯 <b>NEXT:</b> Gather 2 Wood + 2 Stone during a run, then return to build the Skill Tree!",
+        message: '🛠️ Tools acquired. Now gather resources for the Songspire Tree. You need 2 Wood and 2 Stone.',
         nextQuest: 'quest_buildSongspire',
         conditions: ['quest_harvester']
       },
@@ -1886,7 +1969,7 @@
       quest_buildSongspire: {
         id: 'quest_buildSongspire',
         name: 'The Songspire Tree',
-        description: "A.I.D.A: 'Gather 2 Wood and 2 Stone. We will build the Songspire — an ancient tree that grants power and wisdom.' Go on a run, gather the resources, and return to build the Skill Tree.",
+        description: 'Gather 2 Wood and 2 Stone. We will build the Songspire — an ancient tree that grants power and wisdom.',
         objectives: 'Gather 2 Wood + 2 Stone, then build the Skill Tree (Songspire)',
         claim: 'Quest Hall',
         rewardGold: 100,
@@ -1895,42 +1978,26 @@
         deductResources: { wood: 2, stone: 2 },
         unlockBuilding: 'skillTree',
         triggerOnDeath: true,
-        message: "🌳 <b>The Songspire is Alive!</b><br><br>Achievement: <b>Songspire</b> unlocked!<br>You received <b>2 Skill Points</b>!<br><br><i>A.I.D.A: 'The Songspire channels the energy of this world. Use your Skill Points to grow stronger. The tree pulses with ancient power — it will guide you.'</i>",
-        nextQuest: 'quest_firstBlood',
+        message: '🌳 The Songspire is Alive! Achievement: Songspire unlocked! You received 2 Skill Points! The Songspire channels the energy of this world. Use your Skill Points to grow stronger.',
+        nextQuest: 'quest_gainingStats',
         conditions: ['quest_craftAllTools']
       },
 
-      // === STEP 5: First Blood — Turn in 30 Wood and 30 Stone ===
-      quest_firstBlood: {
-        id: 'quest_firstBlood',
-        name: 'First Blood',
-        description: 'Gather and turn in 30 Wood and 30 Stone to unlock the Armory and Weapon Crafting at the Forge.',
-        objectives: 'Have 30 Wood and 30 Stone (turned in on claim)',
-        claim: 'Main Building',
-        rewardGold: 100,
-        rewardSkillPoints: 1,
-        deductResources: { wood: 30, stone: 30 },
-        unlockBuilding: 'armory',
-        triggerOnDeath: true,
-        message: "⚔️ <b>Armory</b> and <b>Weapon Crafting</b> Unlocked!<br><br><i>A.I.D.A: 'Survival requires weapons. Grow stronger. The lake\'s collective will not reclaim you while you are fragile.'</i><br><br>⚠️ <b>Note:</b> Before Prestige, you can only craft and equip <b>Common</b>, <b>Uncommon</b>, and <b>Rare</b> gear.",
-        nextQuest: 'quest_gainingStats',
-        conditions: ['quest_buildSongspire']
-      },
-
-      // === STEP 6: Gaining Stats — Defeat 300 enemies total ===
+      // === QUEST 5: Gathering Stats — Defeat 300 enemies total ===
+      // (Legacy quest kept for save-compat; Horus narrator version)
       quest_gainingStats: {
         id: 'quest_gainingStats',
         name: 'Gaining Stats',
         description: 'Defeat 300 enemies total across all your runs to unlock the Companion House.',
         objectives: 'Defeat 300 enemies total',
-        claim: 'Main Building',
+        claim: 'Quest Hall',
         rewardGold: 150,
         rewardSkillPoints: 2,
         unlockBuilding: 'companionHouse',
         triggerOnDeath: true,
-        message: "🐺 <b>Companion House Unlocked!</b><br><br>You received <b>2 Skill Points</b>!<br><br><i>A.I.D.A: 'Good. Each enemy you dissolve feeds my understanding. Find a companion — you should not wander alone.'</i>",
+        message: '🐺 Companion House Unlocked! You received 2 Skill Points! Find a companion — you should not wander alone.',
         nextQuest: 'quest_eggHunt',
-        conditions: ['quest_firstBlood']
+        conditions: ['quest_buildSongspire']
       },
 
       // === STEP 6: The Egg Hunt — Reach Level 10 + defeat The Grey boss ===
@@ -2939,24 +3006,46 @@
     // ── Build Overlay: click-to-build with resource requirements and 0-100% animation ──
     // Building N requires N of each: wood, stone.
     // Resources are checked and deducted on build. Progress shown as 0→100% with phases.
+    // Section 3: First 8 buildings use hardcoded costs from the tutorial questline.
+    var HARDCODED_BUILD_COSTS = {
+      questMission:    { wood: 0,  stone: 0  },  // FREE
+      armory:          { wood: 3,  stone: 3  },
+      accountBuilding: { wood: 4,  stone: 4  },
+      slotMachine:     { wood: 5,  stone: 5  },
+      skillTree:       { wood: 6,  stone: 6  },
+      forge:           { wood: 7,  stone: 7  },
+      trainingHall:    { wood: 8,  stone: 8  },
+      companionHouse:  { wood: 10, stone: 10 }
+    };
+
     function _showBuildOverlay(buildingId, buildingName) {
       window._buildOverlayActive = true;
       if (window.CampWorld && window.CampWorld.isActive) window.CampWorld.pauseInput();
 
-      // Determine resource cost: building N costs N of each material
-      // Free/core buildings cost 0 resources (instant build)
-      var builtCount = 0;
-      if (saveData.campBuildings) {
-        builtCount = Object.values(saveData.campBuildings).filter(function (b) { return b && b.unlocked && b.level > 0; }).length;
-      }
+      // Determine resource cost: hardcoded for first 8 buildings, formula for rest
       var bldDef = CAMP_BUILDINGS[buildingId];
-      var cost = (bldDef && (bldDef.isFree || bldDef.isCore)) ? 0 : Math.max(1, builtCount + 1);
+      var isFreeBuilding = bldDef && (bldDef.isFree || bldDef.isCore);
+      var costObj = HARDCODED_BUILD_COSTS[buildingId];
+      var cost;
+      if (costObj) {
+        cost = costObj.wood; // wood === stone for all 8
+      } else if (isFreeBuilding) {
+        cost = 0;
+      } else {
+        var builtCount = 0;
+        if (saveData.campBuildings) {
+          builtCount = Object.values(saveData.campBuildings).filter(function (b) { return b && b.unlocked && b.level > 0; }).length;
+        }
+        cost = Math.max(1, builtCount + 1);
+      }
+      var woodCost  = costObj ? costObj.wood  : cost;
+      var stoneCost = costObj ? costObj.stone : cost;
 
       // Get current resources
       var res = (saveData.resources) || {};
-      var hasWood  = (res.wood  || 0) >= cost;
-      var hasStone = (res.stone || 0) >= cost;
-      var canBuild = hasWood && hasStone;
+      var hasWood  = (res.wood  || 0) >= woodCost;
+      var hasStone = (res.stone || 0) >= stoneCost;
+      var canBuild = (woodCost === 0 && stoneCost === 0) ? true : (hasWood && hasStone);
 
       var overlay = document.createElement('div');
       overlay.id = 'camp-build-overlay';
@@ -2974,23 +3063,23 @@
       // Sub-heading: resource cost
       var costLabel = document.createElement('div');
       costLabel.style.cssText = 'color:#aaa;font-size:0.9em;margin-bottom:14px;font-family:Arial,sans-serif;letter-spacing:0;';
-      costLabel.textContent = cost === 0 ? 'No materials required — FREE build!' : 'Materials required: ' + cost + ' of each';
+      costLabel.textContent = (woodCost === 0 && stoneCost === 0) ? 'No materials required — FREE build!' : 'Materials required: ' + woodCost + ' Wood, ' + stoneCost + ' Stone';
       panel.appendChild(costLabel);
 
       // Materials display with have/need indicators (skip for free buildings)
-      if (cost > 0) {
+      if (woodCost > 0 || stoneCost > 0) {
         var mats = document.createElement('div');
         mats.style.cssText = 'display:flex;justify-content:center;gap:14px;margin:0 0 16px;';
         var matDefs = [
-          { icon: '🪵', label: 'Wood',  have: res.wood  || 0, ok: hasWood },
-          { icon: '🪨', label: 'Stone', have: res.stone || 0, ok: hasStone }
+          { icon: '🪵', label: 'Wood',  have: res.wood  || 0, need: woodCost,  ok: hasWood },
+          { icon: '🪨', label: 'Stone', have: res.stone || 0, need: stoneCost, ok: hasStone }
         ];
         matDefs.forEach(function (m) {
           var box = document.createElement('div');
           var borderColor = m.ok ? '#2ecc71' : '#e74c3c';
           box.style.cssText = 'background:rgba(30,40,60,0.8);border:2px solid ' + borderColor + ';border-radius:8px;padding:8px 12px;min-width:60px;';
           box.innerHTML = '<div style="font-size:28px;">' + m.icon + '</div>' +
-            '<div style="color:' + (m.ok ? '#aaffaa' : '#ff8888') + ';font-size:13px;margin-top:3px;">' + m.have + '/' + cost + '</div>' +
+            '<div style="color:' + (m.ok ? '#aaffaa' : '#ff8888') + ';font-size:13px;margin-top:3px;">' + m.have + '/' + m.need + '</div>' +
             '<div style="color:#888;font-size:11px;">' + (m.ok ? '✅' : '❌') + ' ' + m.label + '</div>';
           mats.appendChild(box);
         });
@@ -3070,8 +3159,8 @@
 
         // Deduct resources immediately
         var r = saveData.resources || {};
-        r.wood  = Math.max(0, (r.wood  || 0) - cost);
-        r.stone = Math.max(0, (r.stone || 0) - cost);
+        r.wood  = Math.max(0, (r.wood  || 0) - woodCost);
+        r.stone = Math.max(0, (r.stone || 0) - stoneCost);
         if (window.GameHarvesting) window.GameHarvesting.refreshHUD();
 
         var startMs = Date.now();
@@ -3137,6 +3226,27 @@
             saveData.tutorialQuests &&
             saveData.tutorialQuests.currentQuest === 'quest_buildQuesthall') {
           progressTutorialQuest('quest_buildQuesthall', true);
+        }
+
+        // Horus Panel congratulation + sparkle burst
+        if (window.HorusSystem) {
+          // Get approximate screen center for sparkle
+          var bScreenX = window.innerWidth / 2, bScreenY = window.innerHeight * 0.4;
+          if (window.CampWorld && window.CampWorld.getBuildingScreenPos) {
+            var _bPos = window.CampWorld.getBuildingScreenPos(buildingId);
+            if (_bPos) { bScreenX = _bPos.x; bScreenY = _bPos.y; }
+          }
+          window.HorusSystem.onBuildingBuilt(buildingId, bScreenX, bScreenY);
+        }
+
+        // RewardDisplay for build XP
+        if (window.RewardDisplay) {
+          window.RewardDisplay.show({
+            title: '🏛️ ' + buildingName.toUpperCase() + ' BUILT!',
+            rarity: 'rare',
+            rewards: [{ icon: '⭐', label: 'Account XP', amount: _bXP }],
+            source: 'build'
+          });
         }
 
         // ACHIEVEMENT: "Built your First Camp Building" — triggers on first ever building
@@ -3469,19 +3579,36 @@
           window.DopamineSystem.RewardJuice.flyResourcesIn(flyItems, _flyOrigin);
         }
       }
-      // Award account XP for completing a quest (50 XP per quest)
-      addAccountXP(50);
-      // Grant 1 slot coin per quest completed
+      // Award account XP for completing a quest (quest-specific amount or 50 XP default)
+      const _questXP = (quest.rewardAccountXP || 50);
+      addAccountXP(_questXP);
+      // Grant 1 slot coin per quest completed (consolidated Fate Coin)
       if (typeof saveData !== 'undefined') {
         if (!saveData.resources) saveData.resources = {};
         saveData.resources.slotCoins = (saveData.resources.slotCoins || 0) + 1;
         if (typeof saveSaveData === 'function') saveSaveData();
       }
-      if (typeof showStatChange === 'function') showStatChange('+1 🎰 Slot Coin', 'rare');
+      if (typeof showStatChange === 'function') showStatChange('+1 🎰 Fate Coin', 'rare');
       chatSystemMessage('🎁 Quest "' + quest.name + '" claimed! Rewards received.');
 
-      // Casino-style Dopamine Reward modal for major quest claims
-      if (window.DopamineReward && !quest.noRewardPopup) {
+      // RewardDisplay (Section 6) — unified dopamine popup
+      if (window.RewardDisplay && !quest.noRewardPopup) {
+        const _rdItems = [];
+        const _baseGold = (quest.rewardGold || 0) + 50;
+        if (_baseGold > 0) _rdItems.push({ icon: '💰', label: 'Gold',  amount: _baseGold });
+        if (quest.rewardSkillPoints) _rdItems.push({ icon: '⭐', label: 'Skill Points', amount: quest.rewardSkillPoints });
+        if (quest.rewardAttributePoints) _rdItems.push({ icon: '💪', label: 'Attribute Points', amount: quest.rewardAttributePoints });
+        if (quest.rewardSlotCoins) _rdItems.push({ icon: '🎰', label: 'Fate Coins', amount: quest.rewardSlotCoins });
+        if (quest.rewardFreeSpin) _rdItems.push({ icon: '🎰', label: 'Fate Coins', amount: quest.rewardFreeSpin });
+        _rdItems.push({ icon: '🎰', label: 'Fate Coin',  amount: 1 });
+        _rdItems.push({ icon: '⭐', label: 'Account XP', amount: _questXP });
+        window.RewardDisplay.show({
+          title: '📜 QUEST COMPLETE!',
+          rarity: quest.rewardSkillPoints > 1 ? 'epic' : 'rare',
+          rewards: _rdItems,
+          source: 'quest'
+        });
+      } else if (window.DopamineReward && !quest.noRewardPopup) {
         const _drmItems = [];
         const _baseGold = (quest.rewardGold || 0) + 50; // includes 50-bonus
         if (_baseGold > 0) _drmItems.push('💰 +' + _baseGold + ' Gold');
@@ -3494,8 +3621,9 @@
             _drmItems.push((_iconMap[res] || '📦') + ' +' + amt + ' ' + res.charAt(0).toUpperCase() + res.slice(1));
           });
         }
-        if (quest.rewardFreeSpin) _drmItems.push('🎡 +' + quest.rewardFreeSpin + ' Free Spin');
-        _drmItems.push('🎰 +1 Slot Coin');
+        if (quest.rewardFreeSpin) _drmItems.push('🎰 +' + quest.rewardFreeSpin + ' Fate Coins');
+        if (quest.rewardSlotCoins) _drmItems.push('🎰 +' + quest.rewardSlotCoins + ' Fate Coins');
+        _drmItems.push('🎰 +1 Fate Coin');
         if (_drmItems.length > 0) {
           setTimeout(function() {
             window.DopamineReward.show({
@@ -3527,10 +3655,16 @@
         if (window.GameHarvesting) window.GameHarvesting.refreshHUD();
       }
       
-      // Award free spin on the Spin Wheel (e.g., quest_dailyRoutine)
+      // Award slot coins on claim (consolidated from freeSpins/spinTokens)
       if (quest.rewardFreeSpin) {
-        saveData.freeSpins = (saveData.freeSpins || 0) + quest.rewardFreeSpin;
-        showStatChange(`+${quest.rewardFreeSpin} Free Spin!`);
+        if (!saveData.resources) saveData.resources = {};
+        saveData.resources.slotCoins = (saveData.resources.slotCoins || 0) + quest.rewardFreeSpin;
+        showStatChange(`+${quest.rewardFreeSpin} Fate Coin!`);
+      }
+      if (quest.rewardSlotCoins) {
+        if (!saveData.resources) saveData.resources = {};
+        saveData.resources.slotCoins = (saveData.resources.slotCoins || 0) + quest.rewardSlotCoins;
+        showStatChange(`+${quest.rewardSlotCoins} Fate Coin(s)!`);
       }
 
       // Grant a named story achievement (e.g., '1stStoryQuest', 'Songspire', '1stTimeCrafter')
@@ -3811,48 +3945,56 @@
 
     /**
      * initFirstQuest()
-     * Pre-activates quest_findingAida at game start so it shows in Quest Hall.
-     * Called on first camp visit.
+     * Activates quest_gatherStrength on first camp visit. No AIDA dependency.
+     * Called from CampWorld on first camp load.
      */
     window.initFirstQuest = function () {
       if (!saveData.tutorialQuests) {
         saveData.tutorialQuests = { currentQuest: null, completedQuests: [], readyToClaim: [] };
       }
       const completed = saveData.tutorialQuests.completedQuests || [];
-      // Skip if the first quest (or legacy intro quest) is already done
-      if (completed.includes('quest_buildQuesthall') || completed.includes('quest_findingAida')) return;
-      if (saveData.tutorialQuests.currentQuest) return; // already has an active quest
-      // Activate first quest: build the Quest Hall
-      saveData.tutorialQuests.currentQuest = 'quest_buildQuesthall';
+      // Skip if any early quests are already done
+      if (completed.includes('quest_buildQuesthall') ||
+          completed.includes('quest_gatherStrength') ||
+          completed.includes('quest_findingAida')) return;
+      if (saveData.tutorialQuests.currentQuest) return;
+      // Activate the new first quest
+      saveData.tutorialQuests.currentQuest = 'quest_gatherStrength';
       saveSaveData();
+
+      // Horus Panel welcome message (once)
+      if (!saveData._horusTip_welcome) {
+        saveData._horusTip_welcome = true;
+        setTimeout(function () {
+          if (window.HorusSystem) {
+            window.HorusSystem.say(
+              'Welcome, survivor. This camp is yours to build.\nStart by gathering the resources that lie nearby.',
+              { delay: 600 }
+            );
+          }
+        }, 800);
+      }
     };
     
-    // Show next quest popup
+    // Show next quest popup — uses Horus Panel narrator instead of AIDA cinematic
     function showNextQuestPopup(questId) {
       const quest = TUTORIAL_QUESTS[questId];
       if (!quest) return;
 
-      // For the Artifact Shrine quest, show a full CinematicDialogue before the standard popup
-      if (questId === 'quest_shrineCalibrate' && typeof window.showCinematicDialogue === 'function') {
-        window.showCinematicDialogue(
-          'A.I.D.A.',
-          "Droplet, my sensors detect a high-frequency anomaly from the old ruins in the camp. It's a Shrine of some sort. I need raw combat data to calibrate its frequency.",
-          () => {
-            showComicInfoBox(
-              `🏛️ ${quest.name}`,
-              `${quest.description}<br><br><b>Objective:</b> ${quest.objectives}${quest.claim ? `<br><b>Claim:</b> ${quest.claim}` : ''}`,
-              'Continue'
-            );
-          }
+      // Show quest info via Horus Panel if available, otherwise comic info box
+      if (window.HorusSystem && quest.description) {
+        window.HorusSystem.say(
+          '📜 ' + quest.name + '\n' + quest.description +
+          (quest.objectives ? '\n🎯 ' + quest.objectives : ''),
+          { key: '_horusTip_quest_' + questId, once: true }
         );
-        return;
+      } else {
+        showComicInfoBox(
+          `📜 ${quest.name}`,
+          `${quest.description}<br><br><b>Objective:</b> ${quest.objectives}${quest.claim ? `<br><b>Claim:</b> ${quest.claim}` : ''}`,
+          'Continue'
+        );
       }
-
-      showComicInfoBox(
-        `📜 ${quest.name}`,
-        `${quest.description}<br><br><b>Objective:</b> ${quest.objectives}${quest.claim ? `<br><b>Claim:</b> ${quest.claim}` : ''}`,
-        'Continue'
-      );
     }
     
     // Legacy function for backward compatibility

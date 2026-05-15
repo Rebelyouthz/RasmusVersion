@@ -821,8 +821,17 @@
         if (srBtn && !hasClaimable) {
           srBtn.onclick = () => {
             document.body.removeChild(overlay);
-            if (_isSandboxMode) window.location.reload();
-            else window.location.href = 'sandbox.html';
+            // Section 9: Horus pre-run message + 1.5s dramatic pause
+            if (window.HorusSystem) {
+              window.HorusSystem.say('Venture forth, warrior. The waves will not wait.', { delay: 0 });
+              setTimeout(function () {
+                if (_isSandboxMode) window.location.reload();
+                else window.location.href = 'sandbox.html';
+              }, 1500);
+            } else {
+              if (_isSandboxMode) window.location.reload();
+              else window.location.href = 'sandbox.html';
+            }
           };
         }
         const cBtn = container.querySelector('.quest-hall-close-btn');

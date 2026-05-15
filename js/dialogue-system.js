@@ -260,325 +260,58 @@ window.DialogueSystem = (function () {
 
   /**
    * _showCinematic(dialogueArray, options)
-   * Full-screen dark cinematic overlay with Eye of Horus watermark, Annunaki gold/cyan styling,
-   * multi-sentence typewriter, tap-to-advance, and game-pause while active.
-   *
-   * All teardown state is stored at module level (_cinTwTimer, _cinAaTimer, _cinWasPaused,
-   * _cinOnComplete) so the public dismiss() API can call _cinDismiss() without needing access
-   * to a local closure, avoiding timer/pause imbalance bugs.
+   * Cinematic mode (cinematic:true sentences): pauses the game and shows a dark
+   * vignette overlay behind the Horus Panel instead of a full-screen overlay.
+   * Same gold/smoke panel design — just with the world dimmed behind it.
    */
   function _showCinematic(dialogueArray, options) {
     options = options || {};
     if (_cinActive) {
-      // Already showing a cinematic — fire the caller's completion callback so it doesn't hang
       if (typeof options.onComplete === 'function') options.onComplete();
       return;
     }
 
-    // Store module-level teardown state
     _cinOnComplete = options.onComplete || null;
     _cinWasPaused  = false;
     if (typeof window.setGamePaused === 'function') {
       _cinWasPaused = true;
       window.setGamePaused(true);
     }
-
     _cinActive = true;
-    var sentences = dialogueArray;
-    var sentIdx = 0;
-    var twDone = false;
-    var closed = false; // local guard so click handler can't re-trigger after teardown
 
-    // Inject required CSS animations once
-    if (!document.getElementById('ds-cin-style')) {
-      var sty = document.createElement('style');
-      sty.id = 'ds-cin-style';
-      sty.textContent = [
-        '@keyframes dsCinFadeIn{from{opacity:0}to{opacity:1}}',
-        '@keyframes dsCinFadeOut{from{opacity:1}to{opacity:0}}',
-        '@keyframes dsCinSlideUp{from{transform:translate(-50%,-50%) translateY(18px);opacity:0}to{transform:translate(-50%,-50%);opacity:1}}',
-        '@keyframes dsCinTapPulse{0%,100%{opacity:0.55}50%{opacity:1}}',
-        '@keyframes dsCinScanMove{from{background-position:0 0}to{background-position:0 4px}}',
-        '@keyframes dsChipSpin{from{transform:rotateY(0deg) rotateX(20deg)}to{transform:rotateY(360deg) rotateX(20deg)}}',
-        '@keyframes dsChipGlow{0%,100%{box-shadow:0 0 20px rgba(0,204,255,0.6),0 0 40px rgba(0,120,255,0.3)}50%{box-shadow:0 0 35px rgba(0,204,255,1),0 0 70px rgba(0,120,255,0.6)}}'
-      ].join('');
-      document.head.appendChild(sty);
-    }
+    // Dark vignette overlay behind the Horus Panel (cinematic feel without fullscreen takeover)
+    var vig = document.createElement('div');
+    vig.className = 'horus-vignette';
+    document.body.appendChild(vig);
+    _cinOverlay = vig; // stored so _cinDismiss() cleans it up
 
-    // Detect whether this dialogue has a chip visual (aidaChipFound)
-    var hasChipVisual = dialogueArray.some(function (s) { return !!s.chipVisual; });
+    // Safety auto-close: 25s max so a crash can never trap the player
+    _cinSafeTimer = setTimeout(function () {
+      _cinDismiss();
+      if (_container) _container.style.display = 'none';
+      _active = false;
+    }, 25000);
 
-    // Build overlay
-    var ov = document.createElement('div');
-    ov.style.cssText = [
-      'position:fixed','top:0','left:0','width:100%','height:100%',
-      'z-index:19999','pointer-events:all','cursor:pointer',
-      'animation:dsCinFadeIn 0.55s ease-out forwards'
-    ].join(';');
+    // Initialize panel and show sentences through normal bubble path
+    _init();
+    _sentences  = dialogueArray;
+    _sentIdx    = 0;
+    _active     = true;
+    _onComplete = null; // cinematic uses _cinOnComplete; not the bubble _onComplete path
 
-    // Dark full-screen background with radial vignette
-    var bg = document.createElement('div');
-    bg.style.cssText = [
-      'position:absolute','inset:0',
-      'background:radial-gradient(ellipse 80% 70% at 50% 50%,#0a0008 20%,#000 100%)'
-    ].join(';');
+    // Horus narrator speaker
+    var speakerEl = document.getElementById('ds-bubble-speaker');
+    if (speakerEl) speakerEl.innerHTML = '<span style="font-size:14px;">𓂀</span> HORUS';
+    var portraitEl = document.getElementById('ds-bubble-portrait');
+    if (portraitEl) portraitEl.textContent = '𓂀';
 
-    // Scanline CRT overlay
-    var scan = document.createElement('div');
-    scan.style.cssText = [
-      'position:absolute','inset:0','pointer-events:none','z-index:1',
-      'background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.1) 2px,rgba(0,0,0,0.1) 4px)'
-    ].join(';');
+    // Show panel with fresh slide-in animation
+    _container.style.display = 'block';
+    _container.style.animation = 'none';
+    void _container.offsetHeight;
+    _container.style.animation = '';
 
-    // Eye of Horus watermark — centred behind text
-    var watermark = document.createElement('div');
-    watermark.style.cssText = [
-      'position:absolute','top:50%','left:50%',
-      'transform:translate(-50%,-50%)',
-      'pointer-events:none','z-index:2','user-select:none'
-    ].join(';');
-    watermark.innerHTML = _EYE_OF_HORUS_SVG;
-
-    // Hieroglyph border strip — top
-    var hierTop = document.createElement('div');
-    hierTop.style.cssText = [
-      'position:absolute','top:0','left:0','width:100%','height:40px',
-      'background:linear-gradient(180deg,rgba(201,162,39,0.06) 0%,transparent 100%)',
-      'border-bottom:1px solid rgba(201,162,39,0.15)',
-      'display:flex','align-items:center','justify-content:center',
-      'font-size:20px','letter-spacing:14px','color:rgba(201,162,39,0.18)',
-      'pointer-events:none','z-index:3','overflow:hidden'
-    ].join(';');
-    hierTop.textContent = '𓂀 𓁿 𓆣 𓃭 𓂀 𓁿 𓆣 𓃭 𓂀 𓁿 𓆣 𓃭';
-
-    // Hieroglyph border strip — bottom
-    var hierBot = document.createElement('div');
-    hierBot.style.cssText = [
-      'position:absolute','bottom:0','left:0','width:100%','height:40px',
-      'background:linear-gradient(0deg,rgba(201,162,39,0.06) 0%,transparent 100%)',
-      'border-top:1px solid rgba(201,162,39,0.15)',
-      'display:flex','align-items:center','justify-content:center',
-      'font-size:20px','letter-spacing:14px','color:rgba(201,162,39,0.18)',
-      'pointer-events:none','z-index:3','overflow:hidden'
-    ].join(';');
-    hierBot.textContent = '𓃭 𓆣 𓁿 𓂀 𓃭 𓆣 𓁿 𓂀 𓃭 𓆣 𓁿 𓂀';
-
-    // 3D rotating chip visual — shown only for aidaChipFound cinematic
-    if (hasChipVisual) {
-      var chipScene = document.createElement('div');
-      chipScene.style.cssText = [
-        'position:absolute','top:22%','left:50%','transform:translateX(-50%)',
-        'perspective:400px','z-index:4','pointer-events:none',
-        'display:flex','flex-direction:column','align-items:center','gap:12px'
-      ].join(';');
-      var chipWrapper = document.createElement('div');
-      chipWrapper.style.cssText = [
-        'width:90px','height:66px','transform-style:preserve-3d',
-        'animation:dsChipSpin 3s linear infinite'
-      ].join(';');
-      var chipFace = document.createElement('div');
-      chipFace.style.cssText = [
-        'width:90px','height:66px','border-radius:8px','position:relative',
-        'background:linear-gradient(135deg,#001833 0%,#003366 40%,#002244 100%)',
-        'border:2px solid rgba(0,204,255,0.9)',
-        'animation:dsChipGlow 2s ease-in-out infinite'
-      ].join(';');
-      // Chip circuit lines (decorative)
-      var lines = ['top:20%;left:10%;width:30%;height:2px',
-                   'top:50%;left:10%;width:20%;height:2px',
-                   'top:70%;left:10%;width:25%;height:2px',
-                   'top:20%;right:10%;width:30%;height:2px',
-                   'top:50%;right:10%;width:20%;height:2px',
-                   'top:70%;right:10%;width:25%;height:2px'];
-      lines.forEach(function (s) {
-        var l = document.createElement('div');
-        l.style.cssText = 'position:absolute;background:rgba(0,204,255,0.7);border-radius:1px;' + s;
-        chipFace.appendChild(l);
-      });
-      // Center diamond
-      var diamond = document.createElement('div');
-      diamond.style.cssText = [
-        'position:absolute','top:50%','left:50%',
-        'width:16px','height:16px',
-        'transform:translate(-50%,-50%) rotate(45deg)',
-        'background:rgba(0,204,255,0.9)',
-        'box-shadow:0 0 12px rgba(0,204,255,1)'
-      ].join(';');
-      chipFace.appendChild(diamond);
-      chipWrapper.appendChild(chipFace);
-      chipScene.appendChild(chipWrapper);
-      // Label under chip
-      var chipLabel = document.createElement('div');
-      chipLabel.style.cssText = [
-        'font-family:"Courier New",monospace','font-size:11px',
-        'color:rgba(0,204,255,0.7)','letter-spacing:4px','text-transform:uppercase',
-        'text-shadow:0 0 8px rgba(0,204,255,0.5)'
-      ].join(';');
-      chipLabel.textContent = 'A.I.D.A — CORE MODULE';
-      chipScene.appendChild(chipLabel);
-      ov.appendChild(chipScene);
-    }
-
-    // Content box — shifted down when chip visual is shown
-    var box = document.createElement('div');
-    box.style.cssText = [
-      'position:absolute',
-      hasChipVisual ? 'top:68%' : 'top:50%',
-      'left:50%',
-      'transform:translate(-50%,-50%)',
-      'width:min(680px,88vw)','z-index:4',
-      'display:flex','flex-direction:column','gap:14px',
-      'animation:dsCinSlideUp 0.45s cubic-bezier(0.22,1,0.36,1) forwards'
-    ].join(';');
-
-    // Speaker line
-    var speakerEl = document.createElement('div');
-    speakerEl.style.cssText = [
-      'font-family:"Courier New",monospace','font-size:clamp(11px,1.8vw,14px)',
-      'letter-spacing:5px','color:#00ccaa','text-transform:uppercase',
-      'border-bottom:1px solid rgba(0,204,170,0.3)','padding-bottom:6px',
-      'text-shadow:0 0 10px rgba(0,204,170,0.6)'
-    ].join(';');
-    speakerEl.textContent = '◈ A.I.D.A';
-
-    // Dialogue text
-    var textEl = document.createElement('div');
-    textEl.style.cssText = [
-      'font-family:"Courier New",monospace','font-size:clamp(14px,2.2vw,20px)',
-      'line-height:1.75','color:#E8D5A3',
-      'text-shadow:0 0 6px rgba(201,162,39,0.12)',
-      'min-height:3em'
-    ].join(';');
-
-    // Progress dots (sentence x of y)
-    var dotsEl = document.createElement('div');
-    dotsEl.style.cssText = [
-      'display:flex','gap:6px','justify-content:center','margin-top:4px'
-    ].join(';');
-
-    // Tap hint
-    var tapHint = document.createElement('div');
-    tapHint.style.cssText = [
-      'font-family:"Courier New",monospace','font-size:clamp(10px,1.4vw,12px)',
-      'color:rgba(201,162,39,0.65)','letter-spacing:3px','text-align:right',
-      'animation:dsCinTapPulse 1.4s ease-in-out infinite','opacity:0',
-      'transition:opacity 0.4s'
-    ].join(';');
-    tapHint.textContent = '▶  TAP TO CONTINUE';
-
-    box.appendChild(speakerEl);
-    box.appendChild(textEl);
-    box.appendChild(dotsEl);
-    box.appendChild(tapHint);
-
-    ov.appendChild(bg);
-    ov.appendChild(scan);
-    ov.appendChild(watermark);
-    ov.appendChild(hierTop);
-    ov.appendChild(hierBot);
-    ov.appendChild(box);
-    document.body.appendChild(ov);
-    _cinOverlay = ov;
-
-    // ── Helper: rebuild progress dots ─────────────────────────
-    function _updateDots() {
-      dotsEl.innerHTML = '';
-      for (var d = 0; d < sentences.length; d++) {
-        var dot = document.createElement('div');
-        dot.style.cssText = [
-          'width:6px','height:6px','border-radius:50%',
-          'background:' + (d < sentIdx ? '#C9A227' : d === sentIdx ? '#00ccaa' : 'rgba(255,255,255,0.18)')
-        ].join(';');
-        dotsEl.appendChild(dot);
-      }
-    }
-
-    // ── Typewriter for current sentence ───────────────────────
-    function _typeSentence() {
-      var s = sentences[sentIdx];
-      twDone = false;
-      tapHint.style.opacity = '0';
-      textEl.textContent = '';
-      clearTimeout(twTimer);
-      clearTimeout(aaTimer);
-      _updateDots();
-
-      var chars = Array.from(s.text);
-      var ci = 0;
-      function _next() {
-        if (ci < chars.length) {
-          textEl.textContent += chars[ci];
-          var ch = chars[ci];
-          var delay = TW_DELAY_DEFAULT;
-          if (ch === '.' || ch === '!' || ch === '?') delay = TW_DELAY_SENTENCE_END;
-          else if (ch === ',') delay = TW_DELAY_COMMA;
-          ci++;
-          _cinTwTimer = setTimeout(_next, delay);
-        } else {
-          twDone = true;
-          tapHint.style.opacity = '1';
-          var dur = (s.duration != null) ? s.duration : (s.text.length * 50 + 2000);
-          _cinAaTimer = setTimeout(_advance, dur);
-        }
-      }
-      _next();
-    }
-
-    // ── Advance to next sentence or close ─────────────────────
-    function _advance() {
-      clearTimeout(_cinTwTimer);
-      clearTimeout(_cinAaTimer);
-      if (!twDone) {
-        // Finish typewriter instantly
-        textEl.textContent = sentences[sentIdx].text;
-        twDone = true;
-        tapHint.style.opacity = '1';
-        _cinAaTimer = setTimeout(_advance, 1400);
-        return;
-      }
-      sentIdx++;
-      if (sentIdx < sentences.length) {
-        _typeSentence();
-      } else {
-        _closeCinematic();
-      }
-    }
-
-    // ── Close overlay (delegates to the shared module-level teardown) ──
-    function _closeCinematic() {
-      if (closed) return;
-      closed = true;
-      clearTimeout(_cinTwTimer);
-      clearTimeout(_cinAaTimer);
-      clearTimeout(_cinSafeTimer);
-      _cinTwTimer   = null;
-      _cinAaTimer   = null;
-      _cinSafeTimer = null;
-      _cinActive    = false;
-      _cinOverlay   = null;
-      ov.style.animation = 'dsCinFadeOut 0.4s ease-in forwards';
-      setTimeout(function () {
-        if (ov.parentNode) ov.parentNode.removeChild(ov);
-        if (_cinWasPaused && typeof window.setGamePaused === 'function') {
-          window.setGamePaused(false);
-        }
-        _cinWasPaused = false;
-        var cb = _cinOnComplete;
-        _cinOnComplete = null;
-        if (typeof cb === 'function') cb();
-      }, 380);
-    }
-
-    // Tap/click interaction
-    ov.addEventListener('click', function () {
-      if (closed) return;
-      _advance();
-    });
-    // Safety auto-close: max 25s total — stored in module-level so dismiss() can clear it
-    _cinSafeTimer = setTimeout(_closeCinematic, 25000);
-
-    // Start first sentence
-    _typeSentence();
+    _showSentence(_sentences[0]);
   }
 
   // ── Internal state ─────────────────────────────────────────
@@ -601,12 +334,27 @@ window.DialogueSystem = (function () {
     _container = document.createElement('div');
     _container.id = 'ds-bubble';
     _container.className = 'ds-bubble ds-bubble-happy';
+    // Horus Panel structure — Eye of Horus decorations + gold smoke border (see css/styles.css)
     _container.innerHTML =
-      '<div class="ds-bubble-image-wrap" id="ds-bubble-image-wrap" style="display:none;"></div>' +
-      '<div class="ds-bubble-header" id="ds-bubble-header"><span class="ds-aida-label">A.I.D.A</span><span class="ds-panel-dots">● ● ●</span></div>' +
-      '<div class="ds-bubble-text" id="ds-bubble-text"></div>' +
-      '<div class="ds-bubble-choices" id="ds-bubble-choices"></div>' +
-      '<div class="ds-bubble-footer">TAP TO CONTINUE</div>';
+      '<span class="hp-eye-top">𓂀</span>' +
+      '<span class="hp-eye-bl">𓂀</span>' +
+      '<span class="hp-eye-br">𓂀</span>' +
+      '<div class="hp-hieroglyphs">𓂀 𓁿 𓆣 𓃭 𓂀 𓁿 𓆣 𓃭</div>' +
+      '<div class="hp-inner">' +
+        '<div class="hp-speaker" id="ds-bubble-speaker"><span style="font-size:14px;">𓂀</span> HORUS</div>' +
+        '<div class="hp-content">' +
+          '<div class="hp-portrait" id="ds-bubble-portrait">𓂀</div>' +
+          '<div style="flex:1;overflow:hidden;">' +
+            '<div class="ds-bubble-image-wrap" id="ds-bubble-image-wrap" style="display:none;"></div>' +
+            '<div class="hp-text ds-bubble-text" id="ds-bubble-text"></div>' +
+            '<div class="ds-bubble-choices" id="ds-bubble-choices"></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="hp-footer">' +
+          '<span class="hp-tap-hint" id="ds-bubble-tap-hint">TAP TO CONTINUE</span>' +
+          '<button class="hp-dismiss" id="ds-bubble-dismiss">→ OK</button>' +
+        '</div>' +
+      '</div>';
     document.body.appendChild(_container);
     _textEl    = document.getElementById('ds-bubble-text');
     _choicesEl = document.getElementById('ds-bubble-choices');
@@ -620,26 +368,19 @@ window.DialogueSystem = (function () {
     }
     _container.addEventListener('click', _onTap);
     _container.addEventListener('touchend', _onTap, { passive: false });
+
+    // Dismiss button (→ OK)
+    var _dismissBtn = document.getElementById('ds-bubble-dismiss');
+    if (_dismissBtn) {
+      _dismissBtn.addEventListener('click', function (e) { e.stopPropagation(); dismiss(); });
+      _dismissBtn.addEventListener('touchend', function (e) { e.preventDefault(); e.stopPropagation(); dismiss(); }, { passive: false });
+    }
   }
 
   // ── Position helper ────────────────────────────────────────
   function _applyPosition() {
-    if (!_container) return;
-    if (_posX != null && _posY != null) {
-      // Use half the rendered bubble width to keep it centred above the anchor
-      var hw = Math.round((_container.offsetWidth || 180) / 2);
-      var left = _posX - hw;
-      // Clamp to viewport with 8px margin
-      left = Math.max(8, Math.min(left, window.innerWidth - (_container.offsetWidth || 180) - 8));
-      _container.style.left      = left + 'px';
-      _container.style.top       = (_posY - 70) + 'px';
-      _container.style.transform = 'none';
-    } else {
-      // Default: horizontally centred, near top of screen
-      _container.style.left      = '50%';
-      _container.style.top       = '15%';
-      _container.style.transform = 'translateX(-50%)';
-    }
+    // Horus Panel: always fixed to top-right by CSS — no JS positioning needed.
+    // Method kept for backward-compat (external callers of setPosition()).
   }
 
   // ── Typewriter ─────────────────────────────────────────────
@@ -776,14 +517,14 @@ window.DialogueSystem = (function () {
    * Standard speech bubbles are used for idle chatter, hints, and secrets.
    */
   function show(dialogueArray, options) {
-    // Suppress A.I.D.A dialogue while a camp building menu is open
+    // Suppress dialogue while a camp building menu is open
     if (_isCampMenuOpen()) {
       options = options || {};
       if (typeof options.onComplete === 'function') options.onComplete();
       return;
     }
 
-    // Route to cinematic overlay for main story dialogues
+    // Route to cinematic overlay (panel + vignette) for main story dialogues
     if (_isCinematic(dialogueArray)) {
       _showCinematic(dialogueArray, options);
       return;
@@ -795,11 +536,28 @@ window.DialogueSystem = (function () {
     _sentIdx    = 0;
     _active     = true;
     _onComplete = options.onComplete || null;
-    _posX       = (options.x != null) ? options.x : null;
-    _posY       = (options.y != null) ? options.y : null;
+    _posX       = null; // position is CSS-controlled (top-right)
+    _posY       = null;
+
+    // Update speaker name / emoji from options
+    var speakerEl = document.getElementById('ds-bubble-speaker');
+    if (speakerEl) {
+      var spName  = options.speaker || options.speakerName || 'HORUS';
+      var spEmoji = options.speakerEmoji || '𓂀';
+      speakerEl.innerHTML = '<span style="font-size:14px;">' + spEmoji + '</span> ' + spName;
+    }
+    // Update portrait icon from options
+    var portraitEl = document.getElementById('ds-bubble-portrait');
+    if (portraitEl) {
+      portraitEl.textContent = options.portrait || options.portraitEmoji || '𓂀';
+    }
 
     _container.style.display = 'block';
-    _applyPosition();
+    // Reset slide-in animation on re-open
+    _container.style.animation = 'none';
+    void _container.offsetHeight; // reflow
+    _container.style.animation = '';
+
     _showSentence(_sentences[0]);
   }
 

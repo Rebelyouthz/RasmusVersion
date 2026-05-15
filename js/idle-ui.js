@@ -295,8 +295,19 @@ function renderDailyPanel(saveData, container) {
     if (result.alreadyClaimed) {
       alert('Already claimed today! Come back tomorrow.');
     } else {
-      saveData.gold = (saveData.gold || 0) + result.gold;
+      // Note: checkDailyLogin already applies the gold reward — do NOT add it again here.
       alert('Day ' + result.day + ' reward: +' + result.gold + 'g' + (result.item ? ' + ' + result.item : ''));
+      if (window.RewardDisplay) {
+        window.RewardDisplay.show({
+          title: '🌅 DAILY REWARD!',
+          rarity: result.day >= 7 ? 'legendary' : result.day >= 4 ? 'epic' : 'rare',
+          rewards: [
+            result.gold  ? { icon: '💰', label: 'Gold',  amount: result.gold }  : null,
+            result.item  ? { icon: '🎁', label: result.item, amount: 1 }         : null
+          ].filter(Boolean),
+          source: 'daily'
+        });
+      }
       renderDailyPanel(saveData, container);
     }
   });
