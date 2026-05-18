@@ -155,6 +155,8 @@
   let _menuOpenTs  = 0;      // timestamp (ms) when _menuOpen was last set true
   // Maximum time (ms) _menuOpen can remain true before the failsafe forces a reset
   const _MENU_OPEN_FAILSAFE_MS = 30000;
+  // Frame counter for throttled Horus System updates (billboard, ticker)
+  let _hurusTick   = 0;
 
   // Campfire light + flame for flickering
   let _fireLight   = null;
@@ -438,6 +440,9 @@
 
     // ── Small reflection pond near campfire ─────────────────
     _buildCampPond();
+
+    // ── Interactive Fountain (fountain clicker quest) ─────────
+    _buildCampFountain();
 
     // ── Lake (Waterdrop's ultimate goal, south of forest ring) ──
     _buildLake();
@@ -767,6 +772,112 @@
     pondLight.position.set(-6, 0.5, 5);
     _campScene.add(pondLight);
   }
+
+  // ── Interactive Camp Fountain ────────────────────────────
+  // Position: (7, 0, 7) — between campfire and eastern buildings.
+  // Click/interact with it to progress the "fountain clicker" quest.
+  const _FOUNTAIN_POS = { x: 7, z: 7 };
+  const _FOUNTAIN_RADIUS = 3.5;
+  let _fountainMesh = null;
+
+  function _buildCampFountain() {
+    const THREE = T();
+    const grp = new THREE.Group();
+    grp.position.set(_FOUNTAIN_POS.x, 0, _FOUNTAIN_POS.z);
+
+    // Base — stone disc
+    const baseGeo = new THREE.CylinderGeometry(1.2, 1.4, 0.3, 12);
+    const stoneMat = new THREE.MeshPhongMaterial({ color: 0x7a7a8a, emissive: 0x111111 });
+    grp.add(new THREE.Mesh(baseGeo, stoneMat));
+
+    // Basin — shallow ring
+    const basinGeo = new THREE.CylinderGeometry(1.0, 1.0, 0.25, 12, 1, true);
+    grp.add(new THREE.Mesh(basinGeo, stoneMat));
+
+    // Water surface inside basin
+    const waterGeo = new THREE.CircleGeometry(0.9, 12);
+    const waterMat = new THREE.MeshPhongMaterial({ color: 0x44aaff, emissive: 0x002244, emissiveIntensity: 0.5, opacity: 0.82, transparent: true });
+    const water = new THREE.Mesh(waterGeo, waterMat);
+    water.rotation.x = -Math.PI / 2;
+    water.position.y = 0.26;
+    grp.add(water);
+
+    // Centre pillar
+    const pillarGeo = new THREE.CylinderGeometry(0.12, 0.15, 1.2, 8);
+    const pillar = new THREE.Mesh(pillarGeo, stoneMat);
+    pillar.position.y = 0.75;
+    grp.add(pillar);
+
+    // Top spout
+    const spoutGeo = new THREE.SphereGeometry(0.18, 8, 6);
+    const spoutMat = new THREE.MeshPhongMaterial({ color: 0xaaddff, emissive: 0x0055aa, emissiveIntensity: 0.6 });
+    const spout = new THREE.Mesh(spoutGeo, spoutMat);
+    spout.position.y = 1.45;
+    grp.add(spout);
+
+    // Soft blue light
+    const fLight = new THREE.PointLight(0x44aaff, 0.7, 6, 2);
+    fLight.position.set(0, 1, 0);
+    grp.add(fLight);
+
+    _campScene.add(grp);
+    _fountainMesh = grp;
+  }
+
+  function _checkFountainInteraction() {
+    const dx = _playerPos.x - _FOUNTAIN_POS.x;
+    const dz = _playerPos.z - _FOUNTAIN_POS.z;
+    if (Math.sqrt(dx * dx + dz * dz) > _FOUNTAIN_RADIUS) return false;
+    return true;
+  }
+
+  function _doFountainClick() {
+    if (!_saveData) return;
+    if (!_saveData.fountainClicks) _saveData.fountainClicks = 0;
+    _saveData.fountainClicks++;
+    const clicks = _saveData.fountainClicks;
+
+    // Splash effect — coin-burst-style blue particles
+    if (window.HorusSystem && window.HorusSystem.spawnCoinBurst) {
+      // Use screen-center since we don't have 3D projection here
+      window.HorusSystem.spawnCoinBurst(window.innerWidth * 0.6, window.innerHeight * 0.45);
+    }
+    if (typeof showStatChange === 'function') showStatChange('💧 Fountain splash!');
+
+    // Milestone messages
+    if (clicks === 1) {
+      if (window.HorusSystem) window.HorusSystem.say('The fountain hums with ancient energy. Keep pressing…', { delay: 200 });
+    } else if (clicks === 5) {
+      if (window.HorusSystem) window.HorusSystem.say('Halfway there! The water flows stronger. 💧 5/10', { delay: 200 });
+    } else if (clicks >= 10) {
+      // Quest complete — track once
+      if (!_saveData._fountainQuestDone) {
+        _saveData._fountainQuestDone = true;
+        if (typeof saveSaveData === 'function') saveSaveData();
+        if (window.HorusSystem) window.HorusSystem.say('💧 THE FOUNTAIN AWAKENS! Ancient power surges through the camp!', { delay: 200 });
+        if (window.RewardDisplay) {
+          window.RewardDisplay.show({
+            title: '💧 FOUNTAIN AWAKENED!',
+            rewards: [
+              { icon: '⭐', label: 'Account XP', amount: 25 },
+              { icon: '🎰', label: 'Fate Coin', amount: 1 }
+            ],
+            rarity: 'rare',
+            source: 'Fountain'
+          });
+        }
+        // Grant rewards
+        if (typeof addAccountXP === 'function') addAccountXP(25);
+        if (_saveData.resources) {
+          _saveData.resources.slotCoins = (_saveData.resources.slotCoins || 0) + 1;
+        }
+        if (typeof saveSaveData === 'function') saveSaveData();
+      }
+    } else {
+      if (typeof saveSaveData === 'function') saveSaveData();
+    }
+  }
+
 
   // ── Star field ───────────────────────────────────────────
   function _buildStars() {
@@ -5420,6 +5531,23 @@
       if (_buildingNameEl) _buildingNameEl.style.display = 'none';
       return;
     }
+    // Fountain proximity hint
+    if (_checkFountainInteraction()) {
+      const _fClicks = (_saveData && _saveData.fountainClicks) || 0;
+      const _fDone   = _saveData && _saveData._fountainQuestDone;
+      if (_buildingNameEl) {
+        _buildingNameEl.textContent = '⛲  Fountain';
+        _buildingNameEl.style.display = 'block';
+      }
+      _promptEl.textContent = _fDone ? 'Press [E] to splash 💧' : `Press [E] to splash 💧 (${Math.min(_fClicks, 10)}/10)`;
+      _promptEl.style.display = 'block';
+      if (_interactBtn) {
+        _interactBtn.textContent = 'SPLASH';
+        _interactBtn.style.background = 'linear-gradient(135deg,#0077aa,#005577)';
+        _interactBtn.style.display = 'block';
+      }
+      return;
+    }
     if (_nearBuilding) {
       const def = BUILDING_DEFS.find(d => d.id === _nearBuilding);
       if (def) {
@@ -5467,6 +5595,12 @@
 
   function _interact() {
     if (_menuOpen) return; // already showing a building menu
+
+    // ── Fountain interaction ────────────────────────────────
+    if (_checkFountainInteraction()) {
+      _doFountainClick();
+      return;
+    }
 
     // ── A.I.D.A intro interactions (chip pickup / robot insertion) ─
     if (!_aidaIntroState.chipPickedUp && _aidaChipMesh && _aidaChipMesh.visible) {
@@ -7481,6 +7615,18 @@
       }, 800);
     }
 
+    // Daily login reward check on every camp entry (not just page load)
+    // welcome-ui.js _autoShow() runs on DOMContentLoaded which may be too early;
+    // this ensures the overlay fires once the camp is actually visible.
+    if (!window._campWelcomeChecked) {
+      window._campWelcomeChecked = true;
+      setTimeout(function() {
+        if (window.WelcomeUI && typeof window.WelcomeUI.checkAndAutoShow === 'function') {
+          window.WelcomeUI.checkAndAutoShow();
+        }
+      }, 1500);
+    }
+
     _isActive = true;
     if (window.GameAudio && window.GameAudio.playBackgroundMusic) {
       window.GameAudio.playBackgroundMusic(CAMP_BGM_TRACK, CAMP_BGM_VOLUME);
@@ -7941,6 +8087,23 @@
     _updateSigns();
     // Sprite sheet idle-breathing avatar removed per design update
     // _updateProfileAvatar(dt);
+    // Update Horus quest billboard (ready-to-claim indicator above Quest Hall)
+    if (window.HorusSystem && window.HorusSystem.updateQuestBillboard) {
+      var _tqUpd = _saveData && _saveData.tutorialQuests;
+      var _hasReady = _tqUpd && _tqUpd.readyToClaim && _tqUpd.readyToClaim.length > 0;
+      window.HorusSystem.updateQuestBillboard(_hasReady);
+    }
+    // Update building objective billboards and daily challenge ticker (throttled)
+    if (!_hurusTick) _hurusTick = 0;
+    _hurusTick++;
+    if (_hurusTick % 60 === 0) {
+      if (window.HorusSystem && window.HorusSystem.updateBillboardPositions) {
+        window.HorusSystem.updateBillboardPositions();
+      }
+      if (window.HorusSystem && window.HorusSystem.updateDailyTicker) {
+        window.HorusSystem.updateDailyTicker();
+      }
+    }
   }
 
   /**
@@ -8128,28 +8291,51 @@
           else if (sd) { sd.accountXP = (sd.accountXP || 0) + 5; }
           if (typeof showStatChange === 'function') showStatChange('+5 Account XP', 'epic');
           if (typeof saveSaveData === 'function') saveSaveData();
-          // Animate reels
+          // Staggered reel animation: each reel stops independently
           const reels = panel.querySelector('#slot-reels');
           const result = panel.querySelector('#slot-result');
           spinBtn.disabled = true;
+          result.textContent = '';
+          // Pick final outcome up-front
+          const final1 = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+          const final2 = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+          const final3 = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+          const allMatch = final1 === final2 && final2 === final3;
+          const twoMatch = !allMatch && (final1 === final2 || final2 === final3 || final1 === final3);
+          // Per-reel state
+          let r1 = SYMBOLS[0], r2 = SYMBOLS[0], r3 = SYMBOLS[0];
+          let locked1 = false, locked2 = false, locked3 = false;
           let ticks = 0;
-          const totalTicks = 18;
+          const STOP1 = 10, STOP2 = 14, STOP3 = 18;
           const interval = setInterval(function () {
-            const r1 = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
-            const r2 = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
-            const r3 = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
-            reels.textContent = r1 + ' ' + r2 + ' ' + r3;
             ticks++;
-            if (ticks >= totalTicks) {
+            if (!locked1) r1 = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+            if (!locked2) r2 = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+            if (!locked3) r3 = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+            if (ticks >= STOP1 && !locked1) { r1 = final1; locked1 = true; }
+            if (ticks >= STOP2 && !locked2) { r2 = final2; locked2 = true; }
+            if (ticks >= STOP3 && !locked3) { r3 = final3; locked3 = true; }
+            reels.textContent = r1 + ' ' + r2 + ' ' + r3;
+            if (ticks >= STOP3) {
               clearInterval(interval);
-              const allMatch = r1 === r2 && r2 === r3;
               if (allMatch) {
                 result.style.color = '#ffcc00';
-                result.textContent = '🎉 JACKPOT! Bonus: +20 Account XP!';
+                result.textContent = '🎉 JACKPOT! +20 Account XP!';
                 if (typeof addAccountXP === 'function') addAccountXP(20);
                 else if (typeof window.addAccountXP === 'function') window.addAccountXP(20);
                 else if (sd) { sd.accountXP = (sd.accountXP || 0) + 20; }
                 if (typeof saveSaveData === 'function') saveSaveData();
+                if (window.RewardDisplay) {
+                  window.RewardDisplay.show({
+                    title: '🎰 JACKPOT!',
+                    rewards: [{ icon: '⭐', label: 'Bonus Account XP', amount: 20 }],
+                    rarity: 'legendary',
+                    source: 'Slot Machine'
+                  });
+                }
+              } else if (twoMatch) {
+                result.style.color = '#ff8844';
+                result.textContent = '😬 So close! +5 Account XP.';
               } else {
                 result.style.color = '#aaa';
                 result.textContent = '+5 Account XP awarded.';

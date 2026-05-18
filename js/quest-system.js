@@ -898,6 +898,18 @@
             if (typeof saveSaveData === 'function') saveSaveData();
             if (typeof updateGoldDisplays === 'function') updateGoldDisplays();
             if (typeof showStatusMessage === 'function') showStatusMessage(`🏅 ${ch.label} complete! +${ch.reward.xp} XP, +${ch.reward.gold} 💰`, 3000);
+            // RewardDisplay dopamine popup
+            if (window.RewardDisplay) {
+              window.RewardDisplay.show({
+                title: '🏅 ' + ch.label.toUpperCase() + '!',
+                rewards: [
+                  { icon: '⭐', label: 'Account XP', amount: ch.reward.xp },
+                  { icon: '💰', label: 'Gold', amount: ch.reward.gold }
+                ],
+                rarity: 'rare',
+                source: 'Milestone'
+              });
+            }
             _renderTabContent();
           });
         });
@@ -958,12 +970,26 @@
             } else if (typeof addAccountXP === 'function') {
               addAccountXP(ach.xp);
             }
-            // Grant Slot Tokens (freeSpins)
-            saveData.freeSpins = (saveData.freeSpins || 0) + ach.freeSpins;
+            // Grant Slot Coins (unified slotCoins resource)
+            if (!saveData.resources) saveData.resources = {};
+            saveData.resources.slotCoins = (saveData.resources.slotCoins || 0) + ach.freeSpins;
             if (typeof saveSaveData === 'function') saveSaveData();
             if (typeof showStatusMessage === 'function') showStatusMessage(`🏆 ${ach.label}! +${ach.xp} XP · +${ach.freeSpins} 🎰`, 3500);
             // Rarity reveal effect
             if (window.spawnRarityEffects) window.spawnRarityEffects(this, ach.tier);
+            // RewardDisplay dopamine popup
+            if (window.RewardDisplay) {
+              const tierRarity = { common: 'common', uncommon: 'uncommon', rare: 'rare', epic: 'epic', legendary: 'legendary' };
+              window.RewardDisplay.show({
+                title: '🏆 ' + ach.label.toUpperCase() + '!',
+                rewards: [
+                  { icon: '⭐', label: 'Account XP', amount: ach.xp },
+                  { icon: '🎰', label: 'Fate Coins', amount: ach.freeSpins }
+                ],
+                rarity: tierRarity[ach.tier] || 'rare',
+                source: 'Achievement'
+              });
+            }
             _renderTabContent();
           });
         });

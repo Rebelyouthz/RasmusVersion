@@ -513,8 +513,9 @@
   }
 
   window.WelcomeUI = {
-    show:          show,
-    completeQuest: completeQuest,
+    show:             show,
+    completeQuest:    completeQuest,
+    checkAndAutoShow: _autoShow,
     NEW_PLAYER_QUESTS: NEW_PLAYER_QUESTS,
     SPIN_PRIZES:   WELCOME_SPIN_PRIZES
   };

@@ -3568,6 +3568,10 @@
           showStatChange(`+${amt} ${res.charAt(0).toUpperCase() + res.slice(1)}!`);
           const iconMap = { wood: '🪵', stone: '🪨' };
           flyItems.push({ icon: iconMap[res] || '📦', label: `+${amt} ${res}` });
+          // Resource milestone check
+          if (window.HorusSystem && window.HorusSystem.checkResourceMilestone) {
+            window.HorusSystem.checkResourceMilestone(res, saveData.resources[res]);
+          }
         }
         // Animate resource icons flying into HUD
         if (flyItems.length > 0 && window.DopamineSystem && window.DopamineSystem.RewardJuice) {
