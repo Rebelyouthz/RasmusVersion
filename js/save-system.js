@@ -461,6 +461,11 @@
           saveData.artifacts = saveData.artifacts || [];
           saveData.equippedArtifacts = saveData.equippedArtifacts || [null, null, null];
           saveData.campBuildings = { ...defaultSaveData.campBuildings, ...(saveData.campBuildings || {}) };
+          // Migrate old saves: progressionCenter → progressionHouse (canonical ID rename)
+          if (saveData.campBuildings.progressionCenter && !saveData.campBuildings.progressionHouse) {
+            saveData.campBuildings.progressionHouse = saveData.campBuildings.progressionCenter;
+          }
+          delete saveData.campBuildings.progressionCenter;
           saveData.skillTree = { ...defaultSaveData.skillTree, ...(saveData.skillTree || {}) };
           saveData.companions = { ...defaultSaveData.companions, ...(saveData.companions || {}) };
           saveData.hasVisitedCamp = saveData.hasVisitedCamp || false;

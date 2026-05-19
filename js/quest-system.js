@@ -979,7 +979,8 @@
             if (window.spawnRarityEffects) window.spawnRarityEffects(this, ach.tier);
             // RewardDisplay dopamine popup
             if (window.RewardDisplay) {
-              const tierRarity = { common: 'common', uncommon: 'uncommon', rare: 'rare', epic: 'epic', legendary: 'legendary' };
+              // Map tiers to supported RewardDisplay rarities (common|rare|epic|legendary)
+              const tierRarity = { common: 'common', uncommon: 'rare', rare: 'rare', epic: 'epic', legendary: 'legendary' };
               window.RewardDisplay.show({
                 title: '🏆 ' + ach.label.toUpperCase() + '!',
                 rewards: [

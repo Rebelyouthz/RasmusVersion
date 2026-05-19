@@ -868,9 +868,8 @@
         }
         // Grant rewards
         if (typeof addAccountXP === 'function') addAccountXP(25);
-        if (_saveData.resources) {
-          _saveData.resources.slotCoins = (_saveData.resources.slotCoins || 0) + 1;
-        }
+        if (!_saveData.resources) _saveData.resources = {};
+        _saveData.resources.slotCoins = (_saveData.resources.slotCoins || 0) + 1;
         if (typeof saveSaveData === 'function') saveSaveData();
       }
     } else {
@@ -5887,7 +5886,7 @@
     if (!sd) return;
     var steps = [];
 
-    // Section 9: Horus contextual message on camp return
+    // Section 9: Horus contextual message on camp return (shown once per run)
     var runStats = window.currentRunStats;
     if (window.HorusSystem && !sd._horusTip_postRun_shown) {
       var horusMsg = null;
@@ -5903,10 +5902,9 @@
         window.HorusSystem.say(horusMsg, { delay: 200 });
         setTimeout(next, 1600);
       });
-    } else if (sd._horusTip_postRun_shown) {
-      // Reset each run so message shows every time
-      sd._horusTip_postRun_shown = false;
     }
+    // Note: _horusTip_postRun_shown is reset in game-over-reset.js when a new run starts,
+    // not here, to avoid it toggling on every other camp entry.
 
     // 1. Account level-up notification
     var pendingLevelUp = window._pendingAccountLevelUp;

@@ -1736,92 +1736,7 @@
       font-size: 0.9em;
     }
 
-    /* ══════════════════════════════════════════════════════════════════════
-       SECTION 6 — UNIFIED REWARD DISPLAY (window.RewardDisplay)
-       Slides in from right side, centered vertically.
-       ══════════════════════════════════════════════════════════════════════ */
 
-    @keyframes rdSlideIn  { from { transform: translateX(120%); } to { transform: translateX(0); } }
-    @keyframes rdSlideOut { from { transform: translateX(0); }    to { transform: translateX(120%); } }
-    @keyframes rdItemIn   { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-    @keyframes rdFlash {
-      0%,100% { box-shadow: 0 0 0 2px rgba(201,168,76,0.3); }
-      50%      { box-shadow: 0 0 0 6px rgba(201,168,76,0.8), 0 0 40px rgba(201,168,76,0.4); }
-    }
-
-    #reward-display-panel {
-      position: fixed;
-      right: 14px;
-      top: 50%;
-      transform: translateY(-50%) translateX(120%);
-      width: 300px;
-      max-width: min(300px, calc(100vw - 28px));
-      z-index: 99998;
-      background: linear-gradient(135deg, rgba(8,6,2,0.97) 0%, rgba(18,12,4,0.98) 100%);
-      border: 2px solid #c9a84c;
-      border-radius: 12px;
-      padding: 16px 14px 12px;
-      pointer-events: auto;
-      font-family: 'Bangers', cursive;
-      box-shadow:
-        0 0 8px rgba(201,168,76,0.4),
-        0 0 24px rgba(139,105,20,0.2),
-        0 0 48px rgba(0,0,0,0.6);
-    }
-    #reward-display-panel.rd-visible {
-      transform: translateY(-50%) translateX(0);
-      animation: rdSlideIn 0.42s cubic-bezier(0.22,1,0.36,1) both;
-    }
-    #reward-display-panel.rd-sliding-out {
-      animation: rdSlideOut 0.38s ease-in both;
-    }
-    #reward-display-panel.rd-flash {
-      animation: rdFlash 1.1s ease-in-out;
-    }
-
-    .rd-title {
-      font-size: 17px;
-      letter-spacing: 3px;
-      text-align: center;
-      margin-bottom: 12px;
-      text-transform: uppercase;
-      padding-bottom: 8px;
-      border-bottom: 1px solid rgba(201,168,76,0.2);
-    }
-    .rd-common    { color: #e8d5a3; text-shadow: 0 0 6px rgba(232,213,163,0.4); }
-    .rd-rare      { color: #5bc4ff; text-shadow: 0 0 8px rgba(91,196,255,0.5); }
-    .rd-epic      { color: #c78fff; text-shadow: 0 0 8px rgba(199,143,255,0.5); }
-    .rd-legendary { color: #f0d060; text-shadow: 0 0 10px #c9a84c, 0 0 20px #8b6914; }
-
-    .rd-items { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
-    .rd-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      opacity: 0;
-      font-size: 13px;
-      letter-spacing: 0.5px;
-      color: #e8d5a3;
-    }
-    .rd-item.rd-item-visible { animation: rdItemIn 0.3s ease-out both; }
-    .rd-item-icon { font-size: 18px; min-width: 22px; }
-    .rd-item-amount { color: #f0d060; font-size: 14px; margin-left: auto; }
-
-    .rd-footer { display: flex; justify-content: flex-end; }
-    .rd-close-btn {
-      background: linear-gradient(135deg, rgba(201,168,76,0.12), rgba(139,105,20,0.18));
-      border: 1px solid #c9a84c;
-      border-radius: 6px;
-      color: #f0d060;
-      font-family: 'Bangers', cursive;
-      font-size: 12px;
-      letter-spacing: 2px;
-      padding: 5px 14px;
-      cursor: pointer;
-      transition: background 0.18s, box-shadow 0.18s;
-      text-shadow: 0 0 6px #c9a84c;
-    }
-    .rd-close-btn:hover { background: rgba(201,168,76,0.28); box-shadow: 0 0 8px rgba(201,168,76,0.5); }
 
     /* Minimap canvas */
     #game-minimap {
@@ -12932,6 +12847,7 @@
   animation: rdSlideIn 0.5s cubic-bezier(0.22,1.6,0.36,1) both;
 }
 #reward-display-panel.rd-sliding-out {
+  display: block; /* keep panel visible while slide-out animation plays */
   animation: rdSlideOut 0.4s ease-in both;
 }
 #reward-display-panel.rd-flash { animation: rdFlash 0.3s ease-in-out 3; }

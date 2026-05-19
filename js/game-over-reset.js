@@ -465,6 +465,11 @@
       _alienScoutSpawned  = false; // Reset alien spawn flags for new run
       _annunakiOrbSpawned = false;
 
+      // Reset post-run Horus message flag so it fires once after this run ends
+      if (typeof saveData !== 'undefined' && saveData) {
+        saveData._horusTip_postRun_shown = false;
+      }
+
       // Reset Waterdrop story quest state for this run
       if (window.resetLakeBounceQuest) window.resetLakeBounceQuest();
       

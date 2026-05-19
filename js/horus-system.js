@@ -76,13 +76,19 @@
       return;
     }
     el.classList.add('qrb-active');
-    // Update position from 3D world each frame
+    // Position the billboard over the Quest Hall.
+    // Prefer CampWorld.getQuestHallScreenPos() if available; fall back to the
+    // module-local _getQuestHallScreenPos() which uses CampWorld.projectWorldToScreen.
+    var pos = null;
     if (window.CampWorld && window.CampWorld.getQuestHallScreenPos) {
-      var pos = window.CampWorld.getQuestHallScreenPos();
-      if (pos) {
-        el.style.left = pos.x + 'px';
-        el.style.top  = (pos.y - 50) + 'px';
-      }
+      pos = window.CampWorld.getQuestHallScreenPos();
+    }
+    if (!pos) {
+      pos = _getQuestHallScreenPos();
+    }
+    if (pos) {
+      el.style.left = pos.x + 'px';
+      el.style.top  = (pos.y - 50) + 'px';
     }
   }
 
@@ -164,6 +170,9 @@
           saveData.gold = (saveData.gold || 0) + 50;
           if (typeof saveSaveData === 'function') saveSaveData();
           if (typeof showStatChange === 'function') showStatChange('+50 Gold Combo Bonus!');
+          // Refresh gold UI so displayed amount stays in sync
+          if (typeof updateHUD === 'function') updateHUD();
+          else if (typeof updateGoldDisplays === 'function') updateGoldDisplays();
         }
         say('⚡ BUILDING SPREE! +50 bonus gold!', { delay: 400 });
         spawnCoinBurst(screenX || window.innerWidth / 2, screenY || window.innerHeight / 2);

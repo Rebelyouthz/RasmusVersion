@@ -495,6 +495,8 @@
     let _questArrowV3 = null;
     let _minimapCanvas = null;
     let _minimapCtx    = null;
+    let _minimapLastMs = 0;
+    const _MINIMAP_FPS = 15; // throttle: redraw at most 15 times per second
 
     function _ensureMinimap() {
       if (_minimapCanvas) return;
@@ -511,6 +513,11 @@
     }
 
     function updateMinimap() {
+      // Throttle to _MINIMAP_FPS to avoid full canvas redraw every frame
+      var nowMs = Date.now();
+      if (nowMs - _minimapLastMs < 1000 / _MINIMAP_FPS) return;
+      _minimapLastMs = nowMs;
+
       _ensureMinimap();
       var ctx = _minimapCtx;
       if (!ctx) return;
