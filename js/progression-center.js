@@ -199,7 +199,7 @@
     const cost = Math.floor(baseCost * Math.pow(upgrade.costMultiplier, currentLevel));
 
     // Apply building discount
-    const building = window.saveData.campBuildings?.progressionCenter;
+    const building = window.saveData.campBuildings?.progressionHouse;
     const discount = building ? (building.level * 0.05) : 0;
 
     return Math.floor(cost * (1 - Math.min(discount, 0.5))); // Max 50% discount

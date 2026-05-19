@@ -487,13 +487,89 @@
       }
     }
     
-    // Minimap removed — was consuming CPU on canvas redraws every frame.
-    // _NDC_ON_SCREEN and _questArrowV3 are still used by updateQuestArrow().
+    // Minimap — basic 2D canvas: player=white dot, enemies=red dots
+    // Scale: world coords [-500..500] mapped to 120×120px canvas
+    const _MINIMAP_SIZE  = 120;
+    const _MINIMAP_RANGE = 500; // world-unit radius shown on map
     const _NDC_ON_SCREEN = 0.95;
     let _questArrowV3 = null;
+    let _minimapCanvas = null;
+    let _minimapCtx    = null;
+    let _minimapLastMs = 0;
+    const _MINIMAP_FPS = 15; // throttle: redraw at most 15 times per second
 
-    // No-op stub — kept so any external call to updateMinimap() is safe.
-    function updateMinimap() {}
+    function _ensureMinimap() {
+      if (_minimapCanvas) return;
+      _minimapCanvas = document.createElement('canvas');
+      _minimapCanvas.width  = _MINIMAP_SIZE;
+      _minimapCanvas.height = _MINIMAP_SIZE;
+      _minimapCanvas.id = 'game-minimap';
+      _minimapCanvas.style.cssText =
+        'position:fixed;bottom:14px;right:14px;width:' + _MINIMAP_SIZE + 'px;height:' +
+        _MINIMAP_SIZE + 'px;border-radius:50%;border:2px solid rgba(255,255,255,0.25);' +
+        'background:rgba(0,0,0,0.55);z-index:200;pointer-events:none;';
+      document.body.appendChild(_minimapCanvas);
+      _minimapCtx = _minimapCanvas.getContext('2d');
+    }
+
+    function updateMinimap() {
+      // Throttle to _MINIMAP_FPS to avoid full canvas redraw every frame
+      var nowMs = Date.now();
+      if (nowMs - _minimapLastMs < 1000 / _MINIMAP_FPS) return;
+      _minimapLastMs = nowMs;
+
+      _ensureMinimap();
+      var ctx = _minimapCtx;
+      if (!ctx) return;
+      var S = _MINIMAP_SIZE, R = _MINIMAP_RANGE;
+      ctx.clearRect(0, 0, S, S);
+
+      // Draw circular clip
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(S / 2, S / 2, S / 2 - 2, 0, Math.PI * 2);
+      ctx.clip();
+
+      // Background
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.fillRect(0, 0, S, S);
+
+      // World→minimap coordinate helpers
+      function wx(x) { return Math.round(S / 2 + (x / R) * (S / 2)); }
+      function wy(z) { return Math.round(S / 2 + (z / R) * (S / 2)); }
+
+      // Player dot (white)
+      var player = window._playerRef || (window.SandboxScene && window.SandboxScene.player);
+      if (player && player.position) {
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(wx(player.position.x), wy(player.position.z), 4, 0, Math.PI * 2);
+        ctx.fill();
+        // Player direction arrow
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(wx(player.position.x), wy(player.position.z));
+        var rot = player.rotation ? player.rotation.y : 0;
+        ctx.lineTo(wx(player.position.x) + Math.sin(rot) * 8, wy(player.position.z) - Math.cos(rot) * 8);
+        ctx.stroke();
+      }
+
+      // Enemy dots (red)
+      var enemies = window._activeEnemies || (window.SandboxScene && window.SandboxScene.enemies);
+      if (enemies && enemies.length) {
+        ctx.fillStyle = '#ff3333';
+        for (var i = 0; i < enemies.length && i < 50; i++) {
+          var e = enemies[i];
+          if (!e || !e.position) continue;
+          ctx.beginPath();
+          ctx.arc(wx(e.position.x), wy(e.position.z), 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      ctx.restore();
+    }
 
     
     // Stats Bar removed - Users access stats via STATS button modal

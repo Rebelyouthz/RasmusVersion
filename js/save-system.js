@@ -142,7 +142,8 @@
         neuralMatrix:   { level: 0, maxLevel: 1, unlocked: false },
         astralGateway:  { level: 0, maxLevel: 1, unlocked: false },
         droppletShop:   { level: 0, maxLevel: 1, unlocked: false },  // The Dropplet Shop
-        slotMachine:    { level: 0, maxLevel: 1, unlocked: false }   // Slot Machine
+        slotMachine:    { level: 0, maxLevel: 1, unlocked: false },  // Slot Machine
+        progressionHouse: { level: 0, maxLevel: 1, unlocked: false } // Stat Forge (canonical ID)
       },
       // Neural Matrix unlock state (which nodes the player has activated)
       neuralMatrix: {},
@@ -460,6 +461,11 @@
           saveData.artifacts = saveData.artifacts || [];
           saveData.equippedArtifacts = saveData.equippedArtifacts || [null, null, null];
           saveData.campBuildings = { ...defaultSaveData.campBuildings, ...(saveData.campBuildings || {}) };
+          // Migrate old saves: progressionCenter → progressionHouse (canonical ID rename)
+          if (saveData.campBuildings.progressionCenter && !saveData.campBuildings.progressionHouse) {
+            saveData.campBuildings.progressionHouse = saveData.campBuildings.progressionCenter;
+          }
+          delete saveData.campBuildings.progressionCenter;
           saveData.skillTree = { ...defaultSaveData.skillTree, ...(saveData.skillTree || {}) };
           saveData.companions = { ...defaultSaveData.companions, ...(saveData.companions || {}) };
           saveData.hasVisitedCamp = saveData.hasVisitedCamp || false;

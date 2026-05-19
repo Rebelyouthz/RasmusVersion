@@ -2606,6 +2606,10 @@ function addGold(amount) {
   saveData.totalGoldEarned += finalAmount;
   updateHUD();
   updateGoldDisplays();
+  // Resource milestone check (throttled to avoid toast spam every gold pickup)
+  if (window.HorusSystem && window.HorusSystem.checkResourceMilestone) {
+    window.HorusSystem.checkResourceMilestone('gold', saveData.gold);
+  }
 }
 
 function updateGoldDisplays() {

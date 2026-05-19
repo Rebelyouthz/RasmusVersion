@@ -1383,7 +1383,370 @@
     }
     /* ─────────────────────────────────────────────────────────────────────── */
 
-    /* Stat Notification Queue - Red/Black Dominant */
+    /* ══════════════════════════════════════════════════════════════════════
+       SECTION 1 — HORUS PANEL (redesign of #ds-bubble + cinematic)
+       Small compact panel, slides in from top-right. Gold smoke border.
+       Eye of Horus decorations. Player can move while visible.
+       ══════════════════════════════════════════════════════════════════════ */
+
+    @keyframes horusPanelSlideIn {
+      from { transform: translateX(120%); opacity: 0; }
+      to   { transform: translateX(0);    opacity: 1; }
+    }
+    @keyframes horusPanelSlideOut {
+      from { transform: translateX(0);    opacity: 1; }
+      to   { transform: translateX(120%); opacity: 0; }
+    }
+    @keyframes horusEyePulse {
+      0%, 100% { text-shadow: 0 0 6px #f0d060, 0 0 12px #c9a84c; }
+      50%       { text-shadow: 0 0 14px #f0d060, 0 0 28px #8b6914, 0 0 40px #c9a84c; }
+    }
+    @keyframes horusTapBlink {
+      0%, 100% { opacity: 0.55; }
+      50%       { opacity: 1; }
+    }
+
+    /* Override existing #ds-bubble with Horus Panel design */
+    #ds-bubble {
+      position: fixed !important;
+      top: 18px !important;
+      right: 14px !important;
+      left: auto !important;
+      transform: none !important;
+      width: 340px;
+      max-width: min(380px, calc(100vw - 28px));
+      min-width: 240px;
+      padding: 0 !important;
+      z-index: 99999 !important;
+      display: none;
+      animation: horusPanelSlideIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+      pointer-events: auto;
+      cursor: default;
+      /* Gold smoke border */
+      border: 2px solid #c9a84c !important;
+      border-radius: 12px !important;
+      background: linear-gradient(135deg, rgba(8,6,2,0.96) 0%, rgba(18,12,4,0.97) 100%) !important;
+      box-shadow:
+        0 0 0 1px rgba(201,168,76,0.3),
+        0 0 8px rgba(201,168,76,0.4),
+        0 0 20px rgba(139,105,20,0.25),
+        0 0 40px rgba(0,0,0,0.7),
+        inset 0 0 12px rgba(201,168,76,0.05) !important;
+      /* Smoke/liquid gold layered shadow for depth */
+      filter: none !important;
+      font-family: 'Bangers', cursive !important;
+      overflow: visible !important;
+      /* Remove any old tail/arrow */
+    }
+    #ds-bubble::after,
+    #ds-bubble::before { display: none !important; }
+
+    /* Eye of Horus decorations */
+    .hp-eye-top {
+      position: absolute;
+      top: -14px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 18px;
+      color: #f0d060;
+      animation: horusEyePulse 2.2s ease-in-out infinite;
+      z-index: 1;
+      pointer-events: none;
+      text-shadow: 0 0 8px #f0d060, 0 0 16px #c9a84c;
+      line-height: 1;
+    }
+    .hp-eye-bl {
+      position: absolute;
+      bottom: -10px;
+      left: 8px;
+      font-size: 11px;
+      color: #c9a84c;
+      opacity: 0.7;
+      animation: horusEyePulse 2.8s ease-in-out infinite 0.4s;
+      pointer-events: none;
+      text-shadow: 0 0 6px #c9a84c;
+    }
+    .hp-eye-br {
+      position: absolute;
+      bottom: -10px;
+      right: 8px;
+      font-size: 11px;
+      color: #c9a84c;
+      opacity: 0.7;
+      animation: horusEyePulse 2.8s ease-in-out infinite 0.8s;
+      pointer-events: none;
+      text-shadow: 0 0 6px #c9a84c;
+    }
+
+    /* Hieroglyph ticker strip */
+    .hp-hieroglyphs {
+      font-size: 10px;
+      letter-spacing: 6px;
+      color: rgba(201,168,76,0.15);
+      text-align: center;
+      padding: 2px 0 0;
+      border-bottom: 1px solid rgba(201,168,76,0.12);
+      overflow: hidden;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    /* Inner content wrapper */
+    .hp-inner {
+      padding: 8px 12px 10px;
+    }
+
+    /* Speaker name */
+    .hp-speaker {
+      font-family: 'Bangers', cursive;
+      font-size: 11px;
+      letter-spacing: 4px;
+      color: #c9a84c;
+      text-transform: uppercase;
+      border-bottom: 1px solid rgba(201,168,76,0.2);
+      padding-bottom: 5px;
+      margin-bottom: 7px;
+      text-shadow: 0 0 8px rgba(201,168,76,0.5);
+    }
+
+    /* Content row: portrait + text */
+    .hp-content {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    /* Portrait icon */
+    .hp-portrait {
+      font-size: 28px;
+      line-height: 1;
+      min-width: 32px;
+      text-align: center;
+      text-shadow: 0 0 10px #c9a84c;
+      padding-top: 2px;
+    }
+
+    /* Main text area */
+    .hp-text {
+      font-family: 'Bangers', cursive;
+      font-size: clamp(12px, 3.2vw, 14px);
+      letter-spacing: 0.6px;
+      line-height: 1.55;
+      color: #e8d5a3;
+      text-shadow: 0 0 4px rgba(201,168,76,0.1);
+      min-height: 2em;
+      flex: 1;
+    }
+
+    /* Footer: tap hint + dismiss button */
+    .hp-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 8px;
+      padding-top: 6px;
+      border-top: 1px solid rgba(201,168,76,0.15);
+    }
+    .hp-tap-hint {
+      font-family: 'Bangers', cursive;
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: rgba(201,168,76,0.5);
+      animation: horusTapBlink 1.6s step-end infinite;
+    }
+    .hp-dismiss {
+      background: linear-gradient(135deg, rgba(201,168,76,0.12), rgba(139,105,20,0.18));
+      border: 1px solid #c9a84c;
+      border-radius: 6px;
+      color: #f0d060;
+      font-family: 'Bangers', cursive;
+      font-size: 11px;
+      letter-spacing: 2px;
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: background 0.18s, box-shadow 0.18s;
+      text-shadow: 0 0 6px #c9a84c;
+    }
+    .hp-dismiss:hover,
+    .hp-dismiss:focus {
+      background: rgba(201,168,76,0.28);
+      box-shadow: 0 0 8px rgba(201,168,76,0.5);
+      outline: none;
+    }
+
+    /* Cinematic vignette: dark full-screen behind the panel */
+    .horus-vignette {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.82) 100%);
+      z-index: 99990;
+      pointer-events: auto;
+      animation: horusPanelSlideIn 0.3s ease-out both;
+    }
+
+    /* Quest billboard — floating "!" above Quest Hall */
+    #quest-ready-billboard {
+      position: fixed;
+      z-index: 99000;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #f0d060 0%, #c9a84c 100%);
+      border: 2px solid #8b6914;
+      color: #000;
+      font-family: 'Bangers', cursive;
+      font-size: 18px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateX(-50%) translateY(0);
+      transition: opacity 0.3s;
+      box-shadow: 0 0 12px #f0d060, 0 0 24px #c9a84c;
+      animation: questBillboardBob 1.2s ease-in-out infinite;
+    }
+    #quest-ready-billboard.qrb-active {
+      opacity: 1;
+    }
+    @keyframes questBillboardBob {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50%       { transform: translateX(-50%) translateY(-8px); }
+    }
+
+    /* Building objective billboard */
+    .camp-obj-billboard {
+      position: fixed;
+      z-index: 99001;
+      background: rgba(0,0,0,0.82);
+      border: 1px solid #c9a84c;
+      border-radius: 8px;
+      color: #f0d060;
+      font-family: 'Bangers', cursive;
+      font-size: 12px;
+      letter-spacing: 1px;
+      padding: 4px 10px;
+      pointer-events: none;
+      transform: translateX(-50%);
+      opacity: 0;
+      transition: opacity 0.3s;
+      animation: questBillboardBob 1.6s ease-in-out infinite;
+    }
+    .camp-obj-billboard.cob-active { opacity: 1; }
+
+    /* Milestone toasts */
+    .milestone-toast {
+      position: fixed;
+      bottom: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.88);
+      border: 1px solid #c9a84c;
+      border-radius: 8px;
+      color: #f0d060;
+      font-family: 'Bangers', cursive;
+      font-size: 13px;
+      letter-spacing: 1px;
+      padding: 6px 16px;
+      z-index: 50000;
+      pointer-events: none;
+      animation: horusPanelSlideIn 0.3s ease-out both;
+      transition: opacity 0.4s;
+    }
+    .milestone-toast.mt-out { opacity: 0; }
+
+    /* Coin burst particles */
+    @keyframes coinBurstAnim {
+      0%   { transform: translate(0,0) scale(1); opacity: 1; }
+      100% { transform: translate(var(--dx), var(--dy)) scale(0.3); opacity: 0; }
+    }
+    .coin-burst {
+      position: fixed;
+      pointer-events: none;
+      z-index: 60000;
+      font-size: 18px;
+      animation: coinBurstAnim 1s ease-out both;
+    }
+
+    /* Building sparkle particles */
+    @keyframes sparkleAnim {
+      0%   { transform: translate(0,0) scale(1); opacity: 1; }
+      80%  { opacity: 0.8; }
+      100% { transform: translate(var(--sdx), var(--sdy)) scale(0.1); opacity: 0; }
+    }
+    .building-sparkle {
+      position: fixed;
+      pointer-events: none;
+      z-index: 60001;
+      font-size: 16px;
+      animation: sparkleAnim 1.2s ease-out both;
+    }
+
+    /* Rank-up screen flash */
+    @keyframes rankUpFlash {
+      0%   { opacity: 0; }
+      15%  { opacity: 0.55; }
+      40%  { opacity: 0.28; }
+      70%  { opacity: 0.42; }
+      100% { opacity: 0; }
+    }
+    #rank-up-flash-overlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse 120% 120% at 50% 50%, rgba(201,168,76,0.7) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 99980;
+      opacity: 0;
+    }
+    #rank-up-flash-overlay.ruf-active {
+      animation: rankUpFlash 1.6s ease-out both;
+    }
+
+    /* Daily challenge ticker */
+    #daily-challenge-ticker {
+      position: fixed;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.82);
+      border: 1px solid #c9a84c;
+      border-top: none;
+      border-radius: 0 0 10px 10px;
+      color: #f0d060;
+      font-family: 'Bangers', cursive;
+      font-size: 11px;
+      letter-spacing: 1px;
+      padding: 4px 16px;
+      z-index: 9000;
+      cursor: pointer;
+      pointer-events: auto;
+      opacity: 0;
+      max-width: calc(100vw - 100px);
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      transition: opacity 0.3s;
+    }
+    #daily-challenge-ticker.dct-active { opacity: 1; }
+
+    /* Streak fire icon */
+    .streak-fire {
+      margin-left: 4px;
+      font-size: 0.9em;
+    }
+
+
+
+    /* Minimap canvas */
+    #game-minimap {
+      image-rendering: pixelated;
+    }
+
+    /* Progress bar animation for challenges */
+    .idle-progress-bar-fill {
+      transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1) !important;
+    }
     #stat-notifications {
       position: fixed;
       top: 125px;
@@ -12223,4 +12586,490 @@
   55%  { transform: translate(-50%,-50%) scale(0.55) rotate(-180deg); opacity: 1; }
   80%  { transform: translate(-50%,-50%) scale(0.82) rotate(-360deg); opacity: 1; }
   100% { transform: translate(-50%,-50%) scale(1)    rotate(-540deg); opacity: 0; }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   SECTION 1: HORUS PANEL — New Dialogue / Tutorial / Reward Panel Design
+   Slides in from top-right. Gold-smoke border. Eye of Horus decorations.
+   Replaces old #ds-bubble speech-bubble design.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+@keyframes horusPanelSlideIn {
+  0%   { transform: translateX(120%); opacity: 0; }
+  60%  { transform: translateX(-6%);  opacity: 1; }
+  80%  { transform: translateX(2%);   opacity: 1; }
+  100% { transform: translateX(0);    opacity: 1; }
+}
+@keyframes horusPanelSlideOut {
+  from { transform: translateX(0);    opacity: 1; }
+  to   { transform: translateX(120%); opacity: 0; }
+}
+@keyframes horusEyeGlow {
+  0%, 100% { text-shadow: 0 0 8px #f0d060, 0 0 16px #c9a84c; opacity: 0.9; }
+  50%       { text-shadow: 0 0 14px #f0d060, 0 0 28px #c9a84c, 0 0 40px #8b6914; opacity: 1; }
+}
+@keyframes horusVignetteIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Override old #ds-bubble — now IS the Horus Panel */
+#ds-bubble {
+  position: fixed !important;
+  top: 18px !important;
+  right: 14px !important;
+  left: auto !important;
+  width: min(380px, calc(100vw - 28px)) !important;
+  max-width: none !important;
+  min-width: unset !important;
+  z-index: 99999 !important;
+  pointer-events: auto !important;
+  user-select: none !important;
+  display: none;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+  cursor: pointer !important;
+  background: radial-gradient(ellipse 90% 80% at 50% 50%,
+    rgba(12,6,2,0.97) 0%, rgba(6,2,0,0.98) 100%) !important;
+  border: 2px solid #c9a84c !important;
+  border-radius: 12px !important;
+  box-shadow:
+    0 0 0 1px rgba(201,168,76,0.2),
+    0 0 18px rgba(201,168,76,0.35),
+    0 0 40px rgba(139,105,20,0.2),
+    0 4px 24px rgba(0,0,0,0.9),
+    0 8px 48px rgba(0,0,0,0.7),
+    inset 0 0 30px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(240,208,96,0.08) !important;
+  animation: horusPanelSlideIn 0.5s cubic-bezier(0.22,1.6,0.36,1) both !important;
+  overflow: visible !important;
+  word-break: normal !important;
+  white-space: normal !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+  transform: none !important;
+}
+
+/* Suppress old size-variant overrides */
+#ds-bubble.ds-size-short,
+#ds-bubble.ds-size-medium,
+#ds-bubble.ds-size-long {
+  max-width: none !important;
+  font-size: inherit !important;
+}
+
+/* Remove old speech-bubble pointer arrow */
+#ds-bubble::after,
+#ds-bubble::before { display: none !important; content: none !important; }
+
+/* Emotion variants: keep border color hints, remove old shapes */
+#ds-bubble.ds-bubble-happy   { border-color: #c9a84c !important; }
+#ds-bubble.ds-bubble-angry   { border-color: #FF4500 !important; clip-path: none !important; }
+#ds-bubble.ds-bubble-sad     { border-color: #4682B4 !important; border-radius: 12px !important; }
+#ds-bubble.ds-bubble-joking  { border-color: #FF8C00 !important;
+  animation: horusPanelSlideIn 0.5s cubic-bezier(0.22,1.6,0.36,1) both !important; }
+#ds-bubble.ds-bubble-thinking{ border-color: #9090CC !important; border-radius: 12px !important; }
+#ds-bubble.ds-bubble-task    { border-color: #228B22 !important; border-radius: 12px !important; }
+#ds-bubble.ds-bubble-goal    { border-color: #DAA520 !important; border-radius: 12px !important;
+  padding: 0 !important; text-align: left !important; }
+#ds-bubble.ds-bubble-smoky   { border-color: rgba(180,180,180,0.4) !important;
+  border-radius: 12px !important; backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important; }
+#ds-bubble.ds-bubble-watery  { border-color: #00BFFF !important; border-radius: 12px !important;
+  animation: horusPanelSlideIn 0.5s cubic-bezier(0.22,1.6,0.36,1) both !important; }
+
+/* ── Eye of Horus decorations ──────────────────────────────────────────── */
+.hp-eye-top {
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 18px;
+  color: #f0d060;
+  text-shadow: 0 0 8px #f0d060, 0 0 16px #c9a84c;
+  animation: horusEyeGlow 2s ease-in-out infinite;
+  z-index: 2;
+  line-height: 1;
+  pointer-events: none;
+  background: rgba(12,6,2,0.97);
+  padding: 0 5px;
+  border-radius: 3px;
+}
+.hp-eye-bl {
+  position: absolute; bottom: -8px; left: 10px;
+  font-size: 10px; color: #c9a84c;
+  text-shadow: 0 0 5px #c9a84c;
+  animation: horusEyeGlow 2.4s ease-in-out infinite 0.4s;
+  z-index: 2; pointer-events: none;
+  background: rgba(12,6,2,0.97); padding: 0 3px; border-radius: 2px;
+}
+.hp-eye-br {
+  position: absolute; bottom: -8px; right: 10px;
+  font-size: 10px; color: #c9a84c;
+  text-shadow: 0 0 5px #c9a84c;
+  animation: horusEyeGlow 2.4s ease-in-out infinite 0.8s;
+  z-index: 2; pointer-events: none;
+  background: rgba(12,6,2,0.97); padding: 0 3px; border-radius: 2px;
+}
+
+/* ── Panel structure ───────────────────────────────────────────────────── */
+.hp-hieroglyphs {
+  font-size: 9px; letter-spacing: 5px;
+  color: rgba(201,168,76,0.22); text-align: center;
+  padding: 4px 8px 0;
+  border-bottom: 1px solid rgba(201,168,76,0.15);
+  overflow: hidden; white-space: nowrap; font-family: serif;
+}
+.hp-inner { padding: 10px 14px 10px; }
+.hp-speaker {
+  font-family: 'Bangers', cursive; font-size: 11px;
+  letter-spacing: 3px; color: #c9a84c;
+  text-shadow: 0 0 8px rgba(201,168,76,0.55);
+  text-transform: uppercase;
+  margin-bottom: 7px;
+  display: flex; align-items: center; gap: 5px;
+  border-bottom: 1px solid rgba(201,168,76,0.18);
+  padding-bottom: 5px;
+}
+.hp-content { display: flex; gap: 10px; align-items: flex-start; }
+.hp-portrait {
+  flex-shrink: 0; width: 40px; height: 40px;
+  border: 1px solid rgba(201,168,76,0.35); border-radius: 6px;
+  background: rgba(201,168,76,0.05);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; line-height: 1;
+}
+.hp-text {
+  flex: 1; font-family: 'Bangers', cursive;
+  font-size: clamp(13px,3.5vw,15px); line-height: 1.55;
+  color: #E8D5A3; letter-spacing: 0.4px; min-height: 1.8em;
+}
+.hp-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 8px; padding-top: 6px;
+  border-top: 1px solid rgba(201,168,76,0.12);
+}
+.hp-tap-hint {
+  font-family: 'Bangers', cursive; font-size: 10px;
+  letter-spacing: 1.5px; color: rgba(201,168,76,0.4);
+  animation: ds-footer-blink 1.6s step-end infinite;
+}
+.hp-dismiss {
+  font-family: 'Bangers', cursive; font-size: 12px;
+  letter-spacing: 1.5px; color: #c9a84c;
+  background: rgba(201,168,76,0.07);
+  border: 1px solid rgba(201,168,76,0.3); border-radius: 5px;
+  padding: 3px 12px; cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s; outline: none;
+}
+.hp-dismiss:hover, .hp-dismiss:active {
+  background: rgba(201,168,76,0.18);
+  box-shadow: 0 0 8px rgba(201,168,76,0.3);
+}
+
+/* Vignette overlay behind panel (cinematic mode) */
+.horus-vignette {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.60);
+  z-index: 99997; pointer-events: all;
+  animation: horusVignetteIn 0.3s ease-out both;
+}
+
+/* Choice buttons inside horus panel */
+#ds-bubble .ds-bubble-choices { margin-top: 8px; }
+#ds-bubble .ds-choice-btn {
+  display: block; width: 100%; margin: 4px 0;
+  padding: 6px 10px;
+  background: rgba(201,168,76,0.07); color: #f0d060;
+  border: 1px solid rgba(201,168,76,0.4); border-radius: 6px;
+  font-family: 'Bangers', cursive; font-size: 13px;
+  letter-spacing: 0.5px; cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+#ds-bubble .ds-choice-btn:hover,
+#ds-bubble .ds-choice-btn:active {
+  background: rgba(201,168,76,0.2);
+  box-shadow: 0 0 8px rgba(201,168,76,0.3);
+}
+
+/* Goal label inside panel */
+#ds-bubble .ds-goal-label {
+  font-size: 9px; letter-spacing: 2px;
+  color: #888; text-transform: uppercase;
+  display: block; margin-bottom: 3px;
+}
+
+/* Typewriter chars unchanged */
+#ds-bubble .ds-char { opacity: 0; display: inline; transition: opacity 0.05s ease; }
+#ds-bubble .ds-char.visible { opacity: 1; }
+#ds-bubble .ds-dots { opacity: 0.6; font-style: italic; }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   SECTION 6: UNIFIED REWARD DISPLAY (window.RewardDisplay)
+   ════════════════════════════════════════════════════════════════════════════ */
+
+@keyframes rdSlideIn {
+  from { transform: translate(120%, -50%); opacity: 0; }
+  60%  { transform: translate(-4%, -50%);  opacity: 1; }
+  100% { transform: translate(0,   -50%);  opacity: 1; }
+}
+@keyframes rdSlideOut {
+  from { transform: translate(0,   -50%); opacity: 1; }
+  to   { transform: translate(120%,-50%); opacity: 0; }
+}
+@keyframes rdItemPop {
+  from { transform: scale(0.6) translateY(10px); opacity: 0; }
+  to   { transform: scale(1)   translateY(0);    opacity: 1; }
+}
+@keyframes rdFlash {
+  0%,100% { box-shadow: 0 0 18px rgba(201,168,76,0.3), 0 4px 24px rgba(0,0,0,0.9); }
+  50%     { box-shadow: 0 0 40px rgba(240,208,96,0.7),  0 4px 24px rgba(0,0,0,0.9); }
+}
+
+#reward-display-panel {
+  position: fixed; top: 50%; right: 14px;
+  transform: translate(120%,-50%);
+  width: min(340px, calc(100vw - 28px));
+  z-index: 100001; pointer-events: auto;
+  display: none;
+  background: radial-gradient(ellipse 90% 80% at 50% 50%,
+    rgba(12,6,2,0.97) 0%, rgba(6,2,0,0.98) 100%);
+  border: 2px solid #c9a84c; border-radius: 12px;
+  box-shadow:
+    0 0 0 1px rgba(201,168,76,0.2),
+    0 0 18px rgba(201,168,76,0.35),
+    0 4px 24px rgba(0,0,0,0.9),
+    inset 0 0 30px rgba(0,0,0,0.5);
+  overflow: visible;
+}
+#reward-display-panel.rd-visible {
+  display: block;
+  animation: rdSlideIn 0.5s cubic-bezier(0.22,1.6,0.36,1) both;
+}
+#reward-display-panel.rd-sliding-out {
+  display: block; /* keep panel visible while slide-out animation plays */
+  animation: rdSlideOut 0.4s ease-in both;
+}
+#reward-display-panel.rd-flash { animation: rdFlash 0.3s ease-in-out 3; }
+
+.rd-eye-top {
+  position: absolute; top: -13px; left: 50%;
+  transform: translateX(-50%); font-size: 16px; color: #f0d060;
+  text-shadow: 0 0 8px #f0d060; z-index: 2; pointer-events: none;
+  background: rgba(12,6,2,0.97); padding: 0 4px; border-radius: 3px;
+  animation: horusEyeGlow 2s ease-in-out infinite;
+}
+.rd-title {
+  font-family: 'Bangers', cursive; font-size: 16px;
+  letter-spacing: 3px; text-align: center;
+  padding: 12px 14px 6px;
+  border-bottom: 1px solid rgba(201,168,76,0.2);
+}
+.rd-title.rd-common    { color: #E8D5A3; }
+.rd-title.rd-rare      { color: #4fc3f7; text-shadow: 0 0 10px rgba(79,195,247,0.5); }
+.rd-title.rd-epic      { color: #ce93d8; text-shadow: 0 0 10px rgba(206,147,216,0.5); }
+.rd-title.rd-legendary { color: #f0d060; text-shadow: 0 0 12px rgba(240,208,96,0.6); }
+.rd-items { padding: 8px 14px; }
+.rd-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 5px 0;
+  font-family: 'Bangers', cursive; font-size: 14px;
+  color: #E8D5A3; letter-spacing: 0.5px;
+  opacity: 0;
+}
+.rd-item.rd-item-visible {
+  animation: rdItemPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+  opacity: 1;
+}
+.rd-item-icon { font-size: 20px; flex-shrink: 0; }
+.rd-item-amount { color: #f0d060; font-size: 16px; margin-left: auto; }
+.rd-footer {
+  text-align: center; padding: 6px 14px 10px;
+  border-top: 1px solid rgba(201,168,76,0.12);
+}
+.rd-close-btn {
+  font-family: 'Bangers', cursive; font-size: 12px;
+  letter-spacing: 1.5px; color: #c9a84c;
+  background: rgba(201,168,76,0.07);
+  border: 1px solid rgba(201,168,76,0.25); border-radius: 5px;
+  padding: 3px 12px; cursor: pointer;
+  transition: background 0.15s;
+}
+.rd-close-btn:hover { background: rgba(201,168,76,0.18); }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   SECTION 8: QUEST HALL "READY TO CLAIM" BILLBOARD
+   ════════════════════════════════════════════════════════════════════════════ */
+
+#quest-ready-billboard {
+  position: fixed; display: none;
+  width: 34px; height: 34px; border-radius: 50%;
+  background: radial-gradient(circle, #f0d060 0%, #c9a84c 70%);
+  border: 2px solid #8b6914;
+  color: #000; font-family: 'Bangers', cursive; font-size: 18px;
+  line-height: 1; text-align: center;
+  align-items: center; justify-content: center;
+  z-index: 9990; pointer-events: none;
+  box-shadow: 0 0 12px rgba(240,208,96,0.7), 0 2px 8px rgba(0,0,0,0.6);
+  animation: questBillboardBounce 1s ease-in-out infinite;
+  transform: translateX(-50%);
+}
+#quest-ready-billboard.qrb-active { display: flex; }
+@keyframes questBillboardBounce {
+  0%,100% { transform: translateX(-50%) translateY(0); }
+  50%     { transform: translateX(-50%) translateY(-8px); }
+}
+
+/* "BUILD ME" billboard */
+.camp-obj-billboard {
+  position: fixed; display: none;
+  background: rgba(12,6,2,0.92);
+  border: 1px solid #c9a84c; border-radius: 8px;
+  padding: 4px 10px;
+  font-family: 'Bangers', cursive; font-size: 11px;
+  letter-spacing: 1px; color: #f0d060;
+  text-shadow: 0 0 6px rgba(240,208,96,0.4);
+  z-index: 9989; pointer-events: none;
+  white-space: nowrap;
+  animation: buildingBillboardFloat 2s ease-in-out infinite;
+  transform: translateX(-50%);
+}
+.camp-obj-billboard.cob-active { display: block; }
+@keyframes buildingBillboardFloat {
+  0%,100% { transform: translateX(-50%) translateY(0); }
+  50%     { transform: translateX(-50%) translateY(-5px); }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   SECTION 4: SLOT MACHINE REEL animation
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.slot-reel-col {
+  overflow: hidden; display: inline-flex; flex-direction: column;
+  height: 64px; width: 64px; align-items: center;
+  border: 2px solid rgba(255,68,204,0.4); border-radius: 6px;
+  background: rgba(0,0,0,0.6); position: relative; vertical-align: top;
+}
+.slot-reel-strip {
+  display: flex; flex-direction: column;
+  align-items: center; transition: transform 0s;
+}
+.slot-reel-symbol {
+  width: 60px; height: 60px; display: flex;
+  align-items: center; justify-content: center;
+  font-size: 28px; flex-shrink: 0;
+}
+@keyframes jackpotFlash {
+  0%,100% { background: rgba(12,6,2,0.97); }
+  25%,75%  { background: rgba(240,208,96,0.14); }
+  50%     { background: rgba(240,208,96,0.28); }
+}
+.slot-jackpot-flash { animation: jackpotFlash 0.35s ease-in-out 4; }
+@keyframes nearMissShake {
+  0%,100% { transform: translateX(0); }
+  20%     { transform: translateX(-5px); }
+  40%     { transform: translateX(5px); }
+  60%     { transform: translateX(-4px); }
+  80%     { transform: translateX(4px); }
+}
+.slot-near-miss-shake { animation: nearMissShake 0.4s ease-in-out; }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   SECTION 7: ACHIEVEMENT SHIMMER
+   ════════════════════════════════════════════════════════════════════════════ */
+
+@keyframes achievementShimmer {
+  from { background-position: -200% center; }
+  to   { background-position:  200% center; }
+}
+.achievement-claimable {
+  background: linear-gradient(90deg,
+    rgba(201,168,76,0.04) 0%, rgba(240,208,96,0.22) 40%,
+    rgba(201,168,76,0.04) 80%) !important;
+  background-size: 200% auto !important;
+  animation: achievementShimmer 2s linear infinite !important;
+  border-color: #c9a84c !important;
+}
+.challenge-progress-bar-fill {
+  transition: width 0.6s cubic-bezier(0.34,1.56,0.64,1) !important;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   SECTION 10: EXTRA DOPAMINE
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* Resource milestone toast */
+@keyframes milestoneToastIn  { from { transform: translateX(120%); opacity:0; } to { transform:translateX(0); opacity:1; } }
+@keyframes milestoneToastOut { from { transform: translateX(0); opacity:1; } to { transform: translateX(120%); opacity:0; } }
+.milestone-toast {
+  position: fixed; bottom: 80px; right: 14px;
+  background: rgba(12,6,2,0.94); border: 1px solid #c9a84c;
+  border-radius: 8px; padding: 8px 16px;
+  font-family: 'Bangers', cursive; font-size: 13px;
+  letter-spacing: 1px; color: #f0d060; z-index: 99990;
+  pointer-events: none;
+  box-shadow: 0 0 12px rgba(201,168,76,0.3), 0 2px 8px rgba(0,0,0,0.7);
+  animation: milestoneToastIn 0.4s cubic-bezier(0.22,1.4,0.36,1) both;
+}
+.milestone-toast.mt-out { animation: milestoneToastOut 0.4s ease-in both; }
+
+/* Daily challenge ticker */
+#daily-challenge-ticker {
+  position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+  z-index: 9980; background: rgba(0,0,0,0.82);
+  border-bottom: 1px solid rgba(201,168,76,0.28);
+  border-radius: 0 0 8px 8px;
+  padding: 4px 16px; font-family: 'Bangers', cursive;
+  font-size: 12px; letter-spacing: 1px; color: #f0d060;
+  pointer-events: auto; cursor: pointer; white-space: nowrap;
+  max-width: 90vw; overflow: hidden; text-overflow: ellipsis;
+  display: none;
+}
+#daily-challenge-ticker.dct-active { display: block; }
+#daily-challenge-ticker:hover { background: rgba(0,0,0,0.92); }
+
+/* Streak fire icon */
+.streak-fire {
+  display: inline-block;
+  animation: streakFire 0.8s ease-in-out infinite alternate;
+}
+@keyframes streakFire {
+  from { transform: scale(1);    filter: drop-shadow(0 0 3px #ff6a00); }
+  to   { transform: scale(1.15); filter: drop-shadow(0 0 8px #ffd700); }
+}
+
+/* Screen-edge rank-up flash */
+@keyframes rankUpEdgeFlash {
+  0%,100% { box-shadow: inset 0 0 0px rgba(240,208,96,0); }
+  20%,60% { box-shadow: inset 0 0 60px rgba(240,208,96,0.5); }
+}
+#rank-up-flash-overlay {
+  position: fixed; inset: 0; z-index: 99996;
+  pointer-events: none; display: none;
+}
+#rank-up-flash-overlay.ruf-active {
+  display: block;
+  animation: rankUpEdgeFlash 0.8s ease-in-out 2 both;
+}
+
+/* Coin burst particles */
+@keyframes coinBurst {
+  0%   { transform: translate(0,0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--dx),var(--dy)) scale(0.4); opacity: 0; }
+}
+.coin-burst {
+  position: fixed; font-size: 18px; z-index: 9994;
+  pointer-events: none;
+  animation: coinBurst 0.9s ease-out both;
+}
+
+/* Building sparkle burst */
+@keyframes sparkleOut {
+  0%   { transform: translate(0,0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--sdx),var(--sdy)) scale(0.2); opacity: 0; }
+}
+.building-sparkle {
+  position: fixed; font-size: 14px; z-index: 9993;
+  pointer-events: none;
+  animation: sparkleOut 1.2s ease-out both;
 }

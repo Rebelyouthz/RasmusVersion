@@ -439,10 +439,42 @@
   function _autoShow() {
     // Show only on index.html (the Camp); skip on all other pages (sandbox, etc.)
     if (!_isOnCampPage()) return;
-    // Only show on first visit
-    if (localStorage.getItem(STORAGE_KEY)) return;
-    // Give the game a moment to initialize
-    setTimeout(show, 800);
+
+    // Section 5: On EVERY game start, check if daily login reward is available
+    setTimeout(function() {
+      if (window.GameDailies && window.SaveSystem) {
+        var sd = window.SaveSystem.load ? window.SaveSystem.load() : null;
+        if (!sd && typeof loadSaveData === 'function') sd = loadSaveData();
+        if (sd) {
+          var dailies = sd.dailies || {};
+          var lastLogin = dailies.lastLoginDate || 0;
+          var now = Date.now();
+          var sameDay = lastLogin > 0 && (function() {
+            var d1 = new Date(lastLogin), d2 = new Date(now);
+            return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
+          })();
+          if (!sameDay) {
+            // Daily reward available — show Horus Panel message first if first-ever login
+            var isFirstEver = !lastLogin;
+            if (isFirstEver && window.HorusSystem) {
+              window.HorusSystem.say(
+                'Every day you return, you will be rewarded.\nClaim your daily reward now — and come back tomorrow for more!',
+                { delay: 400 }
+              );
+            }
+            // Auto-show welcome overlay after 1.2s
+            setTimeout(function() {
+              if (window.WelcomeUI) window.WelcomeUI.show();
+            }, isFirstEver ? 2600 : 1200);
+            return;
+          }
+        }
+      }
+
+      // Original behaviour: show on first visit only
+      if (localStorage.getItem(STORAGE_KEY)) return;
+      setTimeout(show, 800);
+    }, 600);
   }
 
   if (document.readyState === 'loading') {
@@ -481,8 +513,9 @@
   }
 
   window.WelcomeUI = {
-    show:          show,
-    completeQuest: completeQuest,
+    show:             show,
+    completeQuest:    completeQuest,
+    checkAndAutoShow: _autoShow,
     NEW_PLAYER_QUESTS: NEW_PLAYER_QUESTS,
     SPIN_PRIZES:   WELCOME_SPIN_PRIZES
   };
