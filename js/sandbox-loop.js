@@ -6877,6 +6877,9 @@
     if (cq === 'quest28_survive3min'   && elapsedSec >= 180)       window.progressTutorialQuest('quest28_survive3min', true);
     if (cq === 'quest_dailyRoutine'    && elapsedSec >= 120)       window.progressTutorialQuest('quest_dailyRoutine', true);
     if (cq === 'quest19b_growJuvenile' && elapsedSec >= 60)        window.progressTutorialQuest('quest19b_growJuvenile', true);
+    const currentWave = (window.SeqWaveManager && window.SeqWaveManager._waveNumber) || 0;
+    if (cq === 'quest_secondRun' && currentWave >= 3) window.progressTutorialQuest('quest_secondRun', true);
+    if (cq === 'quest_thirdRun' && currentWave >= 5) window.progressTutorialQuest('quest_thirdRun', true);
     // Level-based quests (safe to check mid-run)
     if (cq === 'quest_harvester'       && playerStats && playerStats.lvl >= 3)  window.progressTutorialQuest('quest_harvester', true);
     if (cq === 'quest_annunaki3'       && playerStats && playerStats.lvl >= 50) window.progressTutorialQuest('quest_annunaki3', true);
@@ -6884,11 +6887,7 @@
     // Boss defeat / special state quests (safe mid-run once flag is set)
     if (cq === 'quest_pushingLimits'   && tq.firstBossDefeated)    window.progressTutorialQuest('quest_pushingLimits', true);
     if (cq === 'quest_eggHunt'         && tq.mysteriousEggFound)   window.progressTutorialQuest('quest_eggHunt', true);
-    // Resource quests (safe mid-run; resources tracked across runs)
-    if (cq === 'quest_firstBlood') {
-      const r = saveData.resources || {};
-      if ((r.wood || 0) >= 30 && (r.stone || 0) >= 30) window.progressTutorialQuest('quest_firstBlood', true);
-    }
+    // quest_firstBlood completes on run end/return to camp (game-over-reset.js)
     if (cq === 'quest_gainingStats' && (saveData.totalKills || 0) >= 300) window.progressTutorialQuest('quest_gainingStats', true);
     // End-of-run only: firstRunDeath requires the player to actually die/end the run
     if (endOfRun) {

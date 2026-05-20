@@ -143,12 +143,12 @@
         if (currentQuest.id === 'quest_harvester' && playerStats.lvl >= 3) {
           progressTutorialQuest('quest_harvester', true);
         }
-        // Step 4: First Blood — Have 30 Wood and 30 Stone gathered across runs
+        // Step 4: First Blood — Complete one run and return to camp
         if (currentQuest.id === 'quest_firstBlood') {
-          if (!saveData.resources) saveData.resources = {};
-          const r = saveData.resources;
-          if ((r.wood || 0) >= 30 && (r.stone || 0) >= 30) {
-            progressTutorialQuest('quest_firstBlood', true);
+          progressTutorialQuest('quest_firstBlood', true);
+          if (!saveData._htip_quest_firstBlood_return && window.HorusPanel && typeof window.HorusPanel.show === 'function') {
+            saveData._htip_quest_firstBlood_return = true;
+            window.HorusPanel.show('You returned. Good. Every run makes you stronger.\nClaim your reward in the Quest Hall.');
           }
         }
         // Step 5: Gaining Stats — 300 total kills
@@ -751,6 +751,7 @@
       if (window.BloodSystem) window.BloodSystem.reset();
       // Reset BloodSimulatorV21 (V21 is the active blood system; clear particles between runs)
       if (window.BloodSimulatorV21 && typeof window.BloodSimulatorV21.reset === 'function') window.BloodSimulatorV21.reset();
+      if (window.BloodV2 && typeof window.BloodV2.reset === 'function') window.BloodV2.reset();
       
       // Reset lava timers
       window._lavaDamageTimer = 0;

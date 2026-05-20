@@ -129,6 +129,32 @@ function init() {
   // Load save data and settings first
   loadSaveData();
   loadSettings();
+  try {
+    if (typeof saveData !== 'undefined') {
+      const now = new Date();
+      const todayKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+      if (saveData._lastLoginCalendar !== todayKey) {
+        saveData.totalLogins = (saveData.totalLogins || 0) + 1;
+        saveData._lastLoginCalendar = todayKey;
+      }
+      const isFirstEverLogin = (saveData.totalLogins || 0) === 1;
+      if (window.GameDailies && typeof window.GameDailies.checkDailyLogin === 'function') {
+        const dailyResult = window.GameDailies.checkDailyLogin(saveData);
+        if (dailyResult && !dailyResult.alreadyClaimed) {
+          window._firstEverLoginDailyPrompt = !!isFirstEverLogin;
+          if (isFirstEverLogin && window.HorusPanel && typeof window.HorusPanel.show === 'function') {
+            window.HorusPanel.show('Every day you return, you will be rewarded.\nClaim your daily reward now — come back tomorrow for more. 👑');
+          }
+          if (window.WelcomeUI && typeof window.WelcomeUI.show === 'function') {
+            window.WelcomeUI.show();
+          } else {
+            window._pendingWelcomeOverlay = true;
+          }
+        }
+      }
+      if (typeof saveSaveData === 'function') saveSaveData();
+    }
+  } catch (_dailyLoginErr) {}
   console.log('[Init] Save data loaded OK');
 
   // Pre-create shared bullet-hole materials now that THREE.js is available
@@ -163,8 +189,8 @@ function init() {
   if (window.BloodSimulatorV21 && typeof THREE !== 'undefined') {
     window.BloodSimulatorV21.init(scene, null, null);
     if (window.BloodV2) {
-      window.BloodV2._dropData = window.BloodSimulatorV21._pool;
-      window.BloodV2._dropIM = window.BloodSimulatorV21.dropIM;
+      window.BloodV2._dropData = window.BloodSimulatorV21._pool || null;
+      window.BloodV2._dropIM = window.BloodSimulatorV21.dropIM || null;
     }
   }
   if (window.GameObjectPool) window.GameObjectPool.prewarm();

@@ -423,6 +423,12 @@
       overlay.style.opacity = '0';
       overlay.style.transition = 'opacity 0.4s';
       setTimeout(function() { overlay.remove(); }, 420);
+      if (window._firstEverLoginDailyPrompt && window.HorusPanel && typeof window.HorusPanel.show === 'function') {
+        window._firstEverLoginDailyPrompt = false;
+        setTimeout(function() {
+          window.HorusPanel.show('Day 1 streak started! Return tomorrow for Day 2.\n7 days in a row unlocks legendary loot. 🔥');
+        }, 480);
+      }
     };
     bottom.appendChild(enterBtn);
     overlay.appendChild(bottom);
@@ -442,6 +448,11 @@
 
     // Section 5: On EVERY game start, check if daily login reward is available
     setTimeout(function() {
+      if (window._pendingWelcomeOverlay) {
+        window._pendingWelcomeOverlay = false;
+        show();
+        return;
+      }
       if (window.GameDailies && window.SaveSystem) {
         var sd = window.SaveSystem.load ? window.SaveSystem.load() : null;
         if (!sd && typeof loadSaveData === 'function') sd = loadSaveData();

@@ -153,15 +153,36 @@ describe('Quest Hall progression', () => {
 
 // ── initFirstQuest — new quest flow ──────────────────────────────────────────
 describe('initFirstQuest (new questline)', () => {
-  // Minimal implementation that mirrors the real initFirstQuest logic
-  function initFirstQuest() {
+  function normalizeTutorialQuestIds() {
     if (!global.saveData.tutorialQuests) {
       global.saveData.tutorialQuests = { currentQuest: null, completedQuests: [], readyToClaim: [] };
     }
+    const tq = global.saveData.tutorialQuests;
+    if (!Array.isArray(tq.completedQuests)) tq.completedQuests = [];
+    if (!Array.isArray(tq.readyToClaim)) tq.readyToClaim = [];
+    const legacyMap = { quest_gatherStrength: 'quest_awaken' };
+    const valid = {
+      quest_awaken: true,
+      quest_buildQuesthall: true,
+      quest_findingAida: true,
+      quest_harvester: true
+    };
+    const normalize = (id) => {
+      const mapped = legacyMap[id] || id;
+      return valid[mapped] ? mapped : null;
+    };
+    tq.currentQuest = normalize(tq.currentQuest);
+    tq.completedQuests = tq.completedQuests.map(normalize).filter(Boolean);
+    tq.readyToClaim = tq.readyToClaim.map(normalize).filter(Boolean);
+  }
+
+  // Minimal implementation that mirrors the real initFirstQuest logic
+  function initFirstQuest() {
+    normalizeTutorialQuestIds();
     const completed = global.saveData.tutorialQuests.completedQuests || [];
-    if (completed.includes('quest_buildQuesthall') || completed.includes('quest_findingAida')) return;
+    if (completed.includes('quest_buildQuesthall') || completed.includes('quest_awaken') || completed.includes('quest_findingAida')) return;
     if (global.saveData.tutorialQuests.currentQuest) return;
-    global.saveData.tutorialQuests.currentQuest = 'quest_buildQuesthall';
+    global.saveData.tutorialQuests.currentQuest = 'quest_awaken';
     global.saveSaveData();
   }
 
@@ -169,9 +190,9 @@ describe('initFirstQuest (new questline)', () => {
     global.saveData.tutorialQuests = { currentQuest: null, completedQuests: [], readyToClaim: [] };
   });
 
-  test('activates quest_buildQuesthall for a fresh save', () => {
+  test('activates quest_awaken for a fresh save', () => {
     initFirstQuest();
-    expect(global.saveData.tutorialQuests.currentQuest).toBe('quest_buildQuesthall');
+    expect(global.saveData.tutorialQuests.currentQuest).toBe('quest_awaken');
     expect(global.saveSaveData).toHaveBeenCalledTimes(1);
   });
 
@@ -192,6 +213,21 @@ describe('initFirstQuest (new questline)', () => {
   test('skips activation when quest_findingAida is already completed (legacy save guard)', () => {
     global.saveData.tutorialQuests.completedQuests = ['quest_findingAida'];
     initFirstQuest();
+    expect(global.saveData.tutorialQuests.currentQuest).toBeNull();
+    expect(global.saveSaveData).not.toHaveBeenCalled();
+  });
+
+  test('migrates legacy quest_gatherStrength to quest_awaken', () => {
+    global.saveData.tutorialQuests.currentQuest = 'quest_gatherStrength';
+    initFirstQuest();
+    expect(global.saveData.tutorialQuests.currentQuest).toBe('quest_awaken');
+    expect(global.saveSaveData).not.toHaveBeenCalled();
+  });
+
+  test('normalizes completedQuests legacy ids before activation checks', () => {
+    global.saveData.tutorialQuests.completedQuests = ['quest_gatherStrength'];
+    initFirstQuest();
+    expect(global.saveData.tutorialQuests.completedQuests).toEqual(['quest_awaken']);
     expect(global.saveData.tutorialQuests.currentQuest).toBeNull();
     expect(global.saveSaveData).not.toHaveBeenCalled();
   });

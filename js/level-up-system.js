@@ -1693,7 +1693,7 @@ window.spawnBossChest = function(x, z) {
           updateHUD();
         }
 
-        choices.forEach((u, index) => {
+        choices.forEach((u) => {
           const card = document.createElement('div');
           card.className = 'upgrade-card';
           if (u._rarity && u._rarity.cssClass) card.classList.add(u._rarity.cssClass);
@@ -1749,9 +1749,6 @@ window.spawnBossChest = function(x, z) {
           }, { once: true });
 
           cardFrag.appendChild(card);
-          setTimeout(() => {
-            requestAnimationFrame(() => requestAnimationFrame(() => card.classList.add('card-visible')));
-          }, index * 70);
         });
 
         list.replaceChildren(cardFrag);
@@ -1772,7 +1769,6 @@ window.spawnBossChest = function(x, z) {
 
         // ── Show modal container ──────────────────────────────────────────────
         const upgradeList = document.getElementById('upgrade-list');
-        if (upgradeList) { upgradeList.style.opacity = '0'; upgradeList.style.visibility = 'hidden'; }
         // Stardust background particles (CSS-only animation hints behind cards)
         const _oldDust = modal.querySelectorAll('.lvlup-stardust');
         _oldDust.forEach(d => d.remove());
@@ -1792,11 +1788,14 @@ window.spawnBossChest = function(x, z) {
         modal.style.animation = 'none';
         void modal.offsetHeight; // force reflow to commit 'none' before re-adding
         modal.style.animation = 'wallFadeIn 0.32s cubic-bezier(0.22,1,0.36,1) forwards';
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            if (upgradeList) { upgradeList.style.opacity = '1'; upgradeList.style.visibility = 'visible'; }
+        if (upgradeList) {
+          const cards = upgradeList.querySelectorAll('.upgrade-card');
+          cards.forEach((card, i) => {
+            setTimeout(() => {
+              requestAnimationFrame(() => card.classList.add('card-visible'));
+            }, i * 80);
           });
-        });
+        }
 
 
         // Show skip button after 5 seconds as safety valve if player can't select an upgrade
