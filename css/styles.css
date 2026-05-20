@@ -1587,7 +1587,7 @@
     /* Quest billboard — floating "!" above Quest Hall */
     #quest-ready-billboard {
       position: fixed;
-      z-index: 99000;
+      z-index: 9000;
       width: 32px;
       height: 32px;
       border-radius: 50%;
@@ -12899,30 +12899,6 @@
   transition: background 0.15s;
 }
 .rd-close-btn:hover { background: rgba(201,168,76,0.18); }
-
-/* ════════════════════════════════════════════════════════════════════════════
-   SECTION 8: QUEST HALL "READY TO CLAIM" BILLBOARD
-   ════════════════════════════════════════════════════════════════════════════ */
-
-#quest-ready-billboard {
-  position: fixed; display: none;
-  width: 34px; height: 34px; border-radius: 50%;
-  background: radial-gradient(circle, #f0d060 0%, #c9a84c 70%);
-  border: 2px solid #8b6914;
-  color: #000; font-family: 'Bangers', cursive; font-size: 18px;
-  line-height: 1; text-align: center;
-  align-items: center; justify-content: center;
-  z-index: 7000; pointer-events: none;
-  text-align: center;
-  box-shadow: 0 0 12px rgba(240,208,96,0.7), 0 2px 8px rgba(0,0,0,0.6);
-  animation: questBillboardBounce 1s ease-in-out infinite;
-  transform: translateX(-50%);
-}
-#quest-ready-billboard.qrb-active { display: flex; }
-@keyframes questBillboardBounce {
-  0%,100% { transform: translateX(-50%) translateY(0); }
-  50%     { transform: translateX(-50%) translateY(-8px); }
-}
 
 /* ════════════════════════════════════════════════════════════════════════════
    HORUS PANEL MODE

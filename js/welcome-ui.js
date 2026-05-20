@@ -448,6 +448,11 @@
 
     // Section 5: On EVERY game start, check if daily login reward is available
     setTimeout(function() {
+      if (window._pendingWelcomeOverlay) {
+        window._pendingWelcomeOverlay = false;
+        show();
+        return;
+      }
       if (window.GameDailies && window.SaveSystem) {
         var sd = window.SaveSystem.load ? window.SaveSystem.load() : null;
         if (!sd && typeof loadSaveData === 'function') sd = loadSaveData();

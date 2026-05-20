@@ -3042,7 +3042,7 @@
     // ── Build Overlay: click-to-build with resource requirements and 0-100% animation ──
     // Building N requires N of each: wood, stone.
     // Resources are checked and deducted on build. Progress shown as 0→100% with phases.
-    // Section 3: First 8 buildings use hardcoded costs from the tutorial questline.
+    // Section 3: First 10 buildings use hardcoded costs from the tutorial questline.
     const BUILDING_COSTS = {
       questMission:        { wood: 0, stone: 0, free: true },
       armory:              { wood: 3, stone: 3 },
@@ -3060,13 +3060,13 @@
       window._buildOverlayActive = true;
       if (window.CampWorld && window.CampWorld.isActive) window.CampWorld.pauseInput();
 
-      // Determine resource cost: hardcoded for first 8 buildings, formula for rest
+      // Determine resource cost: hardcoded for first 10 buildings, formula for rest
       var bldDef = CAMP_BUILDINGS[buildingId];
       var isFreeBuilding = bldDef && (bldDef.isFree || bldDef.isCore);
       var costObj = BUILDING_COSTS[buildingId];
       var cost;
       if (costObj) {
-        cost = costObj.wood; // wood === stone for all 8
+        cost = costObj.wood; // wood === stone for all 10
       } else if (isFreeBuilding) {
         cost = 0;
       } else {
@@ -3981,21 +3981,63 @@
       // Tutorial flow no longer depends on A.I.D.A.
     };
 
+    function normalizeTutorialQuestIds() {
+      if (!saveData.tutorialQuests) {
+        saveData.tutorialQuests = { currentQuest: null, completedQuests: [], readyToClaim: [] };
+      }
+      const tq = saveData.tutorialQuests;
+      if (!Array.isArray(tq.completedQuests)) tq.completedQuests = [];
+      if (!Array.isArray(tq.readyToClaim)) tq.readyToClaim = [];
+
+      const legacyMap = { quest_gatherStrength: 'quest_awaken' };
+      const normalizeId = function (questId) {
+        const mappedId = legacyMap[questId] || questId;
+        return TUTORIAL_QUESTS[mappedId] ? mappedId : null;
+      };
+
+      let changed = false;
+      const normalizeList = function (list) {
+        const seen = {};
+        const out = [];
+        list.forEach(function (questId) {
+          const normalizedId = normalizeId(questId);
+          if (!normalizedId || seen[normalizedId]) return;
+          seen[normalizedId] = true;
+          out.push(normalizedId);
+        });
+        if (out.length !== list.length || out.some(function (id, i) { return id !== list[i]; })) changed = true;
+        return out;
+      };
+
+      const normalizedCurrent = normalizeId(tq.currentQuest);
+      if ((tq.currentQuest || null) !== normalizedCurrent) {
+        tq.currentQuest = normalizedCurrent;
+        changed = true;
+      }
+      tq.completedQuests = normalizeList(tq.completedQuests);
+      tq.readyToClaim = normalizeList(tq.readyToClaim);
+      return changed;
+    }
+
     /**
      * initFirstQuest()
      * Activates quest_awaken on first camp visit.
      * Called from CampWorld on first camp load.
      */
     window.initFirstQuest = function () {
-      if (!saveData.tutorialQuests) {
-        saveData.tutorialQuests = { currentQuest: null, completedQuests: [], readyToClaim: [] };
-      }
+      const wasNormalized = normalizeTutorialQuestIds();
       const completed = saveData.tutorialQuests.completedQuests || [];
       // Skip if any early quests are already done
       if (completed.includes('quest_buildQuesthall') ||
           completed.includes('quest_awaken') ||
-          completed.includes('quest_findingAida')) return;
-      if (saveData.tutorialQuests.currentQuest) return;
+          completed.includes('quest_findingAida')) {
+        if (wasNormalized && typeof saveSaveData === 'function') saveSaveData();
+        return;
+      }
+      if (saveData.tutorialQuests.currentQuest) {
+        if (wasNormalized && typeof saveSaveData === 'function') saveSaveData();
+        return;
+      }
       saveData.tutorialQuests.currentQuest = 'quest_awaken';
       saveSaveData();
 
@@ -4014,15 +4056,24 @@
     }
 
     function _formatQuestObjectives(objectives) {
+      const pluralize = function (count, singular, plural) {
+        const n = Math.max(1, count || 1);
+        return n + ' ' + (n === 1 ? singular : (plural || singular + 's'));
+      };
+      const getBuildingName = function (buildingId) {
+        if (!buildingId) return 'building';
+        if (CAMP_BUILDINGS[buildingId] && CAMP_BUILDINGS[buildingId].name) return CAMP_BUILDINGS[buildingId].name;
+        return buildingId.replace(/([a-z])([A-Z])/g, '$1 $2');
+      };
       if (Array.isArray(objectives)) {
         return objectives.map(function(o) {
           if (!o || !o.type) return '';
           if (o.type === 'collect_intro_resources') return 'Collect the intro resource cache';
-          if (o.type === 'build') return `Build ${o.building || 'building'}`;
-          if (o.type === 'complete_run') return `Complete ${o.count || 1} run`;
+          if (o.type === 'build') return `Build ${getBuildingName(o.building)}`;
+          if (o.type === 'complete_run') return `Complete ${pluralize(o.count, 'run')}`;
           if (o.type === 'survive_waves') return `Survive ${o.count || 1} waves`;
-          if (o.type === 'spin_slot_machine') return `Spin the slot machine ${o.count || 1} time`;
-          if (o.type === 'unlock_skill') return `Unlock ${o.count || 1} skill`;
+          if (o.type === 'spin_slot_machine') return `Spin the slot machine ${pluralize(o.count, 'time')}`;
+          if (o.type === 'unlock_skill') return `Unlock ${pluralize(o.count, 'skill')}`;
           return o.type;
         }).filter(Boolean).join(' • ');
       }
@@ -4080,6 +4131,8 @@
     function updateQuestTracker() {
       const questTracker = document.getElementById('quest-tracker');
       if (!questTracker) return;
+      const wasNormalized = normalizeTutorialQuestIds();
+      if (wasNormalized && typeof saveSaveData === 'function') saveSaveData();
       
       const currentQuest = getCurrentQuest();
       const completedQuests = (saveData.tutorialQuests && saveData.tutorialQuests.completedQuests) || [];

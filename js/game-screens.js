@@ -147,6 +147,8 @@ function init() {
           }
           if (window.WelcomeUI && typeof window.WelcomeUI.show === 'function') {
             window.WelcomeUI.show();
+          } else {
+            window._pendingWelcomeOverlay = true;
           }
         }
       }
