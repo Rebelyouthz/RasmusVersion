@@ -510,7 +510,9 @@ const BloodSimulatorV21 = {
     const finalCount = count || map.count;
     const emitColor = (opts.color !== undefined && opts.color !== null)
       ? opts.color
-      : ((opts && opts.enemyType === 'slime') ? 0x44ff44 : 0xcc0000);
+      : ((opts && opts.enemyType === 'slime')
+          ? (_BSV21_BLOOD.slime || 0x44ff44)
+          : this._pickBloodColor(opts.enemyType || 'human', 0xcc0000));
     this.rawBurst(x, y, z, finalCount, {
       spreadXZ: map.spreadXZ,
       spreadY: map.spreadY,
@@ -538,7 +540,9 @@ const BloodSimulatorV21 = {
     if (!pos) return;
     const o = Object.assign({ shotType: 'pistol' }, opts || {});
     if (o.color === undefined || o.color === null) {
-      o.color = (o.enemyType === 'slime') ? 0x44ff44 : 0xcc0000;
+      o.color = (o.enemyType === 'slime')
+        ? (_BSV21_BLOOD.slime || 0x44ff44)
+        : this._pickBloodColor(o.enemyType || 'human', 0xcc0000);
     }
     this.emit(pos.x || 0, pos.y || 0, pos.z || 0, count || 8, o);
   },
@@ -621,7 +625,9 @@ const BloodSimulatorV21 = {
     const enemyType = options.enemyType || 'human';
     let resolvedColor = options.color;
     if (resolvedColor === undefined || resolvedColor === null) {
-      resolvedColor = (enemyType === 'slime') ? 0x44ff44 : 0xcc0000;
+      resolvedColor = (enemyType === 'slime')
+        ? (_BSV21_BLOOD.slime || 0x44ff44)
+        : (_BSV21_BLOOD[enemyType] || 0x8B0000);
     }
     const spreadXZ  = options.spreadXZ  || 9;
     const spreadY   = options.spreadY   || 14;
