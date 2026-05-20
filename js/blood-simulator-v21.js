@@ -69,6 +69,8 @@ const BloodSimulatorV21 = {
   _head: 0,
   _mistPool: null,
   _mistHead: 0,
+  _initScene: null,
+  _activeCount: 0,
   _rivulets: null,
   _rivuletHead: 0,
   _bulletHoleSpurts: null,
@@ -113,6 +115,7 @@ const BloodSimulatorV21 = {
   },
 
   init(scene, terrainMesh, player) {
+    this._initScene = scene || null;
     this.scene = scene;
     this.terrainMesh = terrainMesh;
     this.player = player;
@@ -238,6 +241,7 @@ const BloodSimulatorV21 = {
     this._pulseTimer = 0;
     if (this.dropIM) { this.dropIM.count = 0; this.dropIM.instanceMatrix.needsUpdate = true; }
     if (this.mistIM) { this.mistIM.count = 0; this.mistIM.instanceMatrix.needsUpdate = true; }
+    this._activeCount = 0;
   },
 
   _spawnDecal(x, z, radius, hexColor, lifetime) {
@@ -394,6 +398,7 @@ const BloodSimulatorV21 = {
     }
     for (let i = activeDrops; i < this.MAX_DROPS; i++) { this.dropIM.setMatrixAt(i, _ZERO_MATRIX); }
     this.dropIM.count = activeDrops;
+    this._activeCount = activeDrops;
     this.dropIM.instanceMatrix.needsUpdate = true;
     if (this.dropIM.instanceColor) this.dropIM.instanceColor.needsUpdate = true;
 
@@ -505,7 +510,7 @@ const BloodSimulatorV21 = {
     const finalCount = count || map.count;
     const emitColor = (opts.color !== undefined && opts.color !== null)
       ? opts.color
-      : this._pickBloodColor(opts.enemyType || 'human', 0xaa0000);
+      : ((opts && opts.enemyType === 'slime') ? 0x44ff44 : 0xcc0000);
     this.rawBurst(x, y, z, finalCount, {
       spreadXZ: map.spreadXZ,
       spreadY: map.spreadY,
@@ -529,8 +534,13 @@ const BloodSimulatorV21 = {
   },
 
   emitBurst(pos, count, opts) {
+    if (!this._initScene) return;
     if (!pos) return;
-    this.emit(pos.x || 0, pos.y || 0, pos.z || 0, count || 8, Object.assign({ shotType: 'pistol' }, opts || {}));
+    const o = Object.assign({ shotType: 'pistol' }, opts || {});
+    if (o.color === undefined || o.color === null) {
+      o.color = (o.enemyType === 'slime') ? 0x44ff44 : 0xcc0000;
+    }
+    this.emit(pos.x || 0, pos.y || 0, pos.z || 0, count || 8, o);
   },
 
   emitWaterBurst(pos, count, opts) {
@@ -604,13 +614,14 @@ const BloodSimulatorV21 = {
   },
 
   rawBurst(x, y, z, count, options) {
+    if (!this._initScene) return;
     if (!this._pool) return;
     count = count || 45;
     options = options || {};
     const enemyType = options.enemyType || 'human';
     let resolvedColor = options.color;
     if (resolvedColor === undefined || resolvedColor === null) {
-      resolvedColor = _BSV21_BLOOD[enemyType] || 0x8B0000;
+      resolvedColor = (enemyType === 'slime') ? 0x44ff44 : 0xcc0000;
     }
     const spreadXZ  = options.spreadXZ  || 9;
     const spreadY   = options.spreadY   || 14;
@@ -762,6 +773,7 @@ const BloodSimulatorV21 = {
   },
 
   hit(enemy, weaponKey, hitPoint) {
+    if (!this._initScene) return;
     const pos = hitPoint || (enemy && enemy.mesh && enemy.mesh.position) || { x: 0, y: 0, z: 0 };
     this.onEnemyHit(enemy || { enemyType: 'default' }, { x: pos.x || 0, y: pos.y || 0, z: pos.z || 0 }, weaponKey);
   },
@@ -824,9 +836,9 @@ window.BloodV2 = {
   _dropIM: null,
   _mistIM: null,
   init: function(scene, terrainMesh, player) {
-    if (!BloodSimulatorV21.scene) {
-      BloodSimulatorV21.init(scene, terrainMesh, player);
-    }
+    if (BloodSimulatorV21._initScene === scene) return BloodSimulatorV21;
+    BloodSimulatorV21._initScene = scene;
+    BloodSimulatorV21.init(scene, terrainMesh, player);
     _syncBloodV2Caches(this);
     return BloodSimulatorV21;
   },

@@ -517,9 +517,17 @@ window.DialogueSystem = (function () {
    * Standard speech bubbles are used for idle chatter, hints, and secrets.
    */
   function show(dialogueArray, options) {
+    options = options || {};
+    if (options.horusPanel && window.HorusPanel && dialogueArray && dialogueArray.length) {
+      const first = dialogueArray[0];
+      const msg = (typeof first === 'string') ? first : (first && first.text ? first.text : '');
+      if (msg) {
+        window.HorusPanel.show(msg, options.onComplete || null);
+        return;
+      }
+    }
     // Suppress dialogue while a camp building menu is open
     if (_isCampMenuOpen()) {
-      options = options || {};
       if (typeof options.onComplete === 'function') options.onComplete();
       return;
     }
@@ -684,3 +692,52 @@ window.DialogueSystem = (function () {
     DIALOGUES:     DIALOGUES
   };
 }());
+
+window.HorusPanel = window.HorusPanel || {
+  _queue: [],
+  _visible: false,
+
+  show: function(text, onDismiss) {
+    this._queue.push({ text: text || '', onDismiss: onDismiss || null });
+    if (!this._visible) this._next();
+  },
+
+  _next: function() {
+    if (!this._queue.length) { this._hide(); return; }
+    const item = this._queue.shift();
+    this._visible = true;
+    let panel = document.getElementById('horus-panel');
+    if (!panel) {
+      panel = document.createElement('div');
+      panel.id = 'horus-panel';
+      panel.innerHTML = `
+        <div id="horus-panel-inner">
+          <div class="horus-panel-topline"></div>
+          <div id="horus-panel-text"></div>
+          <button id="horus-panel-btn">OK →</button>
+        </div>`;
+      document.body.appendChild(panel);
+    }
+    const btn = document.getElementById('horus-panel-btn');
+    if (btn) {
+      btn.onclick = () => {
+        if (typeof item.onDismiss === 'function') item.onDismiss();
+        window.HorusPanel._next();
+      };
+    }
+    const textEl = document.getElementById('horus-panel-text');
+    if (textEl) textEl.textContent = item.text || '';
+    requestAnimationFrame(() => requestAnimationFrame(() => panel.classList.add('horus-visible')));
+  },
+
+  _hide: function() {
+    this._visible = false;
+    const panel = document.getElementById('horus-panel');
+    if (panel) panel.classList.remove('horus-visible');
+  },
+
+  autoHide: function(text, ms) {
+    this.show(text, null);
+    setTimeout(() => this._next(), ms || 3000);
+  }
+};

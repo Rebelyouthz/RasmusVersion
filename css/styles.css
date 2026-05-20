@@ -2545,7 +2545,7 @@
       align-items: center;
       justify-content: center;
       pointer-events: none; /* Modal background should not block clicks */
-      z-index: 500;
+      z-index: 9500;
       animation: fogwater-bg 8s ease-in-out infinite;
     }
 
@@ -2909,7 +2909,7 @@
       border: 3px solid #888888;
       outline: none;
       cursor: pointer;
-      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s;
+      transition: transform 0.18s cubic-bezier(0.22,1,0.36,1), opacity 0.22s ease, filter 0.2s;
       position: relative;
       overflow: visible; /* Allow drips and border-flow to extend outside */
       display: flex;
@@ -2917,8 +2917,11 @@
       justify-content: space-between;
       box-sizing: border-box;
       transform-style: preserve-3d;
-      will-change: box-shadow, transform;
+      will-change: opacity, transform;
+      opacity: 0;
+      transform: translateY(40px) scale(0.88);
     }
+    .upgrade-card.card-visible { opacity: 1; transform: translateY(0) scale(1); }
 
     /* Ensure inner content elements layer above border-flow/drip effects (z-index layering, not clipping) */
     .upgrade-card .upgrade-rarity-header,
@@ -12909,7 +12912,8 @@
   color: #000; font-family: 'Bangers', cursive; font-size: 18px;
   line-height: 1; text-align: center;
   align-items: center; justify-content: center;
-  z-index: 9990; pointer-events: none;
+  z-index: 7000; pointer-events: none;
+  text-align: center;
   box-shadow: 0 0 12px rgba(240,208,96,0.7), 0 2px 8px rgba(0,0,0,0.6);
   animation: questBillboardBounce 1s ease-in-out infinite;
   transform: translateX(-50%);
@@ -12918,6 +12922,97 @@
 @keyframes questBillboardBounce {
   0%,100% { transform: translateX(-50%) translateY(0); }
   50%     { transform: translateX(-50%) translateY(-8px); }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   HORUS PANEL MODE
+   ════════════════════════════════════════════════════════════════════════════ */
+#horus-panel {
+  position: fixed;
+  top: 80px;
+  right: 16px;
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  z-index: 8500;
+  pointer-events: auto;
+  transform: translateX(120%);
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  border-radius: 14px;
+  overflow: visible;
+}
+#horus-panel.horus-visible { transform: translateX(0); }
+#horus-panel-inner {
+  background: rgba(6, 4, 2, 0.96);
+  border: 2px solid #c9a84c;
+  border-radius: 14px;
+  padding: 18px 16px 14px;
+  position: relative;
+  box-shadow:
+    0 0 0 1px #8b6914,
+    0 0 12px 4px rgba(201,168,76,0.4),
+    0 0 30px 8px rgba(0,0,0,0.8),
+    0 0 60px 20px rgba(201,168,76,0.15),
+    inset 0 0 20px rgba(0,0,0,0.7);
+}
+#horus-panel-inner::before {
+  content: '𓂀';
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 28px;
+  color: #f0d060;
+  text-shadow: 0 0 8px #f0d060, 0 0 20px #c9a84c, 0 0 40px rgba(201,168,76,0.5);
+  z-index: 1;
+}
+#horus-panel-inner::after {
+  content: '𓂀                    𓂀';
+  position: absolute;
+  bottom: 6px;
+  left: 10px;
+  right: 10px;
+  font-size: 13px;
+  color: #c9a84c;
+  opacity: 0.6;
+  text-shadow: 0 0 5px #c9a84c;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+#horus-panel-inner .horus-panel-topline {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #f0d060, transparent);
+  margin-bottom: 12px;
+  opacity: 0.7;
+}
+#horus-panel-text {
+  color: #f0e8d0;
+  font-size: 14px;
+  line-height: 1.6;
+  font-family: 'Segoe UI', sans-serif;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+  margin-bottom: 12px;
+  white-space: pre-line;
+}
+#horus-panel-btn {
+  display: block;
+  margin-left: auto;
+  background: linear-gradient(135deg, #3a2a00, #5a3d00);
+  border: 1px solid #c9a84c;
+  color: #f0d060;
+  font-size: 13px;
+  padding: 6px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Bangers', cursive;
+  letter-spacing: 2px;
+  box-shadow: 0 0 8px rgba(201,168,76,0.3);
+  transition: background 0.15s, box-shadow 0.15s;
+}
+#horus-panel-btn:hover {
+  background: linear-gradient(135deg, #5a3d00, #7a5200);
+  box-shadow: 0 0 16px rgba(201,168,76,0.6);
 }
 
 /* "BUILD ME" billboard */

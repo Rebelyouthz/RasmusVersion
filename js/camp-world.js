@@ -194,6 +194,9 @@
   // Camp Quest Arrow
   let _campArrowEl = null;
   let _campArrowDistEl = null;
+  let _questReadyBillboardEl = null;
+  let _questReadyPulseLight = null;
+  let _questReadyPulseT = 0;
 
   // Pre-allocated scratch Vector3 for per-frame camp UI projections (bubble + quest arrow)
   // Avoids GC pressure from new THREE.Vector3() every frame
@@ -1880,6 +1883,13 @@
     if (_introResourceDrop && _campScene) _campScene.remove(_introResourceDrop);
     _introResourceDrop = null;
     if (typeof showStatusMessage === 'function') showStatusMessage('Resources collected — build the Quest Hall!', 3200);
+    if (typeof window.progressTutorialQuest === 'function') {
+      window.progressTutorialQuest('quest_awaken', true);
+    }
+    if (sd && !sd._htip_quest_awaken_collected && window.HorusPanel && typeof window.HorusPanel.show === 'function') {
+      sd._htip_quest_awaken_collected = true;
+      window.HorusPanel.show('You have wood, stone, and gold. Build the Quest Hall to receive your first mission.\nLook for the glowing marker on the ground.');
+    }
   }
 
   function _showIntroResourceOverlay() {
@@ -2139,9 +2149,6 @@
       _aidaCinematicLock = false;
       _aidaOrbitWaitingForDialogue = false;
       _aidaGrantStarterMaterials();
-      if (typeof window.startAidaIntroQuest === 'function') {
-        window.startAidaIntroQuest();
-      }
     }
 
     const DS = window.DialogueSystem;
@@ -5621,32 +5628,7 @@
         return;
       }
     }
-    // Post-insertion: near robot shows hint to go to Quest Hall (no longer opens Profile)
-    if (_aidaIntroState.chipInserted) {
-      const _rp = _getAidaRobotPos();
-      const rdx = _playerPos.x - _rp.x;
-      const rdz = _playerPos.z - _rp.z;
-      if (Math.sqrt(rdx * rdx + rdz * rdz) < AIDA_INTRO_RADIUS) {
-        // Skip AIDA hint if quest_findingAida is already queued or claimed — the player
-        // should be able to walk straight to the Quest Hall and interact with it directly.
-        if (!_isAidaQuestResolved()) {
-          const DS = window.DialogueSystem;
-          if (DS && DS.DIALOGUES && DS.DIALOGUES.aidaQuestHallHint) {
-            _playerVel.x = 0; _playerVel.z = 0;
-            _keys = {}; _touch.active = false;
-            // Call DS.show() BEFORE _openMenu() so _isCampMenuOpen() is still false
-            // and the dialogue is not suppressed.  _openMenu() is called immediately after
-            // so _checkMenuClosed() keeps input frozen until onComplete fires.
-            DS.show(DS.DIALOGUES.aidaQuestHallHint, {
-              onComplete: function() { _resumeInput(); }
-            });
-            _openMenu();
-          }
-          return;
-        }
-        // Quest already queued/claimed — fall through to building interaction below
-      }
-    }
+    // A.I.D.A cinematic is ambient only and must not gate tutorial progression.
 
     if (!_nearBuilding) return;
 
@@ -5759,6 +5741,10 @@
     'camp-intro-resource-overlay',
     // Dialogue system bubble (A.I.D.A speech/cinematic)
     'ds-bubble',
+    // Horus compact panel
+    'horus-panel',
+    // Quest ready UI billboard
+    'quest-ready-billboard',
     // Build-progress overlay (camp-skill-system.js _showBuildOverlay)
     'camp-build-overlay',
   ];
@@ -7485,23 +7471,7 @@
         }
       }
 
-      // Recovery guard: if the chip was inserted and Quest Hall is already built but
-      // quest_findingAida was never pushed to readyToClaim (e.g. save made mid-sequence),
-      // re-run startAidaIntroQuest so the player can claim their reward.
-      (function _recoverAidaIntroQuest() {
-        if (!_aidaIntroState.chipInserted) return;
-        const _tq = _saveData && _saveData.tutorialQuests;
-        if (!_tq) return;
-        const _completed = _tq.completedQuests || [];
-        if (_completed.includes('quest_findingAida')) return; // already done
-        const _ready = _tq.readyToClaim || [];
-        if (_ready.includes('quest_findingAida')) return;     // already queued
-        const _qmData = _saveData && _saveData.campBuildings && _saveData.campBuildings.questMission;
-        if (_qmData && _qmData.level > 0 && typeof window.startAidaIntroQuest === 'function') {
-          console.log('[CampWorld] Recovery: chip inserted + Quest Hall built — auto-queuing quest_findingAida');
-          window.startAidaIntroQuest();
-        }
-      }());
+      // A.I.D.A intro remains ambient-only and no longer drives tutorial quest state.
 
       // Ensure HUD elements
       _ensureHUD();
@@ -7559,8 +7529,24 @@
             var currentQ = (typeof getCurrentQuest === 'function') ? getCurrentQuest() : null;
             if (currentQ) {
               // Context-aware hints for the new slow-burn quest chain
-              if (currentQ.id === 'quest_buildQuesthall') {
-                DS.show([{ text: 'Walk to the Quest Hall plot and build it! 🏗️ It\'s FREE — no resources needed!', emotion: 'task' }]);
+              if (currentQ.id === 'quest_awaken') {
+                DS.show([{ text: 'Find the nearby supply cache and collect it to begin. 📦', emotion: 'task' }], { horusPanel: true });
+              } else if (currentQ.id === 'quest_buildQuesthall') {
+                DS.show([{ text: 'Build the Quest Hall — it is free for your first construction. 🏗️', emotion: 'task' }], { horusPanel: true });
+              } else if (currentQ.id === 'quest_buildArmory') {
+                DS.show([{ text: 'Build the Armory to unlock weapon upgrades between runs. ⚔️', emotion: 'task' }], { horusPanel: true });
+              } else if (currentQ.id === 'quest_knowThyself') {
+                DS.show([{ text: 'Build the Profile Hall and claim your daily rewards. 👑', emotion: 'task' }], { horusPanel: true });
+              } else if (currentQ.id === 'quest_secondRun') {
+                DS.show([{ text: 'Survive 3 waves in one run. You are ready. 🌊', emotion: 'task' }], { horusPanel: true });
+              } else if (currentQ.id === 'quest_spinOfFate') {
+                DS.show([{ text: 'Build the Shrine of Fate (Slot Machine) and test your luck. 🎰', emotion: 'task' }], { horusPanel: true });
+              } else if (currentQ.id === 'quest_firstSpin') {
+                DS.show([{ text: 'Spin the Slot Machine once, then claim in the Quest Hall. 🎰', emotion: 'task' }], { horusPanel: true });
+              } else if (currentQ.id === 'quest_buildSkillTree') {
+                DS.show([{ text: 'Build the Skill Tree and unlock your first permanent skill. 🌳', emotion: 'task' }], { horusPanel: true });
+              } else if (currentQ.id === 'quest_thirdRun') {
+                DS.show([{ text: 'Now push harder: reach wave 5 in a single run. ⚡', emotion: 'task' }], { horusPanel: true });
               } else if (currentQ.id === 'firstRunDeath') {
                 DS.show([{ text: 'Head out and fight! Die once so I can... calibrate. ⚔️', emotion: 'task' }]);
               } else if (currentQ.id === 'quest_dailyRoutine') {
@@ -7896,14 +7882,30 @@
     }
     var cq = tq.currentQuest;
     var storyText = '';
-    if (cq === 'quest_buildQuesthall') {
-      storyText = '📜 Quest 1 — Walk to the Quest Hall and build it (it\'s free!)';
+    if (cq === 'quest_awaken') {
+      storyText = '📜 The Awakening — Collect the nearby supply cache.';
+    } else if (cq === 'quest_buildQuesthall') {
+      storyText = '📜 Raise the Hall — Build the Quest Hall.';
+    } else if (cq === 'quest_firstBlood') {
+      storyText = '📜 First Blood — Complete one run and return.';
+    } else if (cq === 'quest_buildArmory') {
+      storyText = '📜 Forge Your Arsenal — Build the Armory.';
+    } else if (cq === 'quest_knowThyself') {
+      storyText = '📜 Know Thyself — Build the Profile Hall.';
+    } else if (cq === 'quest_secondRun') {
+      storyText = '📜 Prove Yourself — Survive 3 waves in one run.';
+    } else if (cq === 'quest_spinOfFate') {
+      storyText = '📜 Shrine of Fate — Build the Slot Machine.';
+    } else if (cq === 'quest_firstSpin') {
+      storyText = '📜 Pull the Lever — Spin the Slot Machine once.';
+    } else if (cq === 'quest_buildSkillTree') {
+      storyText = '📜 The Skill Within — Build Skill Tree + unlock 1 skill.';
+    } else if (cq === 'quest_thirdRun') {
+      storyText = '📜 The Real Test — Reach wave 5 in a run.';
     } else if (cq === 'quest_findingAida') {
       storyText = '📜 Quest — Collect the sacred resource cache and build the Quest Hall.';
     } else if (cq === 'quest_craftAllTools') {
       storyText = '📜 Quest — Craft all tools at the Forge...';
-    } else if (cq === 'quest_firstBlood') {
-      storyText = '📜 Quest — Complete your first run...';
     } else if (cq === 'quest_dailyRoutine') {
       storyText = '📜 Quest — Complete your daily routine...';
     } else if (cq === 'firstRunDeath') {
@@ -7930,8 +7932,15 @@
     if (tq) {
       const cq = tq.currentQuest;
       const questToBuilding = {
+        'quest_awaken': null,
         'quest_findingAida': null,
         'quest_buildQuesthall': 'questMission',
+        'quest_buildArmory': 'armory',
+        'quest_knowThyself': 'accountBuilding',
+        'quest_spinOfFate': 'slotMachine',
+        'quest_firstSpin': 'slotMachine',
+        'quest_buildSkillTree': 'skillTree',
+        'quest_thirdRun': 'questMission',
         'quest_dailyRoutine': 'questMission',
         'quest_craftAllTools': 'forge',
         'quest_firstBlood': 'questMission',
@@ -7941,7 +7950,7 @@
       const targetId = cq ? questToBuilding[cq] : null;
       if (targetId) {
         targetDef = BUILDING_DEFS.find(function(d) { return d.id === targetId; });
-      } else if (cq === 'quest_findingAida') {
+      } else if (cq === 'quest_findingAida' || cq === 'quest_awaken') {
         targetDef = _introResourceDrop ? { x: 8, z: 0 } : BUILDING_DEFS.find(function(d) { return d.id === 'questMission'; });
       }
     }
@@ -8027,6 +8036,79 @@
     _campArrowEl.style.transform = 'rotate(' + (angleDeg + 90) + 'deg)';
   }
 
+  function _isQuestHallOverlayOpen() {
+    const el = document.getElementById('quest-hall-overlay');
+    return !!(el && getComputedStyle(el).display !== 'none');
+  }
+
+  function _ensureQuestReadyBillboard() {
+    if (_questReadyBillboardEl) return _questReadyBillboardEl;
+    const el = document.createElement('div');
+    el.id = 'quest-ready-billboard';
+    el.setAttribute('aria-hidden', 'true');
+    el.style.textAlign = 'center';
+    el.innerHTML = '<span>!</span>';
+    document.body.appendChild(el);
+    _questReadyBillboardEl = el;
+    return el;
+  }
+
+  function _getQuestHallWorldPos() {
+    const grp = _buildingMeshes && _buildingMeshes.questMission;
+    if (grp && grp.position) {
+      return { x: grp.position.x, y: grp.position.y || 0, z: grp.position.z };
+    }
+    const def = BUILDING_DEFS.find(d => d.id === 'questMission') || { x: 0, z: -14 };
+    return { x: def.x, y: 0, z: def.z };
+  }
+
+  function _updateQuestReadyBillboardAndPulse(dt) {
+    if (!_campCamera || !_campScene || !_isActive) return;
+    const tq = _saveData && _saveData.tutorialQuests;
+    const hasReady = !!(tq && tq.readyToClaim && tq.readyToClaim.length > 0);
+    const overlayOpen = _isQuestHallOverlayOpen();
+    const shouldShow = hasReady && !overlayOpen;
+
+    if (!shouldShow) {
+      if (_questReadyBillboardEl) _questReadyBillboardEl.classList.remove('qrb-active');
+      if (_questReadyPulseLight && _questReadyPulseLight.parent) {
+        _questReadyPulseLight.parent.remove(_questReadyPulseLight);
+      }
+      _questReadyPulseLight = null;
+      _questReadyPulseT = 0;
+      return;
+    }
+
+    const billboard = _ensureQuestReadyBillboard();
+    const wp = _getQuestHallWorldPos();
+
+    if (!_campUITmpVec && window.THREE) _campUITmpVec = new window.THREE.Vector3();
+    if (_campUITmpVec) {
+      _campUITmpVec.set(wp.x, wp.y + 3.2, wp.z);
+      _campUITmpVec.project(_campCamera);
+      const sx = (_campUITmpVec.x * 0.5 + 0.5) * window.innerWidth;
+      const sy = (-_campUITmpVec.y * 0.5 + 0.5) * window.innerHeight;
+      billboard.style.left = `${sx}px`;
+      billboard.style.top = `${sy}px`;
+      billboard.classList.add('qrb-active');
+    }
+
+    if (!_questReadyPulseLight && window.THREE) {
+      _questReadyPulseLight = new window.THREE.PointLight(0xffd65a, 0, 6, 2);
+      _campScene.add(_questReadyPulseLight);
+    }
+    if (_questReadyPulseLight) {
+      _questReadyPulseLight.position.set(wp.x, wp.y + 2.4, wp.z);
+      _questReadyPulseT += Math.max(0.001, Math.min(dt || 0.016, 0.05));
+      const cyc = (_questReadyPulseT % 1.5) / 1.5;
+      _questReadyPulseLight.intensity = Math.max(0, Math.sin(cyc * Math.PI) * 2);
+    }
+  }
+
+  function showQuestReadyBillboard() {
+    _updateQuestReadyBillboardAndPulse(0.016);
+  }
+
   /**
    * update(dt)
    * Per-frame logic update.  Called from main.js animate() when isActive.
@@ -8085,12 +8167,7 @@
     _updateSigns();
     // Sprite sheet idle-breathing avatar removed per design update
     // _updateProfileAvatar(dt);
-    // Update Horus quest billboard (ready-to-claim indicator above Quest Hall)
-    if (window.HorusSystem && window.HorusSystem.updateQuestBillboard) {
-      var _tqUpd = _saveData && _saveData.tutorialQuests;
-      var _hasReady = _tqUpd && _tqUpd.readyToClaim && _tqUpd.readyToClaim.length > 0;
-      window.HorusSystem.updateQuestBillboard(_hasReady);
-    }
+    _updateQuestReadyBillboardAndPulse(dt);
     // Update building objective billboards and daily challenge ticker (throttled)
     if (!_hurusTick) _hurusTick = 0;
     _hurusTick++;
@@ -8283,6 +8360,13 @@
           }
           sd.resources.slotCoins = (sd.resources.slotCoins || 0) - 1;
           if (typeof showStatChange === 'function') showStatChange('−1 🎰 Slot Coin', 'rare');
+          if (typeof window.progressTutorialQuest === 'function') {
+            window.progressTutorialQuest('quest_firstSpin', true);
+          }
+          if (sd && !sd._htip_quest_firstSpin && window.HorusPanel && typeof window.HorusPanel.show === 'function') {
+            sd._htip_quest_firstSpin = true;
+            window.HorusPanel.show('The reels spin... destiny is written in gold.\nClaim your spin reward in the Quest Hall.');
+          }
           // Grant 5 Account XP always
           if (typeof addAccountXP === 'function') addAccountXP(5);
           else if (typeof window.addAccountXP === 'function') window.addAccountXP(5);
@@ -8376,6 +8460,7 @@
     bennyWalkToBuild: _bennyWalkToBuild,
     bennyWalkToBuildThenDialog: _bennyWalkToBuildThenDialog,
     showBennyContextualHint: _showBennyContextualHint,
+    showQuestReadyBillboard,
     showBennySpeech: _showBennySpeech,
     hideBennySpeech: _hideBennySpeech,
     interactIncubator: _interactIncubator,

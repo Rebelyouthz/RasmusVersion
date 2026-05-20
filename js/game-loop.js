@@ -768,7 +768,9 @@
       let dt = (time - lastTime) / 1000;
       // Sanitize dt before any system update — NaN/Infinity/negative would corrupt timers/pools
       if (!isFinite(dt) || dt <= 0) dt = 0.016; // fallback to ~60fps frame
-      if (window.BloodV2) window.BloodV2.update(dt);
+      if (window.BloodV2 && window.BloodSimulatorV21 && window.BloodSimulatorV21._activeCount > 0) {
+        window.BloodV2.update(dt);
+      }
       if (window.GoreSim && typeof window.GoreSim.update === 'function') window.GoreSim.update(dt);
       if (window.BloodSimulatorV21 && typeof window.BloodSimulatorV21.update === 'function') window.BloodSimulatorV21.update(dt);
       if (window.SlimePool) window.SlimePool.update(dt, player && player.mesh ? player.mesh.position : null);
@@ -3897,4 +3899,3 @@
       }
     }
     } // end THREE check
-
