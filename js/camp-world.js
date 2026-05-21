@@ -1874,21 +1874,23 @@
   function _collectIntroResources() {
     const sd = (typeof saveData !== 'undefined') ? saveData : _saveData;
     if (!sd || sd._introResourcesDropped) return;
-    if (!sd.resources) sd.resources = {};
-    sd.resources.wood = (sd.resources.wood || 0) + 50;
-    sd.resources.stone = (sd.resources.stone || 0) + 50;
-    sd.resources.gold = (sd.resources.gold || 0) + 200;
     sd._introResourcesDropped = true;
-    if (typeof saveSaveData === 'function') saveSaveData();
     if (_introResourceDrop && _campScene) _campScene.remove(_introResourceDrop);
     _introResourceDrop = null;
     if (typeof showStatusMessage === 'function') showStatusMessage('Resources collected — build the Quest Hall!', 3200);
-    if (typeof window.progressTutorialQuest === 'function') {
-      window.progressTutorialQuest('quest_awaken', true);
-    }
-    if (sd && !sd._htip_quest_awaken_collected && window.HorusPanel && typeof window.HorusPanel.show === 'function') {
-      sd._htip_quest_awaken_collected = true;
-      window.HorusPanel.show('You have wood, stone, and gold. Build the Quest Hall to receive your first mission.\nLook for the glowing marker on the ground.');
+    if (sd.tutorialQuests &&
+        sd.tutorialQuests.currentQuest === 'quest_gatherStrength') {
+      if (typeof progressTutorialQuest === 'function')
+        progressTutorialQuest('quest_gatherStrength', true);
+      setTimeout(function() {
+        if (window.HorusPanel) {
+          window.HorusPanel.show(
+            'Resources collected!\n+60 Wood  +60 Stone  +200 Gold\n\nNow walk to the Quest Hall build spot\nand press BUILD. It\'s free!'
+          );
+        }
+      }, 600);
+    } else {
+      if (typeof saveSaveData === 'function') saveSaveData();
     }
   }
 
@@ -2154,6 +2156,10 @@
     const DS = window.DialogueSystem;
     const arrivalDialogue = DS && DS.DIALOGUES && DS.DIALOGUES.aidaRobotWake;
     if (DS && typeof DS.show === 'function' && arrivalDialogue) {
+      var _tutDone = saveData.tutorialQuests &&
+        saveData.tutorialQuests.completedQuests &&
+        saveData.tutorialQuests.completedQuests.includes('quest_buildForge');
+      if (!_tutDone) return _onArrivalComplete();
       DS.show(arrivalDialogue, { onComplete: _onArrivalComplete });
     } else {
       _onArrivalComplete();
@@ -2326,6 +2332,10 @@
 
     const DS = window.DialogueSystem;
     if (DS) {
+      var _tutDone = saveData.tutorialQuests &&
+        saveData.tutorialQuests.completedQuests &&
+        saveData.tutorialQuests.completedQuests.includes('quest_buildForge');
+      if (!_tutDone) return;
       DS.show(DS.DIALOGUES.aidaChipFound, { onComplete: function () { _stabilizeCampPlayerVisual(); _resumeInput(); } });
       _openMenu();
     }
@@ -7529,34 +7539,34 @@
             var currentQ = (typeof getCurrentQuest === 'function') ? getCurrentQuest() : null;
             if (currentQ) {
               // Context-aware hints for the new slow-burn quest chain
-              if (currentQ.id === 'quest_awaken') {
+              if (currentQ.id === 'quest_awaken' || currentQ.id === 'quest_gatherStrength') {
                 DS.show([{ text: 'Find the nearby supply cache and collect it to begin. 📦', emotion: 'task' }], { horusPanel: true });
               } else if (currentQ.id === 'quest_buildQuesthall') {
                 DS.show([{ text: 'Build the Quest Hall — it is free for your first construction. 🏗️', emotion: 'task' }], { horusPanel: true });
               } else if (currentQ.id === 'quest_buildArmory') {
                 DS.show([{ text: 'Build the Armory to unlock weapon upgrades between runs. ⚔️', emotion: 'task' }], { horusPanel: true });
-              } else if (currentQ.id === 'quest_knowThyself') {
+              } else if (currentQ.id === 'quest_knowThyself' || currentQ.id === 'quest_buildProfile') {
                 DS.show([{ text: 'Build the Profile Hall and claim your daily rewards. 👑', emotion: 'task' }], { horusPanel: true });
-              } else if (currentQ.id === 'quest_secondRun') {
-                DS.show([{ text: 'Survive 3 waves in one run. You are ready. 🌊', emotion: 'task' }], { horusPanel: true });
-              } else if (currentQ.id === 'quest_spinOfFate') {
+              } else if (currentQ.id === 'quest_secondRun' || currentQ.id === 'quest_run2') {
+                DS.show([{ text: 'Kill 5 enemies in one run. You are ready. 🌊', emotion: 'task' }], { horusPanel: true });
+              } else if (currentQ.id === 'quest_spinOfFate' || currentQ.id === 'quest_buildSlotMachine') {
                 DS.show([{ text: 'Build the Shrine of Fate (Slot Machine) and test your luck. 🎰', emotion: 'task' }], { horusPanel: true });
               } else if (currentQ.id === 'quest_firstSpin') {
                 DS.show([{ text: 'Spin the Slot Machine once, then claim in the Quest Hall. 🎰', emotion: 'task' }], { horusPanel: true });
               } else if (currentQ.id === 'quest_buildSkillTree') {
                 DS.show([{ text: 'Build the Skill Tree and unlock your first permanent skill. 🌳', emotion: 'task' }], { horusPanel: true });
-              } else if (currentQ.id === 'quest_thirdRun') {
-                DS.show([{ text: 'Now push harder: reach wave 5 in a single run. ⚡', emotion: 'task' }], { horusPanel: true });
+              } else if (currentQ.id === 'quest_thirdRun' || currentQ.id === 'quest_run3') {
+                DS.show([{ text: 'Now push harder: kill 10 enemies in a single run. ⚡', emotion: 'task' }], { horusPanel: true });
               } else if (currentQ.id === 'firstRunDeath') {
                 DS.show([{ text: 'Head out and fight! Die once so I can... calibrate. ⚔️', emotion: 'task' }]);
-              } else if (currentQ.id === 'quest_dailyRoutine') {
-                DS.show([{ text: 'Hey dude! 🌊 Survive 2 minutes in your next run to unlock daily rewards!', emotion: 'task' }]);
+              } else if (currentQ.id === 'quest_run4') {
+                DS.show([{ text: 'Hey dude! 🌊 Survive 2 minutes in your next run to unlock Training Hall!', emotion: 'task' }]);
               } else if (currentQ.id === 'quest_harvester') {
                 DS.show([{ text: 'Reach Level 3 in a run to unlock the Forge, dude! 🔨', emotion: 'task' }]);
-              } else if (currentQ.id === 'quest_firstBlood') {
+              } else if (currentQ.id === 'quest_firstBlood' || currentQ.id === 'quest_run1') {
                 var w = (sd.resources && sd.resources.wood) || 0;
                 var s = (sd.resources && sd.resources.stone) || 0;
-                DS.show([{ text: 'Gather resources! 🪵 Wood: ' + w + '/30 🪨 Stone: ' + s + '/30 Then turn them in!', emotion: 'task' }]);
+                DS.show([{ text: 'Kill 3 enemies, then claim in the Quest Hall! 🪵 Wood: ' + w + ' 🪨 Stone: ' + s, emotion: 'task' }]);
               } else if (currentQ.id === 'quest_gainingStats') {
                 var kills = sd.totalKills || 0;
                 DS.show([{ text: 'Keep fighting! ⚔️ ' + kills + '/300 kills The Skill Tree awaits, dude! 🌳', emotion: 'task' }]);
@@ -7882,26 +7892,40 @@
     }
     var cq = tq.currentQuest;
     var storyText = '';
-    if (cq === 'quest_awaken') {
+    if (cq === 'quest_awaken' || cq === 'quest_gatherStrength') {
       storyText = '📜 The Awakening — Collect the nearby supply cache.';
     } else if (cq === 'quest_buildQuesthall') {
       storyText = '📜 Raise the Hall — Build the Quest Hall.';
-    } else if (cq === 'quest_firstBlood') {
-      storyText = '📜 First Blood — Complete one run and return.';
+    } else if (cq === 'quest_firstBlood' || cq === 'quest_run1') {
+      storyText = '📜 First Blood — Kill 3 enemies in one run.';
     } else if (cq === 'quest_buildArmory') {
       storyText = '📜 Forge Your Arsenal — Build the Armory.';
-    } else if (cq === 'quest_knowThyself') {
+    } else if (cq === 'quest_knowThyself' || cq === 'quest_buildProfile') {
       storyText = '📜 Know Thyself — Build the Profile Hall.';
-    } else if (cq === 'quest_secondRun') {
-      storyText = '📜 Prove Yourself — Survive 3 waves in one run.';
-    } else if (cq === 'quest_spinOfFate') {
+    } else if (cq === 'quest_secondRun' || cq === 'quest_run2') {
+      storyText = '📜 Prove Your Worth — Kill 5 enemies in one run.';
+    } else if (cq === 'quest_spinOfFate' || cq === 'quest_buildSlotMachine') {
       storyText = '📜 Shrine of Fate — Build the Slot Machine.';
-    } else if (cq === 'quest_firstSpin') {
-      storyText = '📜 Pull the Lever — Spin the Slot Machine once.';
     } else if (cq === 'quest_buildSkillTree') {
-      storyText = '📜 The Skill Within — Build Skill Tree + unlock 1 skill.';
-    } else if (cq === 'quest_thirdRun') {
-      storyText = '📜 The Real Test — Reach wave 5 in a run.';
+      storyText = '📜 The Skill Within — Build the Skill Tree.';
+    } else if (cq === 'quest_thirdRun' || cq === 'quest_run3') {
+      storyText = '📜 The Real Test — Kill 10 enemies in one run.';
+    } else if (cq === 'quest_buildClicker') {
+      storyText = '📜 Power the Camp — Build the Idle Fountain.';
+    } else if (cq === 'quest_buildCodex') {
+      storyText = '📜 The Codex Awakens — Build the Codex.';
+    } else if (cq === 'quest_run4') {
+      storyText = '📜 Endurance Trial — Survive 2 minutes in one run.';
+    } else if (cq === 'quest_buildTraining') {
+      storyText = '📜 Forge Your Body — Build the Training Hall.';
+    } else if (cq === 'quest_buildAchievements') {
+      storyText = '📜 Hall of Glory — Build the Achievement Hall.';
+    } else if (cq === 'quest_run5') {
+      storyText = '📜 Combat Mastery — Kill 15 enemies in one run.';
+    } else if (cq === 'quest_buildCompanion') {
+      storyText = '📜 A New Companion — Build the Companion House.';
+    } else if (cq === 'quest_buildForge') {
+      storyText = '📜 Master the Forge — Build the Forge.';
     } else if (cq === 'quest_findingAida') {
       storyText = '📜 Quest — Collect the sacred resource cache and build the Quest Hall.';
     } else if (cq === 'quest_craftAllTools') {
@@ -7932,10 +7956,24 @@
     if (tq) {
       const cq = tq.currentQuest;
       const questToBuilding = {
+        'quest_gatherStrength': null,
         'quest_awaken': null,
         'quest_findingAida': null,
         'quest_buildQuesthall': 'questMission',
+        'quest_run1': 'questMission',
         'quest_buildArmory': 'armory',
+        'quest_buildProfile': 'accountBuilding',
+        'quest_run2': 'questMission',
+        'quest_buildSlotMachine': 'slotMachine',
+        'quest_run3': 'questMission',
+        'quest_buildClicker': 'idleMenu',
+        'quest_buildCodex': 'codex',
+        'quest_run4': 'questMission',
+        'quest_buildTraining': 'trainingHall',
+        'quest_buildAchievements': 'achievementBuilding',
+        'quest_run5': 'questMission',
+        'quest_buildCompanion': 'companionHouse',
+        'quest_buildForge': 'forge',
         'quest_knowThyself': 'accountBuilding',
         'quest_spinOfFate': 'slotMachine',
         'quest_firstSpin': 'slotMachine',
@@ -7950,7 +7988,7 @@
       const targetId = cq ? questToBuilding[cq] : null;
       if (targetId) {
         targetDef = BUILDING_DEFS.find(function(d) { return d.id === targetId; });
-      } else if (cq === 'quest_findingAida' || cq === 'quest_awaken') {
+      } else if (cq === 'quest_findingAida' || cq === 'quest_awaken' || cq === 'quest_gatherStrength') {
         targetDef = _introResourceDrop ? { x: 8, z: 0 } : BUILDING_DEFS.find(function(d) { return d.id === 'questMission'; });
       }
     }

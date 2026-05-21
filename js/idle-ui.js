@@ -156,6 +156,8 @@ function renderClickerFountain(saveData, container) {
     fountain.classList.add('idle-fountain-pop');
     goldDisplay.textContent = '💰 Gold: ' + (saveData.gold || 0);
     essenceDisplay.textContent = '✨ Essence: ' + (clicker.essence || 0).toFixed(1);
+    woodDisplay.textContent = '🪵 Wood: ' + (((saveData.resources || {}).wood) || 0);
+    stoneDisplay.textContent = '🪨 Stone: ' + (((saveData.resources || {}).stone) || 0);
     comboDisplay.textContent   = result.combo > 0 ? '🔥 Combo x' + (result.combo + 1) : '';
     if (result.isCrit) {
       comboDisplay.textContent += '  💥 CRIT x' + result.critMult;
@@ -167,10 +169,19 @@ function renderClickerFountain(saveData, container) {
 
   var goldDisplay    = _el('p', 'idle-gold-text',  null, '💰 Gold: ' + (saveData.gold || 0));
   var essenceDisplay = _el('p', 'idle-blue-text',  null, '✨ Essence: ' + (clicker.essence || 0).toFixed(1));
+  var woodDisplay    = _el('p', null,              null, '🪵 Wood: ' + (((saveData.resources || {}).wood) || 0));
+  var stoneDisplay   = _el('p', null,              null, '🪨 Stone: ' + (((saveData.resources || {}).stone) || 0));
   var comboDisplay   = _el('p', 'idle-combo-text', null, '');
   var critDisplay    = _el('p', 'idle-muted',      'font-size:12px;', '🎯 Crit streak: ' + (clicker.critStreak || 0));
+  var perGainDisplay = _el('p', 'idle-muted',      'font-size:12px;', 'Per click: +1 🪵 +1 🪨 +Gold +Essence');
+  var acLevelNow     = clicker.autoClickerLevel || 1;
+  var tickGainDisplay = _el('p', 'idle-muted',     'font-size:12px;', 'Passive tick: +' + acLevelNow + ' 🪵 +' + acLevelNow + ' 🪨 (+Gold/+Essence with auto-clicker)');
   container.appendChild(goldDisplay);
   container.appendChild(essenceDisplay);
+  container.appendChild(woodDisplay);
+  container.appendChild(stoneDisplay);
+  container.appendChild(perGainDisplay);
+  container.appendChild(tickGainDisplay);
   container.appendChild(comboDisplay);
   container.appendChild(critDisplay);
 
