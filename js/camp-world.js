@@ -1883,8 +1883,8 @@
     if (_introResourceDrop && _campScene) _campScene.remove(_introResourceDrop);
     _introResourceDrop = null;
     if (typeof showStatusMessage === 'function') showStatusMessage('Resources collected — build the Quest Hall!', 3200);
-    if (saveData.tutorialQuests &&
-        saveData.tutorialQuests.currentQuest === 'quest_gatherStrength') {
+    if (sd.tutorialQuests &&
+        sd.tutorialQuests.currentQuest === 'quest_gatherStrength') {
       if (typeof progressTutorialQuest === 'function')
         progressTutorialQuest('quest_gatherStrength', true);
       setTimeout(function() {
