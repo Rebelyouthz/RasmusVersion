@@ -1949,18 +1949,34 @@
       quest_thirdRun: {
         id: 'quest_thirdRun',
         name: 'The Real Test',
-        description: 'Complete a run and reach wave 5.',
-        objectives: [{ type: 'survive_waves', count: 5 }],
+        description: 'Survive a run and kill at least 10 enemies.',
+        objectives: [{ type: 'kill_enemies', count: 10 }],
         claim: 'Quest Hall',
         rewardGold: 300,
-        rewardResources: { wood: 60, stone: 60 },
+        rewardResources: { wood: 80, stone: 80 },
         rewardSkillPoints: 1,
         rewardAttributePoints: 1,
         rewardAccountXP: 100,
         triggerOnDeath: true,
-        message: 'You have weapons, skills, and fortune on your side.\nNow push further. Reach wave 5. Show the enemies what you\'ve built.',
-        nextQuest: 'quest_harvester',
+        message: 'Excellent. Now unlock the Fountain to generate resources automatically.',
+        nextQuest: 'quest_buildClickerMenu',
         conditions: ['quest_buildSkillTree']
+      },
+
+      // === Unlock the Idle Fountain (Clicker) ===
+      quest_buildClickerMenu: {
+        id: 'quest_buildClickerMenu',
+        name: 'Power the Camp',
+        description: 'Build the Idle Fountain to generate gold and essence automatically.',
+        objectives: [{ type: 'build', building: 'idleMenu' }],
+        claim: 'Quest Hall',
+        rewardGold: 200,
+        rewardResources: { wood: 100, stone: 100 },
+        rewardAccountXP: 75,
+        unlockBuildingOnActivation: 'idleMenu',
+        message: 'The Fountain pulses with energy! Tap it to harvest gold and essence. Resources now flow automatically.',
+        nextQuest: 'quest_harvester',
+        conditions: ['quest_thirdRun']
       },
 
       // === QUEST 2: The Harvester — Reach Level 3 ===
@@ -3049,6 +3065,7 @@
       accountBuilding:     { wood: 4, stone: 4 },
       slotMachine:         { wood: 5, stone: 5 },
       skillTree:           { wood: 6, stone: 6 },
+      idleMenu:            { wood: 10, stone: 10 },
       forge:               { wood: 7, stone: 7 },
       trainingHall:        { wood: 8, stone: 8 },
       companionHouse:      { wood: 10, stone: 10 },

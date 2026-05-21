@@ -143,12 +143,26 @@
         if (currentQuest.id === 'quest_harvester' && playerStats.lvl >= 3) {
           progressTutorialQuest('quest_harvester', true);
         }
-        // Step 4: First Blood — Complete one run and return to camp
-        if (currentQuest.id === 'quest_firstBlood') {
+        // Step 4: First Blood — Complete one run with at least 3 kills
+        if (currentQuest.id === 'quest_firstBlood' && saveData.tutorialQuests.killsThisRun >= 3) {
           progressTutorialQuest('quest_firstBlood', true);
           if (!saveData._htip_quest_firstBlood_return && window.HorusPanel && typeof window.HorusPanel.show === 'function') {
             saveData._htip_quest_firstBlood_return = true;
-            window.HorusPanel.show('You returned. Good. Every run makes you stronger.\nClaim your reward in the Quest Hall.');
+            window.HorusPanel.show('3 enemies defeated! Head to the Quest Hall to claim your reward.');
+          }
+        }
+        // Second run — survive and kill at least 5 enemies
+        if (currentQuest.id === 'quest_secondRun' && saveData.tutorialQuests.killsThisRun >= 5) {
+          progressTutorialQuest('quest_secondRun', true);
+          if (window.HorusPanel && typeof window.HorusPanel.show === 'function') {
+            window.HorusPanel.show('Well fought! Return to the Quest Hall to claim your reward.');
+          }
+        }
+        // Third run — survive and kill at least 10 enemies
+        if (currentQuest.id === 'quest_thirdRun' && saveData.tutorialQuests.killsThisRun >= 10) {
+          progressTutorialQuest('quest_thirdRun', true);
+          if (window.HorusPanel && typeof window.HorusPanel.show === 'function') {
+            window.HorusPanel.show('10 enemies down! Claim your reward in the Quest Hall.');
           }
         }
         // Step 5: Gaining Stats — 300 total kills
@@ -750,7 +764,11 @@
       // Reset advanced blood particle system
       if (window.BloodSystem) window.BloodSystem.reset();
       // Reset BloodSimulatorV21 (V21 is the active blood system; clear particles between runs)
-      if (window.BloodSimulatorV21 && typeof window.BloodSimulatorV21.reset === 'function') window.BloodSimulatorV21.reset();
+      if (window.BloodSimulatorV21 && typeof window.BloodSimulatorV21.reset === 'function') {
+        window.BloodSimulatorV21.reset();
+        // Clear the scene reference so init() runs fresh on the next run
+        window.BloodSimulatorV21._initScene = null;
+      }
       if (window.BloodV2 && typeof window.BloodV2.reset === 'function') window.BloodV2.reset();
       
       // Reset lava timers

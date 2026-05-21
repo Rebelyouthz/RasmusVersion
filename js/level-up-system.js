@@ -506,6 +506,7 @@ window.spawnBossChest = function(x, z) {
   opacity: 0;
   transform: translateY(40px) scale(0.88);
   transition: transform 0.18s cubic-bezier(0.22,1,0.36,1), box-shadow 0.15s, opacity 0.22s;
+  will-change: opacity, transform;
   font-family: 'Bangers', cursive;
   letter-spacing: 1px;
   flex-shrink: 0;
@@ -1714,8 +1715,11 @@ window.spawnBossChest = function(x, z) {
           const desc = document.createElement('div'); desc.className = 'uc-desc'; desc.textContent = u.description || u.desc || '';
           const bottomBar = document.createElement('div'); bottomBar.className = 'uc-bottom-bar';
           card.append(horus, rarityLabel, divider, icon, name, desc, bottomBar);
-          card.style.opacity = '0';
-          card.style.transform = 'translateY(40px) scale(0.88)';
+          // Do NOT set inline opacity/transform — let CSS defaults apply so
+          // card-visible class can override them via the transition rule.
+          // (Inline styles have higher specificity than class rules, so setting
+          //  card.style.opacity = '0' would prevent .card-visible { opacity:1 }
+          //  from ever taking effect.)
 
           card.addEventListener('click', () => {
             const cards = Array.from(list.querySelectorAll('.upgrade-card'));
@@ -1788,12 +1792,15 @@ window.spawnBossChest = function(x, z) {
         modal.style.animation = 'none';
         void modal.offsetHeight; // force reflow to commit 'none' before re-adding
         modal.style.animation = 'wallFadeIn 0.32s cubic-bezier(0.22,1,0.36,1) forwards';
+        // Trigger card entrance animations now that modal is visible.
+        // The 50 ms offset lets the wallFadeIn animation start first so cards
+        // slide in against the already-faded background.
         if (upgradeList) {
           const cards = upgradeList.querySelectorAll('.upgrade-card');
-          cards.forEach((card, i) => {
+          cards.forEach((_card, _i) => {
             setTimeout(() => {
-              requestAnimationFrame(() => card.classList.add('card-visible'));
-            }, i * 80);
+              requestAnimationFrame(() => _card.classList.add('card-visible'));
+            }, _i * 80 + 50);
           });
         }
 
