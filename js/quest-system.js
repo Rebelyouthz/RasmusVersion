@@ -838,6 +838,14 @@
 
       function _renderChallengesTab(container) {
         if (!saveData.questHallChallenges) saveData.questHallChallenges = {};
+        if (!saveData._htip_ch_tab) {
+          saveData._htip_ch_tab = true; saveSaveData();
+          setTimeout(function() {
+            if (window.HorusPanel) window.HorusPanel.show(
+              '⚔️ CHALLENGES\n\nChallenges are repeatable goals that refresh over time.\nComplete them repeatedly to earn Gold, XP and Skill Points.\n\nUnlike Achievements, challenges RESET so you can keep earning!'
+            );
+          }, 400);
+        }
         let html = '<div style="font-family:\'Bangers\',cursive;font-size:17px;color:#8855ff;letter-spacing:2px;margin-bottom:4px;">⚔️ RECURRING MILESTONES</div>';
         html += '<div style="font-size:11px;color:#555;margin-bottom:14px;letter-spacing:1px;">Complete milestones to earn Account XP and Gold.</div>';
 
@@ -919,6 +927,14 @@
 
       function _renderAchievementsTab(container) {
         if (!saveData.questHallAchievements) saveData.questHallAchievements = {};
+        if (!saveData._htip_ach_tab) {
+          saveData._htip_ach_tab = true; saveSaveData();
+          setTimeout(function() {
+            if (window.HorusPanel) window.HorusPanel.show(
+              '🏆 ACHIEVEMENTS\n\nComplete permanent milestones to earn one-time rewards.\nThey track across ALL your runs forever.\n\nClick any completed achievement to claim its reward!'
+            );
+          }, 400);
+        }
         let html = '<div style="font-family:\'Bangers\',cursive;font-size:17px;color:#aa44ff;letter-spacing:2px;margin-bottom:4px;">🏆 TIERED ACHIEVEMENTS</div>';
         html += '<div style="font-size:11px;color:#555;margin-bottom:14px;letter-spacing:1px;">Unlock achievements to earn Account XP and 🎰 Slot Tokens.</div>';
 

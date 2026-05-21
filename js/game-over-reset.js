@@ -143,26 +143,39 @@
         if (currentQuest.id === 'quest_harvester' && playerStats.lvl >= 3) {
           progressTutorialQuest('quest_harvester', true);
         }
-        // Step 4: First Blood — Complete one run with at least 3 kills
-        if (currentQuest.id === 'quest_firstBlood' && saveData.tutorialQuests.killsThisRun >= 3) {
-          progressTutorialQuest('quest_firstBlood', true);
-          if (!saveData._htip_quest_firstBlood_return && window.HorusPanel && typeof window.HorusPanel.show === 'function') {
-            saveData._htip_quest_firstBlood_return = true;
-            window.HorusPanel.show('3 enemies defeated! Head to the Quest Hall to claim your reward.');
+        if (currentQuest.id === 'quest_run1' && saveData.tutorialQuests.killsThisRun >= 3) {
+          progressTutorialQuest('quest_run1', true);
+          if (!saveData._htip_run1_done && window.HorusPanel) {
+            saveData._htip_run1_done = true;
+            window.HorusPanel.show('3 enemies defeated!\nReturn to the Quest Hall to claim your reward.');
           }
         }
-        // Second run — survive and kill at least 5 enemies
-        if (currentQuest.id === 'quest_secondRun' && saveData.tutorialQuests.killsThisRun >= 5) {
-          progressTutorialQuest('quest_secondRun', true);
-          if (window.HorusPanel && typeof window.HorusPanel.show === 'function') {
-            window.HorusPanel.show('Well fought! Return to the Quest Hall to claim your reward.');
+        if (currentQuest.id === 'quest_run2' && saveData.tutorialQuests.killsThisRun >= 5) {
+          progressTutorialQuest('quest_run2', true);
+          if (!saveData._htip_run2_done && window.HorusPanel) {
+            saveData._htip_run2_done = true;
+            window.HorusPanel.show('5 kills! Return to the Quest Hall to claim your reward.');
           }
         }
-        // Third run — survive and kill at least 10 enemies
-        if (currentQuest.id === 'quest_thirdRun' && saveData.tutorialQuests.killsThisRun >= 10) {
-          progressTutorialQuest('quest_thirdRun', true);
-          if (window.HorusPanel && typeof window.HorusPanel.show === 'function') {
+        if (currentQuest.id === 'quest_run3' && saveData.tutorialQuests.killsThisRun >= 10) {
+          progressTutorialQuest('quest_run3', true);
+          if (!saveData._htip_run3_done && window.HorusPanel) {
+            saveData._htip_run3_done = true;
             window.HorusPanel.show('10 enemies down! Claim your reward in the Quest Hall.');
+          }
+        }
+        if (currentQuest.id === 'quest_run4' && survivalTime >= 120) {
+          progressTutorialQuest('quest_run4', true);
+          if (!saveData._htip_run4_done && window.HorusPanel) {
+            saveData._htip_run4_done = true;
+            window.HorusPanel.show('2 minutes survived! Claim your reward in the Quest Hall.');
+          }
+        }
+        if (currentQuest.id === 'quest_run5' && saveData.tutorialQuests.killsThisRun >= 15) {
+          progressTutorialQuest('quest_run5', true);
+          if (!saveData._htip_run5_done && window.HorusPanel) {
+            saveData._htip_run5_done = true;
+            window.HorusPanel.show('15 kills! You are becoming unstoppable. Claim your reward.');
           }
         }
         // Step 5: Gaining Stats — 300 total kills

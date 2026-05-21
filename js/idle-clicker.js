@@ -108,9 +108,15 @@ function processClick(saveData, ascensionBonuses) {
   );
   var essenceGainMult = bonuses.essenceBonus || 1;
   var essenceEarned = Math.round(CLICKER_CONFIG.BASE_CLICK_ESSENCE * powerMult * comboMult * critMult * essenceGainMult * 100) / 100;
+  var woodEarned = 1;
+  var stoneEarned = 1;
 
   clicker.essence = (clicker.essence || 0) + essenceEarned;
   saveData.essence = (saveData.essence || 0) + essenceEarned;
+  saveData.resources = saveData.resources || {};
+  saveData.resources.wood = (saveData.resources.wood || 0) + woodEarned;
+  saveData.resources.stone = (saveData.resources.stone || 0) + stoneEarned;
+  if (window.GameHarvesting && window.GameHarvesting.refreshHUD) window.GameHarvesting.refreshHUD();
   clicker.totalClicks = (clicker.totalClicks || 0) + 1;
   clicker.totalEssenceEarned = (clicker.totalEssenceEarned || 0) + essenceEarned;
   saveData.clicker = clicker;
@@ -118,6 +124,8 @@ function processClick(saveData, ascensionBonuses) {
   return {
     goldEarned: goldEarned,
     essenceEarned: essenceEarned,
+    woodEarned: woodEarned,
+    stoneEarned: stoneEarned,
     isCrit: isCrit,
     critMult: isCrit ? critMult : null,
     combo: clicker.combo,
@@ -153,11 +161,18 @@ function upgradeAutoClicker(saveData) {
 
 function processAutoClicks(saveData, elapsedMs, ascensionBonuses) {
   var clicker = saveData.clicker || getClickerDefaults();
+  var upgradeLevel = clicker.autoClickerLevel || 1;
+  var woodEarned = 1 * upgradeLevel;
+  var stoneEarned = 1 * upgradeLevel;
+  saveData.resources = saveData.resources || {};
+  saveData.resources.wood = (saveData.resources.wood || 0) + woodEarned;
+  saveData.resources.stone = (saveData.resources.stone || 0) + stoneEarned;
+  if (window.GameHarvesting && window.GameHarvesting.refreshHUD) window.GameHarvesting.refreshHUD();
   var cps = getAutoClickerCPS(clicker);
   if (cps <= 0) {
     // Still tick the advanced clicker
     if (window.AdvancedClicker) window.AdvancedClicker.tick(saveData, elapsedMs);
-    return { goldEarned: 0, essenceEarned: 0, clicks: 0 };
+    return { goldEarned: 0, essenceEarned: 0, woodEarned: woodEarned, stoneEarned: stoneEarned, clicks: 0 };
   }
 
   var clicks = cps * (elapsedMs / 1000);
@@ -177,7 +192,7 @@ function processAutoClicks(saveData, elapsedMs, ascensionBonuses) {
   // Also tick advanced clicker
   if (window.AdvancedClicker) window.AdvancedClicker.tick(saveData, elapsedMs);
 
-  return { goldEarned: goldEarned, essenceEarned: essenceEarned, clicks: clicks };
+  return { goldEarned: goldEarned, essenceEarned: essenceEarned, woodEarned: woodEarned, stoneEarned: stoneEarned, clicks: clicks };
 }
 
 window.GameClicker = {
