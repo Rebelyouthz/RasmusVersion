@@ -1874,12 +1874,7 @@
   function _collectIntroResources() {
     const sd = (typeof saveData !== 'undefined') ? saveData : _saveData;
     if (!sd || sd._introResourcesDropped) return;
-    if (!sd.resources) sd.resources = {};
-    sd.resources.wood = (sd.resources.wood || 0) + 60;
-    sd.resources.stone = (sd.resources.stone || 0) + 60;
-    sd.resources.gold = (sd.resources.gold || 0) + 200;
     sd._introResourcesDropped = true;
-    if (typeof saveSaveData === 'function') saveSaveData();
     if (_introResourceDrop && _campScene) _campScene.remove(_introResourceDrop);
     _introResourceDrop = null;
     if (typeof showStatusMessage === 'function') showStatusMessage('Resources collected — build the Quest Hall!', 3200);
@@ -1894,6 +1889,8 @@
           );
         }
       }, 600);
+    } else {
+      if (typeof saveSaveData === 'function') saveSaveData();
     }
   }
 

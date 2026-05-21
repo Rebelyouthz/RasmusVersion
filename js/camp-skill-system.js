@@ -2967,7 +2967,7 @@
       }
     };
 
-    const buildingQuestUnlockMap = {
+    const buildingQuestUnlockMap = new Proxy({
       // === Tutorial progression chain ===
       'questMission': 'quest_buildQuesthall',
       'armory': 'quest_buildArmory',
@@ -2989,7 +2989,6 @@
       'tavern': 'quest8_kill10',
       'shop': 'quest9_activateCompanion',
       'prestige': 'quest10_kill15',
-      'codex': 'quest17_visitCodex',
       'campBoard': 'quest36_blackMarket',
       'trashRecycle': 'quest26_kill20',
       'tempShop': 'quest28_survive3min',
@@ -2999,7 +2998,19 @@
       'prismReliquary': 'quest35_crystallizedTear',
       // === The Dropplet Shop — unlocks alongside the Prism Reliquary (late-game) ===
       'droppletShop': 'quest35_crystallizedTear'
-    };
+    }, {
+      get(target, prop) {
+        if (prop === 'codex') {
+          const tq = typeof saveData !== 'undefined' && saveData && saveData.tutorialQuests;
+          const isTutorial = tq && (
+            tq.currentQuest === 'quest_buildCodex' ||
+            (Array.isArray(tq.readyToClaim) && tq.readyToClaim.includes('quest_buildCodex'))
+          );
+          return isTutorial ? 'quest_buildCodex' : 'quest17_visitCodex';
+        }
+        return target[prop];
+      }
+    });
     
     // Get current quest object
     function getCurrentQuest() {
