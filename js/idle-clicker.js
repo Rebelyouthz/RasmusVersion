@@ -161,13 +161,18 @@ function upgradeAutoClicker(saveData) {
 
 function processAutoClicks(saveData, elapsedMs, ascensionBonuses) {
   var clicker = saveData.clicker || getClickerDefaults();
-  var upgradeLevel = clicker.autoClickerLevel || 1;
-  var woodEarned = 1 * upgradeLevel;
-  var stoneEarned = 1 * upgradeLevel;
+  var upgradeLevel = clicker.autoClickerLevel || 0;
+  var hasIdleFountain = !!(saveData.campBuildings && saveData.campBuildings.idleMenu && saveData.campBuildings.idleMenu.level > 0);
+  var woodEarned = 0;
+  var stoneEarned = 0;
   saveData.resources = saveData.resources || {};
-  saveData.resources.wood = (saveData.resources.wood || 0) + woodEarned;
-  saveData.resources.stone = (saveData.resources.stone || 0) + stoneEarned;
-  if (window.GameHarvesting && window.GameHarvesting.refreshHUD) window.GameHarvesting.refreshHUD();
+  if (hasIdleFountain && upgradeLevel > 0) {
+    woodEarned = 1 * upgradeLevel;
+    stoneEarned = 1 * upgradeLevel;
+    saveData.resources.wood = (saveData.resources.wood || 0) + woodEarned;
+    saveData.resources.stone = (saveData.resources.stone || 0) + stoneEarned;
+    if (window.GameHarvesting && window.GameHarvesting.refreshHUD) window.GameHarvesting.refreshHUD();
+  }
   var cps = getAutoClickerCPS(clicker);
   if (cps <= 0) {
     // Still tick the advanced clicker
