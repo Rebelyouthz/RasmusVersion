@@ -490,49 +490,110 @@ window.spawnBossChest = function(x, z) {
       const st = document.createElement('style');
       st.id = 'horus-levelup-style';
       st.textContent = `.upgrade-card {
-  width: 160px;
-  min-height: 220px;
-  background: linear-gradient(160deg, #0a0a0a 0%, #111100 60%, #1a1400 100%);
-  border: 2px solid #C9A227;
-  border-radius: 10px;
-  box-shadow: 0 0 18px rgba(201,162,39,0.35), inset 0 0 12px rgba(0,0,0,0.8);
+  width: 170px;
+  min-height: 240px;
+  position: relative;
+  cursor: pointer;
+  transform-style: preserve-3d;
+  perspective: 1000px;
+  flex-shrink: 0;
+  transform: translateY(60px) rotateY(180deg);
+  opacity: 0;
+  transition: transform 0.5s cubic-bezier(0.22,1,0.36,1), opacity 0.3s;
+}
+.upgrade-card.card-visible {
+  transform: translateY(0) rotateY(0deg);
+  opacity: 1;
+}
+.upgrade-card:hover {
+  transform: translateY(-8px) rotateY(0deg) scale(1.06);
+}
+.uc-inner {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+}
+.uc-front, .uc-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  border-radius: 12px;
+  padding: 14px 12px;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  padding: 12px 10px 14px;
-  cursor: pointer;
-  position: relative;
-  opacity: 0;
-  transform: translateY(40px) scale(0.88);
-  transition: transform 0.18s cubic-bezier(0.22,1,0.36,1), box-shadow 0.15s, opacity 0.22s;
-  will-change: opacity, transform;
-  font-family: 'Bangers', cursive;
-  letter-spacing: 1px;
-  flex-shrink: 0;
-  transform-style: preserve-3d;
-  perspective: 900px;
 }
-.upgrade-card.card-visible { opacity: 1; transform: translateY(0) scale(1); }
-.upgrade-card:hover { transform: translateY(-6px) scale(1.05); box-shadow: 0 0 36px rgba(201,162,39,0.75), inset 0 0 16px rgba(201,162,39,0.12); }
-.upgrade-card.rarity-common{ border-color:#888; box-shadow:0 0 10px rgba(136,136,136,0.3); }
-.upgrade-card.rarity-rare{ border-color:#4a9eff; box-shadow:0 0 18px rgba(74,158,255,0.4); }
-.upgrade-card.rarity-epic{ border-color:#cc44ff; box-shadow:0 0 22px rgba(204,68,255,0.45); }
-.upgrade-card.rarity-legendary { border-color:#ff8c00; box-shadow:0 0 30px rgba(255,140,0,0.6); background:linear-gradient(160deg,#0f0800 0%,#1a0f00 60%,#251800 100%); }
-.upgrade-card.rarity-mythical { border-color:#ff44cc; box-shadow:0 0 36px rgba(255,68,204,0.7); background:linear-gradient(160deg,#100010 0%,#1a0018 60%,#200020 100%); }
-.upgrade-card.weapon { border-top: 3px solid #ff8c00; }
-.upgrade-card.class { border-top: 3px solid #cc44ff; }
-.upgrade-card.perk { border-top: 3px solid #00ccff; }
-.uc-horus{ font-size:38px; line-height:1; margin-bottom:6px; filter:drop-shadow(0 0 8px #C9A227); }
-.uc-rarity-label{ font-size:9px; letter-spacing:3px; text-transform:uppercase; color:#C9A227; margin-bottom:8px; opacity:0.85; }
-.uc-icon{ font-size:28px; margin-bottom:6px; filter:drop-shadow(0 0 6px rgba(255,255,255,0.3)); }
-.uc-name{ font-size:17px; color:#fff; text-align:center; line-height:1.2; margin-bottom:6px; text-shadow:0 0 8px #C9A227; }
-.uc-desc{ font-size:11px; color:#bbb; text-align:center; line-height:1.5; font-family:'Segoe UI',sans-serif; font-weight:normal; letter-spacing:0; flex-grow:1; }
-.uc-divider{ width:80%; height:1px; background:linear-gradient(90deg, transparent, #C9A227, transparent); margin:7px 0; opacity:0.5; }
-.uc-bottom-bar{ width:100%; height:3px; border-radius:2px; margin-top:10px; background:#C9A227; opacity:0.4; }
-.upgrade-card.selected-card { animation: card-select-slam 0.45s cubic-bezier(0.15,1.2,0.32,1) forwards; pointer-events:none; }
-.upgrade-card.reject-card { transition: transform 0.38s cubic-bezier(0.55,0,1,0.45), opacity 0.38s ease-in; pointer-events:none; }
-@keyframes card-select-slam { 0%{transform:translateY(0) scale(1) rotateX(0deg);} 40%{transform:translateY(-34px) scale(1.16) rotateX(14deg);box-shadow:0 0 60px #FFD700;} 72%{transform:translateY(-18px) scale(1.08) rotateX(0deg);} 100%{transform:translateY(-6px) scale(0) rotate(15deg);opacity:0;} }
+.uc-back {
+  transform: rotateY(180deg);
+  background: linear-gradient(160deg, #0a0a14 0%, #0d0018 60%, #12001e 100%);
+  border: 2px solid #C9A227;
+  justify-content: center;
+}
+.uc-back-horus {
+  font-size: 80px;
+  line-height: 1;
+  filter: drop-shadow(0 0 18px #C9A227) drop-shadow(0 0 40px rgba(201,162,39,0.6));
+  animation: horus-pulse 2s ease-in-out infinite;
+}
+@keyframes horus-pulse {
+  0%,100% { filter: drop-shadow(0 0 14px #C9A227); }
+  50% { filter: drop-shadow(0 0 28px #C9A227) drop-shadow(0 0 50px #ff8000); }
+}
+.uc-front {
+  background: linear-gradient(160deg, #0a0a0a 0%, #111100 60%, #1a1400 100%);
+  border: 2px solid #C9A227;
+  justify-content: flex-start;
+}
+.upgrade-card.rarity-common .uc-front { border-color: #888; background: linear-gradient(160deg,#0a0a0a,#111); box-shadow: 0 0 10px rgba(136,136,136,0.3); }
+.upgrade-card.rarity-uncommon .uc-front { border-color: #1eff00; background: linear-gradient(160deg,#050f05,#0a1a0a); box-shadow: 0 0 14px rgba(30,255,0,0.35); }
+.upgrade-card.rarity-rare .uc-front { border-color: #0070dd; background: linear-gradient(160deg,#03050f,#060a1a); box-shadow: 0 0 18px rgba(0,112,221,0.4); }
+.upgrade-card.rarity-epic .uc-front { border-color: #a335ee; background: linear-gradient(160deg,#0a0310,#12021c); box-shadow: 0 0 22px rgba(163,53,238,0.45); }
+.upgrade-card.rarity-legendary .uc-front { border-color: #ff8000; background: linear-gradient(160deg,#100600,#1c0a00,#240e00); box-shadow: 0 0 30px rgba(255,128,0,0.6); }
+.upgrade-card.rarity-mythical .uc-front { border-color: #e6200a; background: linear-gradient(160deg,#150000,#200005,#2a000a); box-shadow: 0 0 36px rgba(230,32,10,0.7); animation: mythic-border-pulse 1.5s ease-in-out infinite; }
+@keyframes mythic-border-pulse {
+  0%,100% { box-shadow: 0 0 30px rgba(230,32,10,0.7); }
+  50% { box-shadow: 0 0 60px rgba(230,32,10,1), 0 0 100px rgba(255,50,0,0.5); }
+}
+.upgrade-card.rarity-legendary .uc-back { border-color: #ff8000; box-shadow: 0 0 20px rgba(255,128,0,0.5); }
+.upgrade-card.rarity-mythical .uc-back  { border-color: #e6200a; box-shadow: 0 0 30px rgba(230,32,10,0.7); }
+.upgrade-card.rarity-epic .uc-back      { border-color: #a335ee; }
+.upgrade-card.rarity-rare .uc-back      { border-color: #0070dd; }
+.uc-hold-ring {
+  position: absolute;
+  top: -6px; left: -6px;
+  width: calc(100% + 12px);
+  height: calc(100% + 12px);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.upgrade-card.holding .uc-hold-ring { opacity: 1; }
+.uc-hold-ring circle {
+  fill: none;
+  stroke: #FFD700;
+  stroke-width: 3;
+  stroke-dasharray: 0;
+  stroke-dashoffset: 0;
+  transition: none;
+  filter: drop-shadow(0 0 6px #FFD700);
+}
+.uc-rarity-label { font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: #C9A227; margin-bottom: 6px; opacity: 0.85; font-family: 'Segoe UI', sans-serif; }
+.uc-icon { font-size: 32px; margin-bottom: 4px; filter: drop-shadow(0 0 8px rgba(255,255,255,0.4)); }
+.uc-name { font-size: 16px; color: #fff; text-align: center; line-height: 1.2; margin-bottom: 6px; text-shadow: 0 0 8px #C9A227; font-family: 'Bangers', cursive; letter-spacing: 1px; }
+.uc-divider { width: 80%; height: 1px; background: linear-gradient(90deg, transparent, #C9A227, transparent); margin: 5px 0; opacity: 0.5; }
+.uc-desc { font-size: 11px; color: #bbb; text-align: center; line-height: 1.5; font-family: 'Segoe UI', sans-serif; flex-grow: 1; }
+.uc-stats { font-size: 12px; color: #FFD700; text-align: center; margin-top: 8px; font-family: 'Segoe UI', sans-serif; font-weight: bold; text-shadow: 0 0 8px rgba(255,215,0,0.6); }
+.uc-hold-hint { font-size: 9px; color: rgba(255,255,255,0.4); text-align: center; margin-top: 4px; font-family: 'Segoe UI', sans-serif; letter-spacing: 1px; }
+.upgrade-card.selected-card { animation: card-select-slam 0.45s cubic-bezier(0.15,1.2,0.32,1) forwards; pointer-events: none; }
+@keyframes card-select-slam {
+  0%   { transform: translateY(0) scale(1) rotateY(0deg); }
+  40%  { transform: translateY(-40px) scale(1.2) rotateY(0deg); box-shadow: 0 0 80px #FFD700; }
+  70%  { transform: translateY(-20px) scale(1.15) rotateY(0deg); }
+  100% { transform: translateY(0) scale(0) rotateY(0deg); opacity: 0; }
+}
 #levelup-vortex{ position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:0; height:0; border-radius:50%; background:radial-gradient(circle, rgba(0,0,0,0.96) 0%, transparent 70%); pointer-events:none; z-index:9999; transition:width 0.42s ease-in, height 0.42s ease-in; }`;
       document.head.appendChild(st);
     }
@@ -1703,54 +1764,98 @@ window.spawnBossChest = function(x, z) {
           else if (u.id && (u.id.includes('_up') || u.id.includes('_evo') || u.id.startsWith('wup_') || u.id.includes('gun_') || u.id.includes('sword_') || u.id.includes('aura_'))) card.classList.add('weapon');
           if (!Array.from(card.classList).some(c => c.startsWith('rarity-'))) card.classList.add('rarity-common');
 
-          const horus = document.createElement('div');
-          horus.className = 'uc-horus';
-          horus.textContent = '𓂀';
-          const rarityLabel = document.createElement('div');
-          rarityLabel.className = 'uc-rarity-label';
+          const inner = document.createElement('div');
+          inner.className = 'uc-inner';
+          const back = document.createElement('div');
+          back.className = 'uc-back';
+          const backHorus = document.createElement('div');
+          backHorus.className = 'uc-back-horus';
+          backHorus.textContent = '𓂀';
+          back.appendChild(backHorus);
+          const front = document.createElement('div');
+          front.className = 'uc-front';
+          const rarityLabel = document.createElement('div'); rarityLabel.className = 'uc-rarity-label';
           rarityLabel.textContent = (u._rarity && u._rarity.label) ? u._rarity.label : _rarityLabelFromCard(card);
+          const iconEl = document.createElement('div'); iconEl.className = 'uc-icon'; iconEl.textContent = u.icon || '⚡';
+          const nameEl = document.createElement('div'); nameEl.className = 'uc-name'; nameEl.textContent = u.name || u.title || 'UPGRADE';
           const divider = document.createElement('div'); divider.className = 'uc-divider';
-          const icon = document.createElement('div'); icon.className = 'uc-icon'; icon.textContent = u.icon || '⚡';
-          const name = document.createElement('div'); name.className = 'uc-name'; name.textContent = u.name || u.title || 'UPGRADE';
-          const desc = document.createElement('div'); desc.className = 'uc-desc'; desc.textContent = u.description || u.desc || '';
-          const bottomBar = document.createElement('div'); bottomBar.className = 'uc-bottom-bar';
-          card.append(horus, rarityLabel, divider, icon, name, desc, bottomBar);
-          // Do NOT set inline opacity/transform — let CSS defaults apply so
-          // card-visible class can override them via the transition rule.
-          // (Inline styles have higher specificity than class rules, so setting
-          //  card.style.opacity = '0' would prevent .card-visible { opacity:1 }
-          //  from ever taking effect.)
+          const descEl = document.createElement('div'); descEl.className = 'uc-desc'; descEl.textContent = u.description || u.desc || '';
+          const statsEl = document.createElement('div'); statsEl.className = 'uc-stats';
+          var _statMatch = (u.desc || u.description || '').match(/[+\-][\d\.]+[%\s]/);
+          statsEl.textContent = _statMatch ? _statMatch[0].trim() : '';
+          const holdHint = document.createElement('div'); holdHint.className = 'uc-hold-hint'; holdHint.textContent = 'HOLD TO SELECT';
+          front.append(rarityLabel, iconEl, nameEl, divider, descEl, statsEl, holdHint);
+          const svgNS = 'http://www.w3.org/2000/svg';
+          const holdRing = document.createElementNS(svgNS, 'svg');
+          holdRing.setAttribute('class', 'uc-hold-ring');
+          holdRing.setAttribute('viewBox', '0 0 100 100');
+          const circle = document.createElementNS(svgNS, 'circle');
+          circle.setAttribute('cx', '50'); circle.setAttribute('cy', '50'); circle.setAttribute('r', '48');
+          holdRing.appendChild(circle);
+          inner.append(back, front);
+          card.append(inner, holdRing);
 
-          card.addEventListener('click', () => {
-            const cards = Array.from(list.querySelectorAll('.upgrade-card'));
-            cards.forEach(c => c.style.pointerEvents = 'none');
-            if (window.GameAudio && window.GameAudio.playSound) window.GameAudio.playSound('card_select');
-            let vortex = document.getElementById('levelup-vortex');
-            if (!vortex) {
-              vortex = document.createElement('div');
-              vortex.id = 'levelup-vortex';
-              document.body.appendChild(vortex);
+          var _holdTimer = null;
+          var _holdStart = null;
+          var _holdDuration = 600;
+          var _holdAnimFrame = null;
+          var _selected = false;
+          function _startHold(evt) {
+            if (_holdTimer || _selected) return;
+            evt.preventDefault();
+            card.classList.add('holding');
+            _holdStart = performance.now();
+            var circumference = 2 * Math.PI * 48;
+            circle.style.strokeDasharray = circumference;
+            circle.style.strokeDashoffset = circumference;
+            function _animHold() {
+              var elapsed = performance.now() - _holdStart;
+              var progress = Math.min(1, elapsed / _holdDuration);
+              var offset = circumference * (1 - progress);
+              circle.style.strokeDashoffset = offset;
+              if (progress < 1) _holdAnimFrame = requestAnimationFrame(_animHold);
             }
-            requestAnimationFrame(() => { requestAnimationFrame(() => { vortex.style.width = '320px'; vortex.style.height = '320px'; }); });
-
-            card.classList.add('selected-card');
-            const cx = window.innerWidth / 2;
-            const cy = window.innerHeight / 2;
-            cards.forEach(other => {
-              if (other === card) return;
-              const rect = other.getBoundingClientRect();
-              other.style.transition = 'transform 0.38s cubic-bezier(0.55,0,1,0.45), opacity 0.38s ease-in';
-              other.style.transform = `translate(${cx - rect.left - rect.width / 2}px, ${cy - rect.top - rect.height / 2}px) scale(0) rotate(540deg)`;
-              other.style.opacity = '0';
-              other.classList.add('reject-card');
-            });
-
-            setTimeout(() => {
-              const v = document.getElementById('levelup-vortex');
-              if (v && v.parentNode) v.parentNode.removeChild(v);
-              _applyAndClose(u);
-            }, 550);
-          }, { once: true });
+            _holdAnimFrame = requestAnimationFrame(_animHold);
+            _holdTimer = setTimeout(function() {
+              _holdTimer = null;
+              _selected = true;
+              if (_holdAnimFrame) cancelAnimationFrame(_holdAnimFrame);
+              if (window.GameAudio && window.GameAudio.playSound) window.GameAudio.playSound('card_select');
+              var cards = Array.from(list.querySelectorAll('.upgrade-card'));
+              cards.forEach(c => c.style.pointerEvents = 'none');
+              var vortex = document.getElementById('levelup-vortex');
+              if (!vortex) { vortex = document.createElement('div'); vortex.id = 'levelup-vortex'; document.body.appendChild(vortex); }
+              requestAnimationFrame(() => { requestAnimationFrame(() => { vortex.style.width = '320px'; vortex.style.height = '320px'; }); });
+              card.classList.remove('holding');
+              card.classList.add('selected-card');
+              _explodeCardShards(card);
+              var cx = window.innerWidth / 2;
+              var cy = window.innerHeight / 2;
+              cards.forEach(function(other) {
+                if (other === card) return;
+                var rect = other.getBoundingClientRect();
+                other.style.transition = 'transform 0.38s cubic-bezier(0.55,0,1,0.45), opacity 0.38s ease-in';
+                other.style.transform = 'translate(' + (cx - rect.left - rect.width/2) + 'px, ' + (cy - rect.top - rect.height/2) + 'px) scale(0) rotate(540deg)';
+                other.style.opacity = '0';
+              });
+              setTimeout(function() {
+                var v = document.getElementById('levelup-vortex');
+                if (v && v.parentNode) v.parentNode.removeChild(v);
+                _applyAndClose(u);
+              }, 550);
+            }, _holdDuration);
+          }
+          function _cancelHold() {
+            if (_selected) return;
+            if (_holdTimer) { clearTimeout(_holdTimer); _holdTimer = null; }
+            if (_holdAnimFrame) { cancelAnimationFrame(_holdAnimFrame); _holdAnimFrame = null; }
+            card.classList.remove('holding');
+            if (circle) circle.style.strokeDashoffset = 2 * Math.PI * 48;
+          }
+          card.addEventListener('pointerdown', _startHold);
+          card.addEventListener('pointerup', _cancelHold);
+          card.addEventListener('pointercancel', _cancelHold);
+          card.addEventListener('pointerleave', _cancelHold);
 
           cardFrag.appendChild(card);
         });
@@ -1771,6 +1876,7 @@ window.spawnBossChest = function(x, z) {
           return;
         }
 
+        if (typeof setGamePaused === 'function') setGamePaused(true);
         // ── Show modal container ──────────────────────────────────────────────
         const upgradeList = document.getElementById('upgrade-list');
         // Stardust background particles (CSS-only animation hints behind cards)
@@ -1797,10 +1903,12 @@ window.spawnBossChest = function(x, z) {
         // slide in against the already-faded background.
         if (upgradeList) {
           const cards = upgradeList.querySelectorAll('.upgrade-card');
+          const totalCards = cards.length;
           cards.forEach((_card, _i) => {
+            const reverseIndex = totalCards - 1 - _i;
             setTimeout(() => {
               requestAnimationFrame(() => _card.classList.add('card-visible'));
-            }, _i * 80 + 50);
+            }, reverseIndex * 180 + 50);
           });
         }
 

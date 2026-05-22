@@ -162,8 +162,8 @@ const BloodSimulatorV21 = {
     const mistGeo = new THREE.CircleGeometry(1.0, 12);
     mistGeo.rotateX(-Math.PI / 2);
     const mistMat = new THREE.MeshBasicMaterial({
-      map: _circleTex, transparent:true, opacity:0.65, depthWrite:false, alphaTest: 0.05,
-      vertexColors:true, blending:THREE.AdditiveBlending
+      map: _circleTex, transparent:true, opacity:0.55, depthWrite:false, alphaTest: 0.05,
+      vertexColors:true, blending:THREE.NormalBlending
     });
     this.mistIM = new THREE.InstancedMesh(mistGeo, mistMat, this.MAX_MIST);
     this.mistIM.count = 0;

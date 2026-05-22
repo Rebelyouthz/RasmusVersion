@@ -827,19 +827,31 @@ window.RunEndScreen = (function () {
   function _goToCamp(fromQuestComplete) {
     hide();
     window._campFromRun = true;
-    if (fromQuestComplete) {
-      // Trigger AIDA dialogue on arrival at camp
-      window._pendingAIDADialogueOnCamp = true;
-    }
+    if (fromQuestComplete) window._pendingAIDADialogueOnCamp = true;
     setTimeout(function () {
-      // Signal camp to show post-run notifications
       window._campFromRun = true;
+      // Prefer higher-level camp navigation helpers that initialize CampWorld with
+      // the correct renderer/save data, and only fall back to direct entry if needed.
       if (typeof showCamp === 'function') {
         showCamp();
       } else if (typeof showCampScreen === 'function') {
         showCampScreen();
       } else if (typeof returnToLobby === 'function') {
         returnToLobby();
+      } else if (window.CampWorld && typeof window.CampWorld.enter === 'function') {
+        window.CampWorld.enter();
+      } else {
+        // Last resort: look for the camp screen element and show it
+        var campScreen = document.getElementById('camp-screen') ||
+                         document.getElementById('camp-container') ||
+                         document.getElementById('camp-world');
+        var runScreen  = document.getElementById('game-canvas') ||
+                         document.getElementById('sandbox-container') ||
+                         document.getElementById('run-screen');
+        if (runScreen)  runScreen.style.display  = 'none';
+        if (campScreen) campScreen.style.display = 'flex';
+        // Trigger camp init if available
+        if (window.initCamp && typeof window.initCamp === 'function') window.initCamp();
       }
     }, 600);
   }
