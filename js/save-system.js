@@ -567,7 +567,7 @@
               tutorialBld.forEach(function(id) {
                 if (!saveData.campBuildings[id]) saveData.campBuildings[id] = { level: 0, maxLevel: 1, unlocked: false };
                 saveData.campBuildings[id].level = 0;
-                saveData.campBuildings[id].unlocked = false;
+                if (saveData.campBuildings[id].unlocked !== true) saveData.campBuildings[id].unlocked = false;
               });
             }
             saveData._tutorialBuildingDefaultsV1 = true;

@@ -1881,16 +1881,19 @@
     var sd = (typeof saveData !== 'undefined') ? saveData : _saveData;
     if (!sd || sd._introResourcesDropped) return;
     sd._introResourcesDropped = true;
-    if (!sd.resources) sd.resources = {};
-    sd.resources.wood  = (sd.resources.wood  || 0) + 60;
-    sd.resources.stone = (sd.resources.stone || 0) + 60;
-    sd.resources.gold  = (sd.resources.gold  || 0) + 200;
-    if (window.GameHarvesting && window.GameHarvesting.refreshHUD) window.GameHarvesting.refreshHUD();
+    var isGatherStrengthQuest = !!(sd.tutorialQuests && sd.tutorialQuests.currentQuest === 'quest_gatherStrength');
+    if (!isGatherStrengthQuest) {
+      if (!sd.resources) sd.resources = {};
+      sd.resources.wood  = (sd.resources.wood  || 0) + 60;
+      sd.resources.stone = (sd.resources.stone || 0) + 60;
+      sd.gold = (sd.gold || 0) + 200;
+      if (window.GameHarvesting && window.GameHarvesting.refreshHUD) window.GameHarvesting.refreshHUD();
+    }
     if (_introResourceDrop && _campScene) _campScene.remove(_introResourceDrop);
     _introResourceDrop = null;
     if (typeof showStatusMessage === 'function') showStatusMessage('Resources collected!', 3200);
     if (typeof saveSaveData === 'function') saveSaveData();
-    if (sd.tutorialQuests && sd.tutorialQuests.currentQuest === 'quest_gatherStrength') {
+    if (isGatherStrengthQuest) {
       if (typeof progressTutorialQuest === 'function') progressTutorialQuest('quest_gatherStrength', true);
       setTimeout(function() {
         if (window.HorusPanel) window.HorusPanel.show(
