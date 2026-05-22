@@ -830,15 +830,16 @@ window.RunEndScreen = (function () {
     if (fromQuestComplete) window._pendingAIDADialogueOnCamp = true;
     setTimeout(function () {
       window._campFromRun = true;
-      // Try all possible camp navigation functions
-      if (window.CampWorld && typeof window.CampWorld.enter === 'function') {
-        window.CampWorld.enter();
-      } else if (typeof showCamp === 'function') {
+      // Prefer higher-level camp navigation helpers that initialize CampWorld with
+      // the correct renderer/save data, and only fall back to direct entry if needed.
+      if (typeof showCamp === 'function') {
         showCamp();
       } else if (typeof showCampScreen === 'function') {
         showCampScreen();
       } else if (typeof returnToLobby === 'function') {
         returnToLobby();
+      } else if (window.CampWorld && typeof window.CampWorld.enter === 'function') {
+        window.CampWorld.enter();
       } else {
         // Last resort: look for the camp screen element and show it
         var campScreen = document.getElementById('camp-screen') ||
