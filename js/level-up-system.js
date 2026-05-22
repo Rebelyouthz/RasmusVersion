@@ -1670,6 +1670,13 @@ window.spawnBossChest = function(x, z) {
 
         function _applyAndClose(upgrade) {
           try { if (upgrade && typeof upgrade.apply === 'function') upgrade.apply(); } catch (error) { console.error('Error applying LVL UP:', error); }
+          // Clear any lingering blood / mist particles that may have built up during the
+          // level-up pause — prevents large artefact splats appearing after card select.
+          try {
+            if (window.BloodSimulatorV21 && typeof window.BloodSimulatorV21.reset === 'function') {
+              window.BloodSimulatorV21.reset();
+            }
+          } catch (_) {}
           const doubleUpgradeChance = playerStats.doubleUpgradeChance || 0;
           if (!isBonusRound && doubleUpgradeChance > 0) {
             const bonusChance = Math.min(1.0, doubleUpgradeChance);

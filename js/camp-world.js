@@ -1877,19 +1877,24 @@
     if (!sd.resources) sd.resources = {};
     sd.resources.wood = (sd.resources.wood || 0) + 50;
     sd.resources.stone = (sd.resources.stone || 0) + 50;
-    sd.resources.gold = (sd.resources.gold || 0) + 200;
+    // Fix: gold lives on saveData.gold, NOT saveData.resources.gold
+    sd.gold = (sd.gold || 0) + 200;
     sd._introResourcesDropped = true;
     if (typeof saveSaveData === 'function') saveSaveData();
     if (_introResourceDrop && _campScene) _campScene.remove(_introResourceDrop);
     _introResourceDrop = null;
     if (typeof showStatusMessage === 'function') showStatusMessage('Resources collected — build the Quest Hall!', 3200);
-    if (typeof window.progressTutorialQuest === 'function') {
-      window.progressTutorialQuest('quest_awaken', true);
-    }
     if (sd && !sd._htip_quest_awaken_collected && window.HorusPanel && typeof window.HorusPanel.show === 'function') {
       sd._htip_quest_awaken_collected = true;
       window.HorusPanel.show('You have wood, stone, and gold. Build the Quest Hall to receive your first mission.\nLook for the glowing marker on the ground.');
     }
+    // Defer quest progress to next frame so _resumeInput() has already fired,
+    // preventing any autoClaim popup chain from freezing camp input.
+    setTimeout(function() {
+      if (typeof window.progressTutorialQuest === 'function') {
+        window.progressTutorialQuest('quest_awaken', true);
+      }
+    }, 0);
   }
 
   function _showIntroResourceOverlay() {

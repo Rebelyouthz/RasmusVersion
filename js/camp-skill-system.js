@@ -1811,11 +1811,32 @@
         objectives: [{ type: 'collect_intro_resources', count: 1 }],
         claim: 'Auto-Claim',
         rewardGold: 0,
-        rewardResources: { wood: 50, stone: 50, gold: 200 },
+        // NOTE: rewardResources intentionally omitted — _collectIntroResources() in camp-world.js
+        // already grants +50 wood / +50 stone / +200 gold when the player walks up to the cache.
+        // Listing them here caused a double-grant on auto-claim.
         autoClaim: true,
         noRewardPopup: true,
         message: 'Well done. You have what you need. Now build the Quest Hall — your command center.',
         nextQuest: 'quest_buildQuesthall',
+        conditions: []
+      },
+
+      // === QUEST 1b: Daily Routine — legacy-save bridge quest ===
+      // Auto-assigned by the V8 save migration when old saves were on questForge0_unlock
+      // but hadn't yet completed quest1_kill3.  Keeps the quest tracker visible and gives
+      // those saves a meaningful objective before rejoining the main chain.
+      quest_dailyRoutine: {
+        id: 'quest_dailyRoutine',
+        name: 'Daily Routine',
+        description: 'Survive for 2 minutes in a single run to prove your endurance.',
+        objectives: 'Survive for 2 minutes in a single run',
+        claim: 'Quest Hall',
+        rewardGold: 100,
+        rewardAccountXP: 30,
+        rewardResources: { wood: 20, stone: 20 },
+        triggerOnDeath: true,
+        message: 'You lasted 2 minutes — your body is already adapting. Return to the Quest Hall.',
+        nextQuest: 'quest_buildArmory',
         conditions: []
       },
 
@@ -2881,7 +2902,7 @@
         unlockBuilding: 'shrine',
         triggerOnDeath: true,
         message: "🏛️ <b>Shrine Frequency Calibrated!</b><br><br><i>A.I.D.A: 'Calibration complete. The resonance is stable. We can now rebuild The Artifact Shrine using Wood and Stone. Artifacts housed within it will amplify your combat potential in ways conventional gear cannot.'</i><br><br>The <b>Artifact Shrine</b> can now be built in the camp!<br><br>Walk to the shrine ruins and construct it to unlock your first Artifact slot.",
-        nextQuest: 'quest2_spendSkills',
+        nextQuest: null,
         conditions: ['quest_pushingLimits']
       }
     };
@@ -4140,6 +4161,7 @@
       const totalQuests = Object.keys(TUTORIAL_QUESTS).length;
       
       // Hide tracker if no quest is active or ready, and no recently completed quest, and player hasn't died yet
+      // Exception: always show if there IS an active quest (even on first-ever camp visit, so quest_awaken is visible)
       if (!saveData.tutorialQuests.firstDeathShown && !currentQuest && completedQuests.length === 0) {
         questTracker.style.display = 'none';
         return;
