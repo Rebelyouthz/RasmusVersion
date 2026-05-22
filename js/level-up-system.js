@@ -506,33 +506,38 @@ window.spawnBossChest = function(x, z) {
   opacity: 0;
   transform: translateY(40px) scale(0.88);
   transition: transform 0.18s cubic-bezier(0.22,1,0.36,1), box-shadow 0.15s, opacity 0.22s;
+  will-change: opacity, transform;
   font-family: 'Bangers', cursive;
   letter-spacing: 1px;
   flex-shrink: 0;
-  transform-style: preserve-3d;
-  perspective: 900px;
 }
 .upgrade-card.card-visible { opacity: 1; transform: translateY(0) scale(1); }
 .upgrade-card:hover { transform: translateY(-6px) scale(1.05); box-shadow: 0 0 36px rgba(201,162,39,0.75), inset 0 0 16px rgba(201,162,39,0.12); }
-.upgrade-card.rarity-common{ border-color:#888; box-shadow:0 0 10px rgba(136,136,136,0.3); }
-.upgrade-card.rarity-rare{ border-color:#4a9eff; box-shadow:0 0 18px rgba(74,158,255,0.4); }
-.upgrade-card.rarity-epic{ border-color:#cc44ff; box-shadow:0 0 22px rgba(204,68,255,0.45); }
+.upgrade-card.rarity-common { border-color:#888; box-shadow:0 0 10px rgba(136,136,136,0.3); }
+.upgrade-card.rarity-uncommon { border-color:#1eff00; box-shadow:0 0 14px rgba(30,255,0,0.35); }
+.upgrade-card.rarity-rare { border-color:#0070dd; box-shadow:0 0 18px rgba(0,112,221,0.4); }
+.upgrade-card.rarity-epic { border-color:#a335ee; box-shadow:0 0 22px rgba(163,53,238,0.45); }
 .upgrade-card.rarity-legendary { border-color:#ff8c00; box-shadow:0 0 30px rgba(255,140,0,0.6); background:linear-gradient(160deg,#0f0800 0%,#1a0f00 60%,#251800 100%); }
 .upgrade-card.rarity-mythical { border-color:#ff44cc; box-shadow:0 0 36px rgba(255,68,204,0.7); background:linear-gradient(160deg,#100010 0%,#1a0018 60%,#200020 100%); }
 .upgrade-card.weapon { border-top: 3px solid #ff8c00; }
 .upgrade-card.class { border-top: 3px solid #cc44ff; }
 .upgrade-card.perk { border-top: 3px solid #00ccff; }
-.uc-horus{ font-size:38px; line-height:1; margin-bottom:6px; filter:drop-shadow(0 0 8px #C9A227); }
-.uc-rarity-label{ font-size:9px; letter-spacing:3px; text-transform:uppercase; color:#C9A227; margin-bottom:8px; opacity:0.85; }
-.uc-icon{ font-size:28px; margin-bottom:6px; filter:drop-shadow(0 0 6px rgba(255,255,255,0.3)); }
-.uc-name{ font-size:17px; color:#fff; text-align:center; line-height:1.2; margin-bottom:6px; text-shadow:0 0 8px #C9A227; }
-.uc-desc{ font-size:11px; color:#bbb; text-align:center; line-height:1.5; font-family:'Segoe UI',sans-serif; font-weight:normal; letter-spacing:0; flex-grow:1; }
-.uc-divider{ width:80%; height:1px; background:linear-gradient(90deg, transparent, #C9A227, transparent); margin:7px 0; opacity:0.5; }
-.uc-bottom-bar{ width:100%; height:3px; border-radius:2px; margin-top:10px; background:#C9A227; opacity:0.4; }
+.uc-horus { font-size:38px; line-height:1; margin-bottom:6px; filter:drop-shadow(0 0 8px #C9A227); }
+.uc-rarity-label { font-size:9px; letter-spacing:3px; text-transform:uppercase; color:#C9A227; margin-bottom:8px; opacity:0.85; }
+.uc-icon { font-size:28px; margin-bottom:6px; filter:drop-shadow(0 0 6px rgba(255,255,255,0.3)); }
+.uc-name { font-size:17px; color:#fff; text-align:center; line-height:1.2; margin-bottom:6px; text-shadow:0 0 8px #C9A227; }
+.uc-desc { font-size:11px; color:#bbb; text-align:center; line-height:1.5; font-family:'Segoe UI',sans-serif; font-weight:normal; letter-spacing:0; flex-grow:1; }
+.uc-divider { width:80%; height:1px; background:linear-gradient(90deg, transparent, #C9A227, transparent); margin:7px 0; opacity:0.5; }
+.uc-bottom-bar { width:100%; height:3px; border-radius:2px; margin-top:10px; background:#C9A227; opacity:0.4; }
 .upgrade-card.selected-card { animation: card-select-slam 0.45s cubic-bezier(0.15,1.2,0.32,1) forwards; pointer-events:none; }
 .upgrade-card.reject-card { transition: transform 0.38s cubic-bezier(0.55,0,1,0.45), opacity 0.38s ease-in; pointer-events:none; }
-@keyframes card-select-slam { 0%{transform:translateY(0) scale(1) rotateX(0deg);} 40%{transform:translateY(-34px) scale(1.16) rotateX(14deg);box-shadow:0 0 60px #FFD700;} 72%{transform:translateY(-18px) scale(1.08) rotateX(0deg);} 100%{transform:translateY(-6px) scale(0) rotate(15deg);opacity:0;} }
-#levelup-vortex{ position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:0; height:0; border-radius:50%; background:radial-gradient(circle, rgba(0,0,0,0.96) 0%, transparent 70%); pointer-events:none; z-index:9999; transition:width 0.42s ease-in, height 0.42s ease-in; }`;
+@keyframes card-select-slam {
+  0%   { transform:translateY(0) scale(1); }
+  40%  { transform:translateY(-34px) scale(1.16); box-shadow:0 0 60px #FFD700; }
+  72%  { transform:translateY(-12px) scale(1.06); }
+  100% { transform:translateY(0) scale(0); opacity:0; }
+}
+#levelup-vortex { position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:0; height:0; border-radius:50%; background:radial-gradient(circle, rgba(0,0,0,0.96) 0%, transparent 70%); pointer-events:none; z-index:9998; transition:width 0.3s ease-out, height 0.3s ease-out; }`;
       document.head.appendChild(st);
     }
 
@@ -1712,17 +1717,30 @@ window.spawnBossChest = function(x, z) {
           const horus = document.createElement('div');
           horus.className = 'uc-horus';
           horus.textContent = '𓂀';
+
           const rarityLabel = document.createElement('div');
           rarityLabel.className = 'uc-rarity-label';
           rarityLabel.textContent = (u._rarity && u._rarity.label) ? u._rarity.label : _rarityLabelFromCard(card);
-          const divider = document.createElement('div'); divider.className = 'uc-divider';
-          const icon = document.createElement('div'); icon.className = 'uc-icon'; icon.textContent = u.icon || '⚡';
-          const name = document.createElement('div'); name.className = 'uc-name'; name.textContent = u.name || u.title || 'UPGRADE';
-          const desc = document.createElement('div'); desc.className = 'uc-desc'; desc.textContent = u.description || u.desc || '';
-          const bottomBar = document.createElement('div'); bottomBar.className = 'uc-bottom-bar';
+
+          const divider = document.createElement('div');
+          divider.className = 'uc-divider';
+
+          const icon = document.createElement('div');
+          icon.className = 'uc-icon';
+          icon.textContent = u.icon || '⚡';
+
+          const name = document.createElement('div');
+          name.className = 'uc-name';
+          name.textContent = u.name || u.title || 'UPGRADE';
+
+          const desc = document.createElement('div');
+          desc.className = 'uc-desc';
+          desc.textContent = u.description || u.desc || '';
+
+          const bottomBar = document.createElement('div');
+          bottomBar.className = 'uc-bottom-bar';
+
           card.append(horus, rarityLabel, divider, icon, name, desc, bottomBar);
-          card.style.opacity = '0';
-          card.style.transform = 'translateY(40px) scale(0.88)';
 
           card.addEventListener('click', () => {
             const cards = Array.from(list.querySelectorAll('.upgrade-card'));
@@ -1735,8 +1753,8 @@ window.spawnBossChest = function(x, z) {
               document.body.appendChild(vortex);
             }
             requestAnimationFrame(() => { requestAnimationFrame(() => { vortex.style.width = '320px'; vortex.style.height = '320px'; }); });
-
             card.classList.add('selected-card');
+            _explodeCardShards(card);
             const cx = window.innerWidth / 2;
             const cy = window.innerHeight / 2;
             cards.forEach(other => {
@@ -1747,7 +1765,6 @@ window.spawnBossChest = function(x, z) {
               other.style.opacity = '0';
               other.classList.add('reject-card');
             });
-
             setTimeout(() => {
               const v = document.getElementById('levelup-vortex');
               if (v && v.parentNode) v.parentNode.removeChild(v);
@@ -1774,6 +1791,7 @@ window.spawnBossChest = function(x, z) {
           return;
         }
 
+        if (typeof setGamePaused === 'function') setGamePaused(true);
         // ── Show modal container ──────────────────────────────────────────────
         const upgradeList = document.getElementById('upgrade-list');
         // Stardust background particles (CSS-only animation hints behind cards)
@@ -1795,12 +1813,15 @@ window.spawnBossChest = function(x, z) {
         modal.style.animation = 'none';
         void modal.offsetHeight; // force reflow to commit 'none' before re-adding
         modal.style.animation = 'wallFadeIn 0.32s cubic-bezier(0.22,1,0.36,1) forwards';
+        // Trigger card entrance animations now that modal is visible.
+        // The 50 ms offset lets the wallFadeIn animation start first so cards
+        // slide in against the already-faded background.
         if (upgradeList) {
           const cards = upgradeList.querySelectorAll('.upgrade-card');
-          cards.forEach((card, i) => {
+          cards.forEach((_card, _i) => {
             setTimeout(() => {
-              requestAnimationFrame(() => card.classList.add('card-visible'));
-            }, i * 80);
+              requestAnimationFrame(() => _card.classList.add('card-visible'));
+            }, _i * 80 + 50);
           });
         }
 

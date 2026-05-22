@@ -109,7 +109,7 @@
       },
       // Camp System - Quest-Driven Building Unlock System
       campBuildings: {
-        questMission: { level: 0, maxLevel: 1, unlocked: true },
+        questMission: { level: 0, maxLevel: 1, unlocked: false },
         inventory: { level: 0, maxLevel: 1, unlocked: false },
         campHub: { level: 0, maxLevel: 1, unlocked: false },
         loreMaster: { level: 0, maxLevel: 1, unlocked: false },
@@ -554,6 +554,24 @@
               saveData.campBuildings[bld] = { level: 0, maxLevel: 1, unlocked: false };
             }
           });
+          // ── Tutorial building defaults guard ──
+          // Apply only to truly fresh tutorial-state saves:
+          // if ANY tutorial building is already built, treat as existing save and skip.
+          if (!saveData._tutorialBuildingDefaultsV1) {
+            var tutorialBld = ['questMission','armory','accountBuilding','slotMachine','skillTree','idleMenu','codex','trainingHall','achievementBuilding','companionHouse','forge'];
+            var hasAnyTutorialBuilt = tutorialBld.some(function(id) {
+              var b = saveData.campBuildings && saveData.campBuildings[id];
+              return !!(b && b.level > 0);
+            });
+            if (!hasAnyTutorialBuilt) {
+              tutorialBld.forEach(function(id) {
+                if (!saveData.campBuildings[id]) saveData.campBuildings[id] = { level: 0, maxLevel: 1, unlocked: false };
+                saveData.campBuildings[id].level = 0;
+                if (saveData.campBuildings[id].unlocked !== true) saveData.campBuildings[id].unlocked = false;
+              });
+            }
+            saveData._tutorialBuildingDefaultsV1 = true;
+          }
           // ── Building level migration v2 ──
           // Previous code paths could leave non-core buildings with level > 0 without
           // the player actually building them.  Reset any non-core building that has

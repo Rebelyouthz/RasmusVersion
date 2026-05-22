@@ -143,12 +143,39 @@
         if (currentQuest.id === 'quest_harvester' && playerStats.lvl >= 3) {
           progressTutorialQuest('quest_harvester', true);
         }
-        // Step 4: First Blood — Complete one run and return to camp
-        if (currentQuest.id === 'quest_firstBlood') {
-          progressTutorialQuest('quest_firstBlood', true);
-          if (!saveData._htip_quest_firstBlood_return && window.HorusPanel && typeof window.HorusPanel.show === 'function') {
-            saveData._htip_quest_firstBlood_return = true;
-            window.HorusPanel.show('You returned. Good. Every run makes you stronger.\nClaim your reward in the Quest Hall.');
+        if (currentQuest.id === 'quest_run1' && saveData.tutorialQuests.killsThisRun >= 3) {
+          progressTutorialQuest('quest_run1', true);
+          if (!saveData._htip_run1_done && window.HorusPanel) {
+            saveData._htip_run1_done = true;
+            window.HorusPanel.show('3 enemies defeated!\nReturn to the Quest Hall to claim your reward.');
+          }
+        }
+        if (currentQuest.id === 'quest_run2' && saveData.tutorialQuests.killsThisRun >= 5) {
+          progressTutorialQuest('quest_run2', true);
+          if (!saveData._htip_run2_done && window.HorusPanel) {
+            saveData._htip_run2_done = true;
+            window.HorusPanel.show('5 kills! Return to the Quest Hall to claim your reward.');
+          }
+        }
+        if (currentQuest.id === 'quest_run3' && saveData.tutorialQuests.killsThisRun >= 10) {
+          progressTutorialQuest('quest_run3', true);
+          if (!saveData._htip_run3_done && window.HorusPanel) {
+            saveData._htip_run3_done = true;
+            window.HorusPanel.show('10 enemies down! Claim your reward in the Quest Hall.');
+          }
+        }
+        if (currentQuest.id === 'quest_run4' && survivalTime >= 120) {
+          progressTutorialQuest('quest_run4', true);
+          if (!saveData._htip_run4_done && window.HorusPanel) {
+            saveData._htip_run4_done = true;
+            window.HorusPanel.show('2 minutes survived! Claim your reward in the Quest Hall.');
+          }
+        }
+        if (currentQuest.id === 'quest_run5' && saveData.tutorialQuests.killsThisRun >= 15) {
+          progressTutorialQuest('quest_run5', true);
+          if (!saveData._htip_run5_done && window.HorusPanel) {
+            saveData._htip_run5_done = true;
+            window.HorusPanel.show('15 kills! You are becoming unstoppable. Claim your reward.');
           }
         }
         // Step 5: Gaining Stats — 300 total kills
@@ -750,7 +777,11 @@
       // Reset advanced blood particle system
       if (window.BloodSystem) window.BloodSystem.reset();
       // Reset BloodSimulatorV21 (V21 is the active blood system; clear particles between runs)
-      if (window.BloodSimulatorV21 && typeof window.BloodSimulatorV21.reset === 'function') window.BloodSimulatorV21.reset();
+      if (window.BloodSimulatorV21 && typeof window.BloodSimulatorV21.reset === 'function') {
+        window.BloodSimulatorV21.reset();
+        // Clear the scene reference so init() runs fresh on the next run
+        window.BloodSimulatorV21._initScene = null;
+      }
       if (window.BloodV2 && typeof window.BloodV2.reset === 'function') window.BloodV2.reset();
       
       // Reset lava timers

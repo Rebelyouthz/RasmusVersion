@@ -739,5 +739,9 @@ window.HorusPanel = window.HorusPanel || {
   autoHide: function(text, ms) {
     this.show(text, null);
     setTimeout(() => this._next(), ms || 3000);
+  },
+
+  clear: function() {
+    this._queue = [];
   }
 };

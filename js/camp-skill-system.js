@@ -1814,11 +1814,16 @@
         // NOTE: rewardResources intentionally omitted — _collectIntroResources() in camp-world.js
         // already grants +50 wood / +50 stone / +200 gold when the player walks up to the cache.
         // Listing them here caused a double-grant on auto-claim.
+      quest_gatherStrength: {
+        id: 'quest_gatherStrength',
+        name: 'Gather Your Strength',
+        description: 'A supply cache glows near the campfire. Collect it to begin.',
+        claim: 'Quest Hall',
         autoClaim: true,
-        noRewardPopup: true,
-        message: 'Well done. You have what you need. Now build the Quest Hall — your command center.',
-        nextQuest: 'quest_buildQuesthall',
-        conditions: []
+        rewardGold: 200,
+        rewardResources: { wood: 60, stone: 60 },
+        message: 'Resources secured! You have wood, stone and gold.\nNow build the Quest Hall — it is FREE.\nLook for the glowing marker.',
+        nextQuest: 'quest_buildQuesthall'
       },
 
       // === QUEST 1b: Daily Routine — legacy-save bridge quest ===
@@ -1844,144 +1849,230 @@
       // First building is always FREE. Auto-claims on build complete.
       quest_buildQuesthall: {
         id: 'quest_buildQuesthall',
-        name: 'Raise the Hall',
-        description: 'Build the Quest Hall — your mission command center.',
-        objectives: [{ type: 'build', building: 'questMission' }],
-        unlockBuildingOnActivation: 'questMission',
-        autoClaim: true,
-        noRewardPopup: false,
-        nextQuest: 'quest_firstBlood',
-        rewardGold: 100,
-        rewardResources: { wood: 30, stone: 30 },
-        message: '⚡ Quest Hall complete! Enter it to claim your first quest.\nEvery mission starts and ends here.',
-        conditions: []
-      },
-
-      // === QUEST 3: First Blood — Complete your first run ===
-      quest_firstBlood: {
-        id: 'quest_firstBlood',
-        name: 'First Blood',
-        description: 'Venture out and survive your first run. You don\'t need to win — just fight.',
-        objectives: [{ type: 'complete_run', count: 1 }],
+        name: 'Raise the Quest Hall',
+        description: 'Build the Quest Hall. This is where you claim ALL your rewards.',
         claim: 'Quest Hall',
-        rewardGold: 150,
-        rewardResources: { wood: 40, stone: 40 },
-        rewardSkillPoints: 1,
-        rewardAccountXP: 50,
-        unlockBuildingOnActivation: 'armory',
-        triggerOnDeath: true,
-        message: 'You returned. Good. Every run makes you stronger.\nClaim your reward in the Quest Hall.',
-        nextQuest: 'quest_buildArmory',
-        conditions: []
+        autoClaim: true,
+        rewardGold: 0,
+        rewardResources: {},
+        message: 'Quest Hall complete! Enter it to receive your first mission.',
+        nextQuest: 'quest_run1'
       },
 
-      // === QUEST 4: Forge Your Arsenal — Build the Armory ===
+      quest_run1: {
+        id: 'quest_run1',
+        name: 'First Blood',
+        description: 'Head out and kill 3 enemies. You don\'t need to survive — just fight.',
+        claim: 'Quest Hall',
+        triggerOnDeath: true,
+        rewardGold: 150,
+        rewardResources: { wood: 30, stone: 30 },
+        rewardAccountXP: 50,
+        message: 'Well fought! Claim here to unlock the Armory and Profile Hall.\nYou have enough resources to build both.',
+        nextQuest: 'quest_buildArmory'
+      },
+
       quest_buildArmory: {
         id: 'quest_buildArmory',
         name: 'Forge Your Arsenal',
-        description: 'Build the Armory to unlock weapon upgrades between runs.',
-        objectives: [{ type: 'build', building: 'armory' }],
+        description: 'Build the Armory to equip weapons and gear between runs.',
         claim: 'Quest Hall',
+        unlockBuildingOnActivation: 'armory',
         rewardGold: 100,
         rewardResources: { wood: 20, stone: 20 },
         rewardAccountXP: 30,
-        unlockBuildingOnActivation: 'armory',
-        message: 'The Armory stands ready. Your weapons grow deadlier with each visit.',
-        nextQuest: 'quest_knowThyself',
-        conditions: ['quest_firstBlood']
+        message: 'Armory ready! Your weapons grow deadlier here.\nNow build the Profile Hall.',
+        nextQuest: 'quest_buildProfile',
+        conditions: ['quest_run1']
       },
 
-      quest_knowThyself: {
-        id: 'quest_knowThyself',
+      quest_buildProfile: {
+        id: 'quest_buildProfile',
         name: 'Know Thyself',
-        description: 'Build the Profile Hall to track your journey, rank, and daily rewards.',
-        objectives: [{ type: 'build', building: 'accountBuilding' }],
+        description: 'Build the Profile Hall to track your stats, rank and daily rewards.',
         claim: 'Quest Hall',
-        rewardGold: 100,
-        rewardResources: { wood: 25, stone: 25 },
-        rewardAccountXP: 50,
         unlockBuildingOnActivation: 'accountBuilding',
-        message: 'Your legend is now being written. Check your rank inside.\nAlso — you have daily rewards waiting. Don\'t leave them unclaimed. 👑',
-        nextQuest: 'quest_secondRun',
+        rewardGold: 100,
+        rewardResources: { wood: 35, stone: 35 },
+        rewardAccountXP: 30,
+        message: 'Profile Hall built! Your legend is being written.\nNow head into another run — kill 5 enemies this time.',
+        nextQuest: 'quest_run2',
         conditions: ['quest_buildArmory']
       },
 
-      quest_secondRun: {
-        id: 'quest_secondRun',
-        name: 'Prove Yourself',
-        description: 'You are stronger now. Survive 3 waves in a single run.',
-        objectives: [{ type: 'survive_waves', count: 3 }],
+      quest_run2: {
+        id: 'quest_run2',
+        name: 'Prove Your Worth',
+        description: 'Head out and kill 5 enemies. Your Armory gear makes you stronger.',
         claim: 'Quest Hall',
-        rewardGold: 200,
-        rewardResources: { wood: 50, stone: 50 },
-        rewardSkillPoints: 1,
-        rewardAccountXP: 75,
         triggerOnDeath: true,
-        message: 'Impressive resolve. The camp grows with your victories.\nClaim your reward in the Quest Hall, then we build further.',
-        nextQuest: 'quest_spinOfFate',
-        conditions: ['quest_knowThyself']
+        rewardGold: 200,
+        rewardResources: { wood: 30, stone: 30 },
+        rewardAccountXP: 75,
+        message: 'Impressive! Claim to unlock the Slot Machine and Skill Tree.\nYou have enough resources to build both.',
+        nextQuest: 'quest_buildSlotMachine',
+        conditions: ['quest_buildProfile']
       },
 
-      quest_spinOfFate: {
-        id: 'quest_spinOfFate',
+      quest_buildSlotMachine: {
+        id: 'quest_buildSlotMachine',
         name: 'Shrine of Fate',
-        description: 'Build the Slot Machine — fortune favors the bold.',
-        objectives: [{ type: 'build', building: 'slotMachine' }],
+        description: 'Build the Shrine of Fate. Fortune favors the bold — you get 3 Fate Coins.',
         claim: 'Quest Hall',
-        rewardGold: 0,
-        rewardFreeSpin: 3,
-        rewardAccountXP: 40,
         unlockBuildingOnActivation: 'slotMachine',
-        message: 'The Shrine of Fate is ready. You have 3 Fate Coins.\nStep inside and pull the lever — jackpot rewards await...',
-        nextQuest: 'quest_firstSpin',
-        conditions: ['quest_secondRun']
-      },
-
-      quest_firstSpin: {
-        id: 'quest_firstSpin',
-        name: 'Pull the Lever',
-        description: 'Spin the Slot Machine once. Fate decides your reward.',
-        objectives: [{ type: 'spin_slot_machine', count: 1 }],
-        claim: 'Quest Hall',
-        rewardGold: 100,
-        rewardAccountXP: 50,
-        autoClaim: false,
-        message: 'The reels spin... destiny is written in gold.\nClaim your spin reward in the Quest Hall.',
+        rewardGold: 50,
+        rewardFreeSpin: 3,
+        rewardResources: { wood: 20, stone: 20 },
+        rewardAccountXP: 40,
+        message: 'Shrine of Fate ready! You have 3 Fate Coins to spin.\nNow build the Skill Tree.',
         nextQuest: 'quest_buildSkillTree',
-        conditions: ['quest_spinOfFate']
+        conditions: ['quest_run2']
       },
 
       quest_buildSkillTree: {
         id: 'quest_buildSkillTree',
         name: 'The Skill Within',
         description: 'Build the Skill Tree and unlock your first permanent skill.',
-        objectives: [{ type: 'build', building: 'skillTree' }, { type: 'unlock_skill', count: 1 }],
         claim: 'Quest Hall',
-        rewardGold: 150,
-        rewardResources: { wood: 30, stone: 30 },
-        rewardSkillPoints: 2,
-        rewardAccountXP: 75,
         unlockBuildingOnActivation: 'skillTree',
-        message: 'The Skill Tree awaits. Enter it and unlock your first skill.\nChoose wisely — or choose chaos. Both are valid paths. ⚡',
-        nextQuest: 'quest_thirdRun',
-        conditions: ['quest_firstSpin']
+        rewardGold: 100,
+        rewardSkillPoints: 2,
+        rewardResources: { wood: 40, stone: 40 },
+        rewardAccountXP: 75,
+        message: 'Skill Tree unlocked! Every skill you buy carries into all future runs.\nNow push further — kill 10 enemies in your next run.',
+        nextQuest: 'quest_run3',
+        conditions: ['quest_buildSlotMachine']
       },
 
-      quest_thirdRun: {
-        id: 'quest_thirdRun',
+      quest_run3: {
+        id: 'quest_run3',
         name: 'The Real Test',
-        description: 'Complete a run and reach wave 5.',
-        objectives: [{ type: 'survive_waves', count: 5 }],
+        description: 'Head out and kill 10 enemies. Your skills and gear make you deadlier.',
         claim: 'Quest Hall',
-        rewardGold: 300,
-        rewardResources: { wood: 60, stone: 60 },
-        rewardSkillPoints: 1,
+        triggerOnDeath: true,
+        rewardGold: 250,
+        rewardResources: { wood: 40, stone: 40 },
         rewardAttributePoints: 1,
         rewardAccountXP: 100,
-        triggerOnDeath: true,
-        message: 'You have weapons, skills, and fortune on your side.\nNow push further. Reach wave 5. Show the enemies what you\'ve built.',
-        nextQuest: 'quest_harvester',
+        message: 'Outstanding! Claim to unlock the Idle Fountain.\nThe Fountain gives you passive gold, wood and stone forever — from now on resources flow automatically!',
+        nextQuest: 'quest_buildClicker',
         conditions: ['quest_buildSkillTree']
+      },
+
+      quest_buildClicker: {
+        id: 'quest_buildClicker',
+        name: 'Power the Camp',
+        description: 'Build the Idle Fountain. It generates gold, wood and stone automatically.',
+        claim: 'Quest Hall',
+        unlockBuildingOnActivation: 'idleMenu',
+        rewardGold: 100,
+        rewardResources: { wood: 30, stone: 30 },
+        rewardAccountXP: 60,
+        message: 'The Fountain pulses with energy!\nTap it in camp to earn gold, wood and stone.\nResources now flow automatically. Now build the Codex (free).',
+        nextQuest: 'quest_buildCodex',
+        conditions: ['quest_run3']
+      },
+
+      quest_buildCodex: {
+        id: 'quest_buildCodex',
+        name: 'The Codex Awakens',
+        description: 'Build the Codex — records every enemy and landmark you discover.',
+        claim: 'Quest Hall',
+        unlockBuildingOnActivation: 'codex',
+        rewardGold: 100,
+        rewardResources: { wood: 40, stone: 40 },
+        rewardAccountXP: 60,
+        message: 'Codex unlocked! Every enemy and landmark you find earns you XP.\nSurvive 2 minutes in your next run.',
+        nextQuest: 'quest_run4',
+        conditions: ['quest_buildClicker']
+      },
+
+      quest_run4: {
+        id: 'quest_run4',
+        name: 'Endurance Trial',
+        description: 'Survive for 2 minutes in a single run.',
+        claim: 'Quest Hall',
+        triggerOnDeath: true,
+        rewardGold: 300,
+        rewardResources: { wood: 45, stone: 45 },
+        rewardAttributePoints: 2,
+        rewardAccountXP: 125,
+        message: 'You endured! Claim to unlock the Training Hall and Achievement Building.',
+        nextQuest: 'quest_buildTraining',
+        conditions: ['quest_buildCodex']
+      },
+
+      quest_buildTraining: {
+        id: 'quest_buildTraining',
+        name: 'Forge Your Body',
+        description: 'Build the Training Hall. Train Strength, Endurance and Flexibility permanently.',
+        claim: 'Quest Hall',
+        unlockBuildingOnActivation: 'trainingHall',
+        rewardGold: 150,
+        rewardAttributePoints: 1,
+        rewardResources: { wood: 30, stone: 30 },
+        rewardAccountXP: 75,
+        message: 'Training Hall ready! You earn 1 Training Point every 24h.\nNow build the Achievement Hall (free).',
+        nextQuest: 'quest_buildAchievements',
+        conditions: ['quest_run4']
+      },
+
+      quest_buildAchievements: {
+        id: 'quest_buildAchievements',
+        name: 'Hall of Glory',
+        description: 'Build the Achievement Hall. Claim achievement rewards and track challenges.',
+        claim: 'Quest Hall',
+        unlockBuildingOnActivation: 'achievementBuilding',
+        rewardGold: 150,
+        rewardResources: { wood: 50, stone: 50 },
+        rewardAccountXP: 75,
+        message: 'Achievement Hall unlocked!\n\n🏆 ACHIEVEMENTS: Complete permanent milestones for one-time rewards.\n⚔️ CHALLENGES: Repeatable goals — complete them repeatedly for ongoing Gold, XP and Skill Points.\n\nCheck both tabs inside the Achievement Hall!',
+        nextQuest: 'quest_run5',
+        conditions: ['quest_buildTraining']
+      },
+
+      quest_run5: {
+        id: 'quest_run5',
+        name: 'Combat Mastery',
+        description: 'Kill 15 enemies in a single run.',
+        claim: 'Quest Hall',
+        triggerOnDeath: true,
+        rewardGold: 400,
+        rewardResources: { wood: 50, stone: 50 },
+        rewardSkillPoints: 2,
+        rewardAccountXP: 150,
+        message: '15 kills! You are becoming unstoppable.\nClaim to unlock the Companion House and Forge.',
+        nextQuest: 'quest_buildCompanion',
+        conditions: ['quest_buildAchievements']
+      },
+
+      quest_buildCompanion: {
+        id: 'quest_buildCompanion',
+        name: 'A New Companion',
+        description: 'Build the Companion House. Companions fight alongside you in every run.',
+        claim: 'Quest Hall',
+        unlockBuildingOnActivation: 'companionHouse',
+        rewardGold: 150,
+        rewardResources: { wood: 30, stone: 30 },
+        rewardAccountXP: 100,
+        message: 'Companion House ready! A Grey Alien egg has appeared — hatch it inside.\nNow build the Forge.',
+        nextQuest: 'quest_buildForge',
+        conditions: ['quest_run5']
+      },
+
+      quest_buildForge: {
+        id: 'quest_buildForge',
+        name: 'Master the Forge',
+        description: 'Build the Forge to craft harvesting tools and powerful equipment.',
+        claim: 'Quest Hall',
+        unlockBuildingOnActivation: 'forge',
+        rewardGold: 200,
+        rewardResources: { wood: 60, stone: 60 },
+        rewardSkillPoints: 1,
+        rewardAccountXP: 100,
+        message: 'The Forge is ready! Craft harvesting tools to gather Wood and Stone in the run world.\nWith tools equipped you can mine and chop — combined with the Fountain you will never run low.\nThe deeper questline now begins.',
+        nextQuest: 'quest_harvester',
+        conditions: ['quest_buildCompanion']
       },
 
       // === QUEST 2: The Harvester — Reach Level 3 ===
@@ -2907,17 +2998,19 @@
       }
     };
 
-    const buildingQuestUnlockMap = {
-      // === New slow-burn progression chain (8-step building unlocks) ===
-      'questMission': 'quest_awaken',
-      'armory': 'quest_firstBlood',
-      'accountBuilding': 'quest_buildArmory',
-      'slotMachine': 'quest_secondRun',
-      'skillTree': 'quest_firstSpin',
-      'forge': 'quest_thirdRun',
-      'trainingHall': 'quest_harvester',
-      'companionHouse': 'quest_gainingStats',
-      'achievementBuilding': 'quest11_findAllLandmarks',
+    const buildingQuestUnlockMap = new Proxy({
+      // === Tutorial progression chain ===
+      'questMission': 'quest_buildQuesthall',
+      'armory': 'quest_buildArmory',
+      'accountBuilding': 'quest_buildProfile',
+      'slotMachine': 'quest_buildSlotMachine',
+      'skillTree': 'quest_buildSkillTree',
+      'idleMenu': 'quest_buildClicker',
+      'codex': 'quest_buildCodex',
+      'trainingHall': 'quest_buildTraining',
+      'companionHouse': 'quest_buildCompanion',
+      'achievementBuilding': 'quest_buildAchievements',
+      'forge': 'quest_buildForge',
       'characterVisuals': 'quest16_visitCharVisuals',
       'progressionHouse': 'quest3_buyProgression',
       'specialAttacks': 'quest_pushingLimits',
@@ -2927,7 +3020,6 @@
       'tavern': 'quest8_kill10',
       'shop': 'quest9_activateCompanion',
       'prestige': 'quest10_kill15',
-      'codex': 'quest17_visitCodex',
       'campBoard': 'quest36_blackMarket',
       'trashRecycle': 'quest26_kill20',
       'tempShop': 'quest28_survive3min',
@@ -2937,7 +3029,19 @@
       'prismReliquary': 'quest35_crystallizedTear',
       // === The Dropplet Shop — unlocks alongside the Prism Reliquary (late-game) ===
       'droppletShop': 'quest35_crystallizedTear'
-    };
+    }, {
+      get(target, prop) {
+        if (prop === 'codex') {
+          const tq = typeof saveData !== 'undefined' && saveData && saveData.tutorialQuests;
+          const isTutorial = tq && (
+            tq.currentQuest === 'quest_buildCodex' ||
+            (Array.isArray(tq.readyToClaim) && tq.readyToClaim.includes('quest_buildCodex'))
+          );
+          return isTutorial ? 'quest_buildCodex' : 'quest17_visitCodex';
+        }
+        return target[prop];
+      }
+    });
     
     // Get current quest object
     function getCurrentQuest() {
@@ -3070,10 +3174,12 @@
       accountBuilding:     { wood: 4, stone: 4 },
       slotMachine:         { wood: 5, stone: 5 },
       skillTree:           { wood: 6, stone: 6 },
-      forge:               { wood: 7, stone: 7 },
+      idleMenu:            { wood: 10, stone: 10 },
+      codex:               { wood: 0, stone: 0 },
       trainingHall:        { wood: 8, stone: 8 },
       companionHouse:      { wood: 10, stone: 10 },
-      achievementBuilding: { wood: 12, stone: 12 },
+      achievementBuilding: { wood: 0, stone: 0 },
+      forge:               { wood: 7, stone: 7 },
       characterVisuals:    { wood: 14, stone: 14 },
     };
 
@@ -3255,6 +3361,30 @@
           saveData.campBuildings[buildingId].unlocked = true;
           if (saveData.campBuildings[buildingId].level === 0) saveData.campBuildings[buildingId].level = 1;
         }
+        (function _checkBuildQuest(bId) {
+          var MAP = {
+            'questMission':       'quest_buildQuesthall',
+            'armory':             'quest_buildArmory',
+            'accountBuilding':    'quest_buildProfile',
+            'slotMachine':        'quest_buildSlotMachine',
+            'skillTree':          'quest_buildSkillTree',
+            'idleMenu':           'quest_buildClicker',
+            'codex':              'quest_buildCodex',
+            'trainingHall':       'quest_buildTraining',
+            'achievementBuilding':'quest_buildAchievements',
+            'companionHouse':     'quest_buildCompanion',
+            'forge':              'quest_buildForge'
+          };
+          var qId = MAP[bId];
+          if (!qId) return;
+          var cq = typeof getCurrentQuest === 'function' ? getCurrentQuest() : null;
+          if (!cq || cq.id !== qId) return;
+          progressTutorialQuest(qId, true);
+          var qDef = TUTORIAL_QUESTS[qId];
+          if (qDef && qDef.message && window.HorusPanel) {
+            setTimeout(function() { window.HorusPanel.show(qDef.message); }, 2800);
+          }
+        })(buildingId);
         showStatChange('🏛️ ' + buildingName + ' Built!');
         // Grant building XP to account
         var _bXP = 50 + 25; // level 1 baseline
@@ -3440,6 +3570,10 @@
               setTimeout(function () {
                 var DS = window.DialogueSystem;
                 if (DS && DS.DIALOGUES && DS.DIALOGUES.aidaForgeHarvester) {
+                  var _tutDone = saveData.tutorialQuests &&
+                    saveData.tutorialQuests.completedQuests &&
+                    saveData.tutorialQuests.completedQuests.includes('quest_buildForge');
+                  if (!_tutDone) return;
                   DS.show(DS.DIALOGUES.aidaForgeHarvester, {
                     onComplete: function () {
                       // Show DopamineReward for Harvester Backpack blueprint unlock
@@ -3649,6 +3783,7 @@
             : { x: window.innerWidth / 2, y: window.innerHeight * 0.35 };
           window.DopamineSystem.RewardJuice.flyResourcesIn(flyItems, _flyOrigin);
         }
+        if (window.GameHarvesting) window.GameHarvesting.refreshHUD();
       }
       // Award account XP for completing a quest (quest-specific amount or 50 XP default)
       const _questXP = (quest.rewardAccountXP || 50);
@@ -3825,11 +3960,11 @@
         }
       }
 
-      if (questId === 'quest_knowThyself') {
+      if (questId === 'quest_buildProfile') {
         if (window.WelcomeUI && typeof window.WelcomeUI.show === 'function') {
           window.WelcomeUI.show();
         }
-        _showHorusTipOnce('quest_knowThyself_daily', 'Return every day for better rewards. 7 days in a row = legendary loot. 🔥');
+        _showHorusTipOnce('quest_buildProfile_daily', 'Return every day for better rewards. 7 days in a row = legendary loot. 🔥');
       }
       
       // Give item
@@ -3886,6 +4021,30 @@
         saveData.tutorialQuests.currentQuest = null;
       } else if (quest.nextQuest && checkQuestConditions(quest.nextQuest)) {
         saveData.tutorialQuests.currentQuest = quest.nextQuest;
+        var _HINTS = {
+          'quest_run1':            '⚔️ MISSION: First Blood\nHead into the run and kill 3 enemies.\nYou don\'t need to survive — just fight!',
+          'quest_buildArmory':     '🔨 BUILD: Forge Your Arsenal\nBuild the Armory — you have the resources.\nThe build spot glows in camp.',
+          'quest_buildProfile':    '🔨 BUILD: Know Thyself\nBuild the Profile Hall.\nTrack your rank and daily rewards inside.',
+          'quest_run2':            '⚔️ MISSION: Prove Your Worth\nKill 5 enemies in a run.\nYour Armory gear makes you stronger!',
+          'quest_buildSlotMachine':'🔨 BUILD: Shrine of Fate\nBuild the Shrine of Fate.\nYou get 3 Fate Coins on completion.',
+          'quest_buildSkillTree':  '🔨 BUILD: The Skill Within\nBuild the Skill Tree.\nPermanent skills carry into every run.',
+          'quest_run3':            '⚔️ MISSION: The Real Test\nKill 10 enemies in a run.',
+          'quest_buildClicker':    '🔨 BUILD: Power the Camp\nBuild the Idle Fountain.\nIt gives you gold, wood and stone passively forever!',
+          'quest_buildCodex':      '🔨 BUILD: The Codex (FREE)\nBuild the Codex.\nEvery enemy and landmark you find earns XP!',
+          'quest_run4':            '⚔️ MISSION: Endurance Trial\nSurvive for 2 minutes in a single run.',
+          'quest_buildTraining':   '🔨 BUILD: Forge Your Body\nBuild the Training Hall.\nTrain permanent attributes here.',
+          'quest_buildAchievements':'🔨 BUILD: Hall of Glory (FREE)\nBuild the Achievement Hall.\nClaim achievements and complete challenges!',
+          'quest_run5':            '⚔️ MISSION: Combat Mastery\nKill 15 enemies in a single run.',
+          'quest_buildCompanion':  '🔨 BUILD: A New Companion\nBuild the Companion House.\nA Grey Alien egg awaits you!',
+          'quest_buildForge':      '🔨 BUILD: Master the Forge\nBuild the Forge.\nCraft tools to harvest Wood and Stone from the world.'
+        };
+        var _nq = quest.nextQuest;
+        if (_nq && _HINTS[_nq] && !saveData['_htip_' + _nq]) {
+          saveData['_htip_' + _nq] = true;
+          setTimeout(function() {
+            if (window.HorusPanel) window.HorusPanel.show(_HINTS[_nq]);
+          }, 1800);
+        }
         nextQuestActivated = TUTORIAL_QUESTS[quest.nextQuest] || null;
         
         // Unlock building on ACTIVATION for next quest (so player can complete it)
@@ -3999,6 +4158,11 @@
     window._campShowBuildOverlay = _showBuildOverlay;
 
     window.startAidaIntroQuest = function () {
+      if (saveData.tutorialQuests && (
+        saveData.tutorialQuests.currentQuest ||
+        (saveData.tutorialQuests.completedQuests &&
+         saveData.tutorialQuests.completedQuests.includes('quest_gatherStrength'))
+      )) return;
       // Tutorial flow no longer depends on A.I.D.A.
     };
 
@@ -4010,7 +4174,16 @@
       if (!Array.isArray(tq.completedQuests)) tq.completedQuests = [];
       if (!Array.isArray(tq.readyToClaim)) tq.readyToClaim = [];
 
-      const legacyMap = { quest_gatherStrength: 'quest_awaken' };
+      const legacyMap = {
+        quest_awaken: 'quest_gatherStrength',
+        quest_firstBlood: 'quest_run1',
+        quest_knowThyself: 'quest_buildProfile',
+        quest_secondRun: 'quest_run2',
+        quest_spinOfFate: 'quest_buildSlotMachine',
+        quest_firstSpin: 'quest_buildSkillTree',
+        quest_thirdRun: 'quest_run3',
+        quest_buildClickerMenu: 'quest_buildClicker'
+      };
       const normalizeId = function (questId) {
         const mappedId = legacyMap[questId] || questId;
         return TUTORIAL_QUESTS[mappedId] ? mappedId : null;
@@ -4040,31 +4213,30 @@
       return changed;
     }
 
-    /**
-     * initFirstQuest()
-     * Activates quest_awaken on first camp visit.
-     * Called from CampWorld on first camp load.
-     */
     window.initFirstQuest = function () {
-      const wasNormalized = normalizeTutorialQuestIds();
-      const completed = saveData.tutorialQuests.completedQuests || [];
-      // Skip if any early quests are already done
-      if (completed.includes('quest_buildQuesthall') ||
-          completed.includes('quest_awaken') ||
-          completed.includes('quest_findingAida')) {
-        if (wasNormalized && typeof saveSaveData === 'function') saveSaveData();
-        return;
+      if (!saveData.tutorialQuests) {
+        saveData.tutorialQuests = {
+          currentQuest: null,
+          completedQuests: [],
+          questProgress: {},
+          readyToClaim: [],
+          firstDeathShown: false,
+          secondRunCompleted: false,
+          killsThisRun: 0,
+          survivalTimeThisRun: 0
+        };
       }
-      if (saveData.tutorialQuests.currentQuest) {
-        if (wasNormalized && typeof saveSaveData === 'function') saveSaveData();
-        return;
-      }
-      saveData.tutorialQuests.currentQuest = 'quest_awaken';
-      saveSaveData();
-
-      if (!saveData._horusTip_awaken && window.HorusPanel && typeof window.HorusPanel.show === 'function') {
-        saveData._horusTip_awaken = true;
-        window.HorusPanel.show('Welcome, survivor. This camp is yours to rebuild.\nA supply cache lies nearby. Collect it to begin your journey.');
+      var tq = saveData.tutorialQuests;
+      if (!tq.currentQuest && (!tq.completedQuests || tq.completedQuests.length === 0)) {
+        tq.currentQuest = 'quest_gatherStrength';
+        saveSaveData();
+        setTimeout(function() {
+          if (window.HorusPanel) {
+            window.HorusPanel.show(
+              'Welcome, survivor.\nThis camp is yours to rebuild.\n\nA supply cache glows near the campfire.\nWalk to it and collect it to begin.'
+            );
+          }
+        }, 1500);
       }
     };
 
@@ -4145,7 +4317,7 @@
       const tq = saveData && saveData.tutorialQuests;
       if (!tq) return false;
       return (tq.readyToClaim && tq.readyToClaim.length > 0) ||
-             (tq.firstDeathShown && !tq.currentQuest && !isQuestClaimed('quest_dailyRoutine') && !isQuestClaimed('quest1_kill3'));
+             (tq.firstDeathShown && !tq.currentQuest && !isQuestClaimed('quest_run1') && !isQuestClaimed('quest1_kill3'));
     }
     
     // Update quest tracker in camp screen
