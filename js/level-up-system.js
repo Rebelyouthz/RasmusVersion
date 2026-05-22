@@ -1775,7 +1775,7 @@ window.spawnBossChest = function(x, z) {
           const front = document.createElement('div');
           front.className = 'uc-front';
           const rarityLabel = document.createElement('div'); rarityLabel.className = 'uc-rarity-label';
-          rarityLabel.textContent = (u._rarity && u._rarity.label) ? u._rarity.label : 'COMMON';
+          rarityLabel.textContent = (u._rarity && u._rarity.label) ? u._rarity.label : _rarityLabelFromCard(card);
           const iconEl = document.createElement('div'); iconEl.className = 'uc-icon'; iconEl.textContent = u.icon || '⚡';
           const nameEl = document.createElement('div'); nameEl.className = 'uc-name'; nameEl.textContent = u.name || u.title || 'UPGRADE';
           const divider = document.createElement('div'); divider.className = 'uc-divider';
