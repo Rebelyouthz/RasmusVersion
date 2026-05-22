@@ -7454,12 +7454,6 @@
     _saveData  = saveData;
     _callbacks = callbacks || {};
     _registerContextListeners(renderer);
-    // Resume tutorial without re-initializing if already in progress
-    var _tq = saveData && saveData.tutorialQuests;
-    if (_tq && _tq.currentQuest) {
-      // Do NOT call initFirstQuest — just refresh UI
-      if (typeof _onArrivalComplete === 'function') { _onArrivalComplete(); return; }
-    }
 
     // Build scene once — wrap in try/catch so a partial build failure
     // resets _campScene to null, allowing a clean retry on the next enter().
