@@ -1804,16 +1804,6 @@
     
     // Quest definitions with conditions for dependencies
     const TUTORIAL_QUESTS = {
-      quest_awaken: {
-        id: 'quest_awaken',
-        name: 'The Awakening',
-        description: 'Something stirs in the ruins. Collect the supply cache nearby.',
-        objectives: [{ type: 'collect_intro_resources', count: 1 }],
-        claim: 'Auto-Claim',
-        rewardGold: 0,
-        // NOTE: rewardResources intentionally omitted — _collectIntroResources() in camp-world.js
-        // already grants +50 wood / +50 stone / +200 gold when the player walks up to the cache.
-        // Listing them here caused a double-grant on auto-claim.
       quest_gatherStrength: {
         id: 'quest_gatherStrength',
         name: 'Gather Your Strength',
