@@ -1153,7 +1153,22 @@ function playBackgroundMusic(url, volume = 0.35, loop = true) {
     if (gm.paused) {
       try {
         const p = gm.play();
-        if (p && typeof p.catch === 'function') p.catch(() => {});
+        if (p && typeof p.catch === 'function') {
+          p.catch(() => {
+            // Autoplay blocked — retry on the next user interaction
+            const _resume = () => {
+              if (gm.paused) {
+                gm.play().catch((err) => {
+                  console.warn('[Audio] Guitar BGM resume blocked:', err);
+                });
+              }
+              document.removeEventListener('pointerdown', _resume);
+              document.removeEventListener('keydown', _resume);
+            };
+            document.addEventListener('pointerdown', _resume, { once: true });
+            document.addEventListener('keydown', _resume, { once: true });
+          });
+        }
       } catch (e) {}
     }
     return;
