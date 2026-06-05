@@ -5,7 +5,7 @@
 (function () {
   'use strict';
 
-  // ── Constants ─────────────────────────────────────────────────────────────
+  // ── Constants ──────────────────────────────────────────────────────────────
   var STORAGE_KEY  = 'wds_welcomeShown';
   var SPINS_KEY    = 'wds_welcomeSpins';
   var NAME_KEY     = 'wds_playerName';
