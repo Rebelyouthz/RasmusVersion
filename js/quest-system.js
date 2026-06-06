@@ -4965,10 +4965,19 @@
       if (canUse3DCamp) {
         const _campBuildingsEl = document.getElementById('camp-buildings-section');
         if (_campBuildingsEl) _campBuildingsEl.style.display = 'none';
-        // Explicitly show the game-container so the Three.js canvas is visible.
-        // (It may have been hidden by a prior 2D-mode camp visit.)
+        // Keep game-container HIDDEN until CampWorld.enter() succeeds — prevents the
+        // black combat-scene canvas from showing through the transparent 3D overlay
+        // during the ~200ms _buildScene() call.  It is re-shown after enter() below.
+        // Exception: if CampWorld is already active (re-entering camp mid-session),
+        // keep it visible so there is no flash.
         const _gameContainerEl = document.getElementById('game-container');
-        if (_gameContainerEl) _gameContainerEl.style.display = 'block';
+        if (_gameContainerEl) {
+          if (window.CampWorld && window.CampWorld.isActive) {
+            _gameContainerEl.style.display = 'block'; // already running, keep visible
+          } else {
+            _gameContainerEl.style.display = 'none';  // hide until enter() succeeds
+          }
+        }
       } else {
         // 2D fallback: ensure buildings section is visible so the camp is not blank.
         const _campBuildingsEl = document.getElementById('camp-buildings-section');
@@ -5125,6 +5134,16 @@
         // Force camp-3d-mode so CSS hides all 2D building cards regardless of timing
         if (_enterSucceeded && _campScreenEl) {
           _campScreenEl.classList.add('camp-3d-mode');
+          _campScreenEl.style.display = 'flex';
+          // NOW show the game-container: CampWorld is active and will render the
+          // 3D camp on the very next animate() frame.  We kept it hidden above to
+          // prevent the black combat-scene canvas from flashing through the
+          // transparent camp-3d-mode overlay while _buildScene() was running.
+          const _gameContainerEl2 = document.getElementById('game-container');
+          if (_gameContainerEl2) _gameContainerEl2.style.display = 'block';
+        } else if (!_enterSucceeded && _campScreenEl) {
+          // Enter failed — stay in opaque camp-screen so canvas remains hidden.
+          // 2D building cards are already restored in the catch block above.
           _campScreenEl.style.display = 'flex';
         }
       } else {

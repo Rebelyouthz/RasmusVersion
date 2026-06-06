@@ -222,6 +222,10 @@ function init() {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.4;
+  // Match the clear colour to the scene background so any frame rendered before
+  // CampWorld is active shows the same colour as the loading screen (#1a1a2e)
+  // rather than a jarring bright white or pure black flash.
+  renderer.setClearColor(0x1a1a2e, 1);
   const gameContainer = document.getElementById('game-container');
   if (!gameContainer) {
     console.error('[Init] #game-container element not found - cannot append renderer canvas');

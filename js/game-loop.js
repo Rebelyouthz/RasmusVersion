@@ -879,8 +879,14 @@
         }
         // Still render the scene so visual effects (camera shake, particles, modals) are visible (PR #82)
         // When CampWorld is active, its dedicated early-return branch handles update/render with its own dt.
+        // BLACK SCREEN FIX: also skip rendering the combat scene when isGameActive=false and no player
+        // exists yet — this is the camp boot phase where CampWorld._buildScene() is still running.
+        // Rendering a blank dark combat scene here would show through the transparent camp-3d-mode
+        // overlay as a black flash. Once CampWorld.isActive is true the early-return branch above
+        // handles all rendering; once isGameActive is true the full game loop renders normally.
         try {
-          if (!(window.CampWorld && window.CampWorld.isActive) && renderer && scene && camera) {
+          const _skipCombatRender = !isGameActive && !player;
+          if (!_skipCombatRender && !(window.CampWorld && window.CampWorld.isActive) && renderer && scene && camera) {
             renderer.render(scene, camera);
           }
         } catch(e) { console.error('Render error (paused):', e); }

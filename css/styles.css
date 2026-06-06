@@ -7053,6 +7053,9 @@
       background: transparent !important;
       overflow: hidden !important;
       pointer-events: none; /* Let touches pass through to 3D canvas and camp world */
+      /* Smooth fade from opaque cover to transparent so the 3D canvas is revealed
+         gently instead of snapping visible. Matches the loading screen fade speed. */
+      transition: background 0.3s ease;
     }
     /* Re-enable pointer-events on interactive children that float over the 3D world */
     #camp-screen.camp-3d-mode .camp-util-icon,

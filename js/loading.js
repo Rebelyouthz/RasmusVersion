@@ -107,19 +107,37 @@
         // Clear return-from-sandbox flag so it doesn't persist across reloads
         try { localStorage.removeItem('wds_fromSandbox'); } catch (e) { /* ignore */ }
 
-        // Fade out loading screen
-        loadingScreen.style.opacity = '0';
-        loadingScreen.style.pointerEvents = 'none';
-        setTimeout(function() {
-          loadingScreen.style.setProperty('display', 'none', 'important');
-        }, 500);
+        // ── BLACK SCREEN FIX ──────────────────────────────────────────────────────
+        // Show the camp-screen (which has a dark HTML background matching the game
+        // palette) BEFORE the loading screen fades out.  This ensures the canvas is
+        // never uncovered while it is still rendering the empty dark combat scene —
+        // the camp-screen background acts as a seamless cover during the ~200-500ms
+        // it takes for CampWorld._buildScene() to complete and _isActive to become
+        // true.  The call to updateCampScreen() below will add camp-3d-mode, which
+        // makes the background transparent so the 3D canvas shows through.
+        var campScreenEl = document.getElementById('camp-screen');
+        if (campScreenEl) {
+          campScreenEl.style.display = 'flex';
+          // Do NOT add camp-3d-mode yet — keep the opaque background as cover.
+        }
 
         // Hide main menu
         var mainMenu = document.getElementById('main-menu');
         if (mainMenu) mainMenu.style.display = 'none';
 
+        // Initialise camp (adds camp-3d-mode, calls CampWorld.enter(), etc.).
+        // This must run before the loading screen fade completes so the 3D scene
+        // is ready the moment the loading screen becomes fully transparent.
         if (typeof window.updateCampScreen === 'function') {
             window.updateCampScreen();
         }
+
+        // Fade out loading screen AFTER camp is set up so it reveals the 3D world,
+        // not a blank canvas.
+        loadingScreen.style.opacity = '0';
+        loadingScreen.style.pointerEvents = 'none';
+        setTimeout(function() {
+          loadingScreen.style.setProperty('display', 'none', 'important');
+        }, 500);
       }
     })();
