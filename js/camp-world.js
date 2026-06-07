@@ -418,67 +418,71 @@
     _campScene.add(fillLight);
 
     // ── Ground ──────────────────────────────────────────────
-    _buildGround();
+    try { _buildGround(); } catch(e) { console.error('[CampWorld] _buildGround failed:', e); }
 
     // ── Campfire ────────────────────────────────────────────
-    _buildCampfire();
+    try { _buildCampfire(); } catch(e) { console.error('[CampWorld] _buildCampfire failed:', e); }
 
     // ── Stars ───────────────────────────────────────────────
-    _buildStars();
+    try { _buildStars(); } catch(e) { console.error('[CampWorld] _buildStars failed:', e); }
 
     // ── Atmospheric particles ───────────────────────────────
-    _buildSparkSystem();
-    _buildDustSystem();
-    _buildFireflySystem();
+    try { _buildSparkSystem(); } catch(e) { console.error('[CampWorld] _buildSparkSystem failed:', e); }
+    try { _buildDustSystem(); } catch(e) { console.error('[CampWorld] _buildDustSystem failed:', e); }
+    try { _buildFireflySystem(); } catch(e) { console.error('[CampWorld] _buildFireflySystem failed:', e); }
 
     // ── Surrounding trees / scenery ─────────────────────────
-    _buildAmbientForest();
+    try { _buildAmbientForest(); } catch(e) { console.error('[CampWorld] _buildAmbientForest failed:', e); }
 
     // ── Pooled fence around absolute map edge ───────────────
-    _buildMapFence();
+    try { _buildMapFence(); } catch(e) { console.error('[CampWorld] _buildMapFence failed:', e); }
 
     // ── Spawn elevator (black cylinder with gold contours) ──
-    _buildSpawnElevator();
+    try { _buildSpawnElevator(); } catch(e) { console.error('[CampWorld] _buildSpawnElevator failed:', e); }
 
     // ── Extra trees, branches, logs, and grass patches ──────
-    _buildExtraVegetation();
+    try { _buildExtraVegetation(); } catch(e) { console.error('[CampWorld] _buildExtraVegetation failed:', e); }
 
     // ── Small reflection pond near campfire ─────────────────
-    _buildCampPond();
+    try { _buildCampPond(); } catch(e) { console.error('[CampWorld] _buildCampPond failed:', e); }
 
     // ── Interactive Fountain (fountain clicker quest) ─────────
-    _buildCampFountain();
+    try { _buildCampFountain(); } catch(e) { console.error('[CampWorld] _buildCampFountain failed:', e); }
 
     // ── Lake (Waterdrop's ultimate goal, south of forest ring) ──
-    _buildLake();
-    _buildLakeParticles();
+    try { _buildLake(); } catch(e) { console.error('[CampWorld] _buildLake failed:', e); }
+    try { _buildLakeParticles(); } catch(e) { console.error('[CampWorld] _buildLakeParticles failed:', e); }
 
     // ── Buildings ───────────────────────────────────────────
     for (const def of BUILDING_DEFS) {
-      const grp = _buildBuilding(def);
-      grp.visible = false; // hidden until _refreshBuildings() called
-      _buildingMeshes[def.id] = grp;
-      _campScene.add(grp);
-      const marker = _buildBuildSiteMarker(def);
-      marker.visible = false;
-      _buildSiteMarkers[def.id] = marker;
-      _campScene.add(marker);
+      try {
+        const grp = _buildBuilding(def);
+        grp.visible = false; // hidden until _refreshBuildings() called
+        _buildingMeshes[def.id] = grp;
+        _campScene.add(grp);
+      } catch(e) { console.error("[CampWorld] _buildBuilding failed for " + def.id + ":", e); }
+      try {
+        const marker = _buildBuildSiteMarker(def);
+        marker.visible = false;
+        _buildSiteMarkers[def.id] = marker;
+        _campScene.add(marker);
+      } catch(e) { console.error("[CampWorld] _buildBuildSiteMarker failed for " + def.id + ":", e); }
     }
 
     // ── Torch / Lantern Lights between buildings ─────────
-    _buildCampTorches();
+    try { _buildCampTorches(); } catch(e) { console.error('[CampWorld] _buildCampTorches failed:', e); }
 
     // ── Player character ─────────────────────────────────────
-    _buildPlayer();
+    try { _buildPlayer(); } catch(e) { console.error('[CampWorld] _buildPlayer failed:', e); }
 
     // ── Benny NPC ────────────────────────────────────────────
-    _buildBennyNPC();
+    try { _buildBennyNPC(); } catch(e) { console.error('[CampWorld] _buildBennyNPC failed:', e); }
 
     // ── Crashed UFO Debris + Alien Incubator Pod ─────────────
-    _buildUFODebrisAndIncubator();
+    try { _buildUFODebrisAndIncubator(); } catch(e) { console.error('[CampWorld] _buildUFODebrisAndIncubator failed:', e); }
 
     // ── A.I.D.A Intro — Broken Robot + Chip ─────────────────
-    _buildAidaIntroProps();
+    try { _buildAidaIntroProps(); } catch(e) { console.error('[CampWorld] _buildAidaIntroProps failed:', e); }
 
     // ── Camera ──────────────────────────────────────────────
     const aspect = window.innerWidth / window.innerHeight;
@@ -487,8 +491,10 @@
 
     // Profile avatar sprite sheet disabled — no UI overlay allocated
     } catch (err) {
-      console.error('[CampWorld] _buildScene() error:', err);
-      throw err; // re-throw so warmUp/enter can reset _campScene for a clean retry
+      // Log the error but do NOT re-throw — a partial scene is better than no 3D camp.
+      // Individual _build* calls above already have their own try/catch so this outer
+      // catch should only fire for the scene/lighting/camera setup at the top of the function.
+      console.error('[CampWorld] _buildScene() outer catch:', err);
     }
   }
 
@@ -7490,13 +7496,30 @@
       try {
         _buildScene();
       } catch (e) {
+        // _buildScene no longer re-throws, but keep this guard for safety
         console.error('[CampWorld]', '_buildScene() in enter', 'failed:', e);
-        _showMobileError(e, '_buildScene() in enter');
-        _campScene = null; // ensure a full rebuild is attempted next time
-        _isBuilding = false;
-        return;
       }
       _isBuilding = false;
+      // If _buildScene failed before creating _campCamera, create a fallback now
+      // so render() is not blocked by the !_campCamera guard.
+      if (_campScene && !_campCamera) {
+        try {
+          const _THREE = T();
+          if (_THREE) {
+            const _asp = window.innerWidth / window.innerHeight;
+            _campCamera = new _THREE.PerspectiveCamera(42, _asp, 0.1, 200);
+            _updateCamera(0);
+            console.warn('[CampWorld] Fallback camera created after _buildScene partial failure');
+          }
+        } catch (camErr) {
+          console.error('[CampWorld] Fallback camera creation failed:', camErr);
+        }
+      }
+      // If _campScene still null after build attempt, abort — cannot render without it
+      if (!_campScene) {
+        console.error('[CampWorld] enter(): _campScene is null after _buildScene — aborting');
+        return;
+      }
     }
 
     // Reset player to spawn — wrap in try/catch so any unexpected setup
