@@ -3854,6 +3854,23 @@
       window.gameModuleReady = true;
       window.gameInitError = e; // Store the error for display
 
+      // If renderer was never created (init crashed early), create one now
+      // so CampWorld can still enter 3D mode via updateCampScreen retry.
+      if (!window.gameRenderer && typeof THREE !== 'undefined') {
+        try {
+          var _emergencyRenderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+          _emergencyRenderer.setSize(window.innerWidth, window.innerHeight);
+          _emergencyRenderer.setClearColor(0x1a1a2e, 1);
+          var _gc = document.getElementById('game-container');
+          if (_gc) _gc.appendChild(_emergencyRenderer.domElement);
+          window.gameRenderer = _emergencyRenderer;
+          renderer = _emergencyRenderer;
+          console.log('[Game] Emergency renderer created for CampWorld');
+        } catch (_rErr) {
+          console.warn('[Game] Could not create emergency renderer:', _rErr);
+        }
+      }
+
       // Show error on screen so the user can report what went wrong
       var errorDiv = document.createElement('div');
       errorDiv.id = 'init-error-display';

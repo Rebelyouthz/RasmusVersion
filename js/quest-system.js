@@ -4950,6 +4950,15 @@
         hasRenderer: !!_rendererRef,
         canUse3DCamp: canUse3DCamp
       });
+      // If CampWorld exists but renderer isn't ready yet, retry after a short delay
+      // instead of falling back to the 2D camp permanently.
+      if (window.CampWorld && !_rendererRef) {
+        console.warn('[updateCampScreen] CampWorld ready but renderer not yet — retrying in 300ms');
+        setTimeout(function() {
+          if (typeof updateCampScreen === 'function') updateCampScreen();
+        }, 300);
+        return;
+      }
       // Explicit add/remove used here for clarity.
       if (_campScreenEl) {
         if (canUse3DCamp) {

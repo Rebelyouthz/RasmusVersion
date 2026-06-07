@@ -186,13 +186,7 @@ function init() {
   window.GoreSim = null;
   window.GoreSimulator = null;
   window.TraumaSystem = null;
-  if (window.BloodSimulatorV21 && typeof THREE !== 'undefined') {
-    window.BloodSimulatorV21.init(scene, null, null);
-    if (window.BloodV2) {
-      window.BloodV2._dropData = window.BloodSimulatorV21._pool || null;
-      window.BloodV2._dropIM = window.BloodSimulatorV21.dropIM || null;
-    }
-  }
+  // BloodSimulatorV21.init moved to after renderer creation (see below)
   if (window.GameObjectPool) window.GameObjectPool.prewarm();
   if (_powerUpUpdateTimer) clearInterval(_powerUpUpdateTimer);
   _powerUpUpdateTimer = setInterval(() => {
@@ -235,6 +229,15 @@ function init() {
   console.log('[Init] Renderer created and appended OK');
 
   window.gameRenderer = renderer;
+
+  // Init blood simulator now that renderer + scene are both ready
+  if (window.BloodSimulatorV21 && typeof THREE !== 'undefined') {
+    try {
+      window.BloodSimulatorV21.init(scene, null, null);
+    } catch (_bsErr) {
+      console.warn('[Init] BloodSimulatorV21.init failed (non-fatal):', _bsErr);
+    }
+  }
 
   renderer.domElement.addEventListener('webglcontextlost', (e) => {
     e.preventDefault();
