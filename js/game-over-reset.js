@@ -8,6 +8,26 @@
     let _landmarkQuestWasActive = false;
 
     function gameOver() {
+      // ── Hard-clear ALL pending level-up state so death cannot loop back into it ──
+      try {
+        window.levelUpPending = false;
+        const _lvlModal = document.getElementById('upgrade-modal');
+        if (_lvlModal) {
+          _lvlModal.style.display = 'none';
+          _lvlModal.style.opacity = '';
+          _lvlModal.style.transform = '';
+        }
+        const _lvlList = document.getElementById('upgrade-list');
+        if (_lvlList) { _lvlList.innerHTML = ''; }
+        if (window._levelupTimeouts && window._levelupTimeouts.length) {
+          window._levelupTimeouts.forEach(function (id) { try { clearTimeout(id); } catch(_) {} });
+          window._levelupTimeouts.length = 0;
+        }
+        if (window.levelupSkipTimeoutId) { clearTimeout(window.levelupSkipTimeoutId); window.levelupSkipTimeoutId = null; }
+        document.querySelectorAll('.levelup-blackhole, .confetti-piece, .card-shard').forEach(function (el) {
+          try { el.remove(); } catch(_) {}
+        });
+      } catch (_clearErr) { console.warn('[GameOver] level-up clear failed:', _clearErr); }
       setGameOver(true);
       setGamePaused(true);
       setGameActive(false);

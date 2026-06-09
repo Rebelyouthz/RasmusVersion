@@ -826,6 +826,19 @@ window.RunEndScreen = (function () {
   // ─────────────────────────────────────────────────────────────
   function _goToCamp(fromQuestComplete) {
     hide();
+    // Hard-reset game state before returning to camp
+    try {
+      if (typeof isGameOver !== 'undefined') { isGameOver = false; }
+      if (typeof isGameActive !== 'undefined') { isGameActive = false; }
+      if (typeof isPaused !== 'undefined') { isPaused = false; }
+      window.levelUpPending = false;
+      if (typeof playerStats !== 'undefined' && playerStats) {
+        playerStats.exp = 0;
+        playerStats.lvl = 1;
+        playerStats.expReq = 100;
+      }
+      if (window._levelupTimeouts) { window._levelupTimeouts.forEach(clearTimeout); window._levelupTimeouts.length = 0; }
+    } catch (_) {}
     window._campFromRun = true;
     if (fromQuestComplete) window._pendingAIDADialogueOnCamp = true;
     setTimeout(function () {
