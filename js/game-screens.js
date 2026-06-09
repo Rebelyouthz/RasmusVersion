@@ -2835,6 +2835,15 @@ function forceGameUnpause() {
   window.isPaused = false;
   if (typeof _syncJoystickZone === 'function') _syncJoystickZone();
   checkPendingLevelUp();
+  // Triple-confirm pause state is cleared after level-up exits
+  try {
+    window.levelUpPending = false;
+    if (typeof isPaused !== 'undefined') { isPaused = false; }
+    if (typeof gamePauseReason !== 'undefined') { gamePauseReason = null; }
+    requestAnimationFrame(function () {
+      try { if (typeof updateInputs === 'function') updateInputs(0); } catch(_){}
+    });
+  } catch (_) {}
 }
 window.forceGameUnpause = forceGameUnpause;
 

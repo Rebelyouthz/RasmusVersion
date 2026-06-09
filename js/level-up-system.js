@@ -1674,9 +1674,37 @@ window.spawnBossChest = function(x, z) {
         }
 
         function _applyAndClose(upgrade) {
-          try { if (upgrade && typeof upgrade.apply === 'function') upgrade.apply(); } catch (error) { console.error('Error applying LVL UP:', error); }
+          try {
+            if (upgrade && typeof upgrade.apply === 'function') upgrade.apply();
+          } catch (error) {
+            console.error('Error applying LVL UP:', error);
+          } finally {
+            // ── Force-reset ALL input + pause state so character is fully playable again ──
+            try {
+              window.levelUpPending = false;
+              if (typeof setGamePaused === 'function') setGamePaused(false);
+              if (typeof forceGameUnpause === 'function') forceGameUnpause();
+              if (window.player) {
+                window.player.vx = 0;
+                window.player.vy = 0;
+                if (window.player.userData) window.player.userData.lockedInLevelUp = false;
+              }
+              if (window.joystick) {
+                window.joystick.dx = 0;
+                window.joystick.dy = 0;
+                window.joystick.active = false;
+              }
+              if (window.aimStick) {
+                window.aimStick.dx = 0;
+                window.aimStick.dy = 0;
+                window.aimStick.active = false;
+                window.aimStick.locked = false;
+              }
+              if (typeof isPaused !== 'undefined') { try { isPaused = false; } catch(_) {} }
+              if (typeof gamePauseReason !== 'undefined') { try { gamePauseReason = null; } catch(_) {} }
+            } catch (_resetErr) { console.warn('[LevelUp] input reset failed:', _resetErr); }
+          }
           // Defer blood reset to next tick so click handler returns immediately (no freeze)
-          // Prevents large artefact splats appearing after card select.
           try {
             if (window.BloodSimulatorV21 && typeof window.BloodSimulatorV21.reset === 'function') {
               setTimeout(function () { try { window.BloodSimulatorV21.reset(); } catch (_) {} }, 0);
