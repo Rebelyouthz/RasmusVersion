@@ -3282,10 +3282,10 @@
         if (typeof window.registerCombatKill === 'function') window.registerCombatKill();
         // Record kill milestone progress
         if (window.GameMilestones) window.GameMilestones.recordKill();
-        // Grant Account XP for kill — strict economy: Normal=1, Elite/MiniBoss=5, Boss=10
-        const _isBossKill  = !!this.isFlyingBoss;  // FlyingBoss (type 11): top-tier boss, 10 XP
-        const _isEliteKill = !!this.isMiniBoss;    // MiniBoss / Annunaki (types 10, 19): elite, 5 XP
-        const xpAmount = _isBossKill ? 10 : (_isEliteKill ? 5 : 1);
+        // Buffed economy so level-ups feel rewarding: Normal=5, Elite=20, Boss=50
+        const _isBossKill  = !!this.isFlyingBoss;
+        const _isEliteKill = !!this.isMiniBoss;
+        const xpAmount = _isBossKill ? 50 : (_isEliteKill ? 20 : 5);
         if (typeof addAccountXP === 'function') {
           addAccountXP(xpAmount);
         } else if (window.GameAccount && typeof window.GameAccount.addXP === 'function' && window.saveData) {

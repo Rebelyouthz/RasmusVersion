@@ -23,9 +23,9 @@
         if (el) el.style.display = 'none';
       });
 
-      // Show "YOU DIED" banner for 3 seconds
-      showYouDiedBanner(3000);
-      // Push to super stat bar
+      // Skip the purple SYSTEM TERMINATED banner — show RunEndScreen directly.
+      const _ydBanner = document.getElementById('you-died-banner');
+      if (_ydBanner) _ydBanner.style.display = 'none';
       if (window.pushSuperStatEvent) window.pushSuperStatEvent('YOU DIED!', 'death', '\uD83D\uDC80', 'death');
 
       // Capture active landmark-quest state BEFORE resetting it so the day/night
@@ -292,7 +292,7 @@
           window.RunEndScreen.show(window._resCurrentStats);
         }
         updateGoldDisplays();
-      }, 3400);
+      }, 300);
       
       // Show deferred mission notification after death (quest completed during run)
       if (saveData.tutorialQuests && saveData.tutorialQuests.pendingMissionNotification === 'quest1_kill3') {

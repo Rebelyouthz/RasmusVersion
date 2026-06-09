@@ -1195,62 +1195,137 @@
   }
 
   // ── Spawn elevator – black cylinder with gold/silver contours ──
+  // ── Eye of Horus Spawn Portal (animated black/gold doors) ─────────────
+  let _eyeOfHorusDoors = null;
+  let _horusDoorState  = 'closed'; // 'closed' | 'opening' | 'open' | 'closing'
+  let _horusDoorT      = 0;
+  const HORUS_DOOR_DURATION = 1.1;
   function _buildSpawnElevator() {
     const THREE = T();
-    const ELEV_POS = { x: 0, y: 0, z: 6 }; // near spawn point
+    const POS = { x: 0, y: 0, z: 6 };
+    const group = new THREE.Group();
+    group.position.set(POS.x, 0.005, POS.z);
 
-    // Main cylinder body — near-black PBR metallic, partially submerged.
-    // MeshStandardMaterial avoids the pink/magenta fallback that MeshPhongMaterial
-    // can produce when lit by the scene's ambient-only setup.
-    const bodyGeo = new THREE.CylinderGeometry(1.2, 1.2, 3.0, 24, 1, true); // open-ended
-    const bodyMat = new THREE.MeshStandardMaterial({
-      color: 0x050505,
-      metalness: 1,
-      roughness: 0.1,
-      side: THREE.DoubleSide,
-    });
-    const body = new THREE.Mesh(bodyGeo, bodyMat);
-    body.position.set(ELEV_POS.x, ELEV_POS.y - 0.5, ELEV_POS.z);
-    _campScene.add(body);
+    // Black oval base ring
+    const baseRingGeo = new THREE.RingGeometry(1.9, 2.15, 64);
+    const baseRingMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, metalness: 1.0, roughness: 0.25, side: THREE.DoubleSide });
+    const baseRing = new THREE.Mesh(baseRingGeo, baseRingMat);
+    baseRing.rotation.x = -Math.PI / 2;
+    baseRing.scale.set(1.0, 1.0, 0.62);
+    group.add(baseRing);
 
-    // Gold contour rings
-    for (let r = 0; r < 3; r++) {
-      const ringGeo = new THREE.TorusGeometry(1.22, 0.03, 8, 32);
-      const ringMat = new THREE.MeshPhongMaterial({
-        color: 0xccaa44,
-        emissive: 0x665520,
-        emissiveIntensity: 0.3,
-        shininess: 100,
-        specular: 0xffdd88,
-      });
-      const ring = new THREE.Mesh(ringGeo, ringMat);
-      ring.rotation.x = Math.PI / 2;
-      ring.position.set(ELEV_POS.x, ELEV_POS.y - 0.8 + r * 0.8, ELEV_POS.z);
-      _campScene.add(ring);
+    // Gold trim outside the base ring
+    const goldTrimGeo = new THREE.RingGeometry(2.12, 2.22, 64);
+    const goldTrimMat = new THREE.MeshStandardMaterial({ color: 0xFFD700, emissive: 0xC9A227, emissiveIntensity: 0.9, metalness: 1.0, roughness: 0.18, side: THREE.DoubleSide });
+    const goldTrim = new THREE.Mesh(goldTrimGeo, goldTrimMat);
+    goldTrim.rotation.x = -Math.PI / 2;
+    goldTrim.scale.set(1.0, 1.0, 0.62);
+    goldTrim.position.y = 0.002;
+    group.add(goldTrim);
+
+    // Inner pupil group (gold iris + glowing yellow pupil + Horus teardrop)
+    const pupilGroup = new THREE.Group();
+    pupilGroup.position.y = 0.012;
+
+    const irisGeo = new THREE.RingGeometry(0.42, 0.55, 48);
+    const irisMat = new THREE.MeshStandardMaterial({ color: 0xFFD700, emissive: 0xC9A227, emissiveIntensity: 1.1, metalness: 0.9, roughness: 0.2, side: THREE.DoubleSide });
+    const iris = new THREE.Mesh(irisGeo, irisMat);
+    iris.rotation.x = -Math.PI / 2;
+    pupilGroup.add(iris);
+
+    const pupilGeo = new THREE.CircleGeometry(0.40, 32);
+    const pupilMat = new THREE.MeshBasicMaterial({ color: 0xFFE45A, transparent: true, opacity: 0.95, side: THREE.DoubleSide });
+    const pupil = new THREE.Mesh(pupilGeo, pupilMat);
+    pupil.rotation.x = -Math.PI / 2;
+    pupil.position.y = 0.002;
+    pupilGroup.add(pupil);
+
+    const tearShape = new THREE.Shape();
+    tearShape.moveTo(0, 0);
+    tearShape.bezierCurveTo(0.05, -0.20, 0.30, -0.45, 0.55, -0.50);
+    tearShape.bezierCurveTo(0.30, -0.55, 0.10, -0.40, 0.10, -0.05);
+    tearShape.lineTo(0, 0);
+    const tearGeo = new THREE.ShapeGeometry(tearShape);
+    const tearMat = new THREE.MeshBasicMaterial({ color: 0xFFD700, transparent: true, opacity: 0.85, side: THREE.DoubleSide });
+    const tear = new THREE.Mesh(tearGeo, tearMat);
+    tear.rotation.x = -Math.PI / 2;
+    tear.position.set(0.05, 0.003, 0.35);
+    pupilGroup.add(tear);
+
+    group.add(pupilGroup);
+
+    // Two black half-oval doors that slide apart along X
+    function _makeDoorMesh(side) {
+      const sgn = side === 'left' ? -1 : 1;
+      const shape = new THREE.Shape();
+      const halfW = 2.10, halfH = 1.30;
+      if (sgn < 0) {
+        shape.moveTo(0, 0);
+        shape.bezierCurveTo(0, halfH * 0.95, -halfW * 0.5, halfH, -halfW, 0);
+        shape.bezierCurveTo(-halfW * 0.5, -halfH, 0, -halfH * 0.95, 0, 0);
+      } else {
+        shape.moveTo(0, 0);
+        shape.bezierCurveTo(0, halfH * 0.95, halfW * 0.5, halfH, halfW, 0);
+        shape.bezierCurveTo(halfW * 0.5, -halfH, 0, -halfH * 0.95, 0, 0);
+      }
+      const geo = new THREE.ShapeGeometry(shape, 48);
+      const mat = new THREE.MeshStandardMaterial({ color: 0x050505, metalness: 1.0, roughness: 0.22, side: THREE.DoubleSide });
+      const m = new THREE.Mesh(geo, mat);
+      m.rotation.x = -Math.PI / 2;
+      m.position.y = 0.018;
+      m.scale.z = 0.62;
+      const wrap = new THREE.Group();
+      wrap.add(m);
+      wrap.userData.side = side;
+      return wrap;
     }
+    const doorLeft  = _makeDoorMesh('left');
+    const doorRight = _makeDoorMesh('right');
+    group.add(doorLeft);
+    group.add(doorRight);
 
-    // Door contour lines (silver vertical strips)
-    const doorGeo = new THREE.BoxGeometry(0.04, 2.0, 0.04);
-    const doorMat = new THREE.MeshPhongMaterial({
-      color: 0xaaaaaa,
-      emissive: 0x444444,
-      emissiveIntensity: 0.2,
-      shininess: 80,
-      specular: 0xffffff,
-    });
-    for (let d = 0; d < 2; d++) {
-      const doorLine = new THREE.Mesh(doorGeo, doorMat);
-      const dx = (d === 0 ? -0.35 : 0.35);
-      doorLine.position.set(ELEV_POS.x + dx, ELEV_POS.y, ELEV_POS.z + 1.2);
-      _campScene.add(doorLine);
-    }
-    // Horizontal door frame
-    const framGeo = new THREE.BoxGeometry(0.74, 0.04, 0.04);
-    const topFrame = new THREE.Mesh(framGeo, doorMat);
-    topFrame.position.set(ELEV_POS.x, ELEV_POS.y + 0.95, ELEV_POS.z + 1.2);
-    _campScene.add(topFrame);
+    // Soft golden glow light from eye centre
+    const eyeLight = new THREE.PointLight(0xFFD24A, 1.4, 6, 2);
+    eyeLight.position.set(0, 0.45, 0);
+    group.add(eyeLight);
+
+    _campScene.add(group);
+
+    _eyeOfHorusDoors = { root: group, left: doorLeft, right: doorRight, pupil: pupilGroup, pupilMat, tearMat, irisMat, light: eyeLight, pos: POS };
+    _horusDoorState = 'closed';
+    _horusDoorT     = 0;
   }
 
+  window._openHorusDoors  = function () { if (!_eyeOfHorusDoors) return; _horusDoorState = 'opening'; _horusDoorT = 0; };
+  window._closeHorusDoors = function () { if (!_eyeOfHorusDoors) return; _horusDoorState = 'closing'; _horusDoorT = 0; };
+
+  function _updateEyeOfHorusDoors(dt) {
+    if (!_eyeOfHorusDoors) return;
+    const e = _eyeOfHorusDoors;
+    if (_horusDoorState === 'closed' && e.pupilMat) {
+      const pulse = 0.85 + 0.15 * Math.sin(_campTime * 2.4);
+      e.pupilMat.opacity = pulse;
+      if (e.irisMat) e.irisMat.emissiveIntensity = 0.7 + 0.4 * pulse;
+      if (e.light)   e.light.intensity = 1.0 + 0.6 * pulse;
+    }
+    if (_horusDoorState === 'opening' || _horusDoorState === 'closing') {
+      _horusDoorT += dt;
+      const tt = Math.min(1, _horusDoorT / HORUS_DOOR_DURATION);
+      const ease = tt < 0.5 ? 2*tt*tt : 1 - Math.pow(-2*tt+2, 2)/2;
+      const k = (_horusDoorState === 'opening') ? ease : (1 - ease);
+      const slide = k * 2.4;
+      e.left.position.x  = -slide;
+      e.right.position.x =  slide;
+      if (e.pupilMat) e.pupilMat.opacity = Math.max(0, 0.95 * (1 - k));
+      if (e.tearMat)  e.tearMat.opacity  = Math.max(0, 0.85 * (1 - k));
+      if (e.irisMat)  e.irisMat.emissiveIntensity = 0.8 + k * 1.4;
+      if (e.light)    e.light.intensity = 1.0 + k * 3.5;
+      if (tt >= 1) {
+        _horusDoorState = (_horusDoorState === 'opening') ? 'open' : 'closed';
+        _horusDoorT = 0;
+      }
+    }
+  }
   // ── Extra trees, branches, logs, and grass patches ──
   // Carefully placed to avoid overlapping existing structures.
   function _buildExtraVegetation() {
@@ -1906,6 +1981,7 @@
     if (sd && !sd._htip_quest_awaken_collected && window.HorusPanel && typeof window.HorusPanel.show === 'function') {
       sd._htip_quest_awaken_collected = true;
       window.HorusPanel.show('You have wood, stone, and gold. Build the Quest Hall to receive your first mission.\nLook for the glowing marker on the ground.');
+    }
     if (typeof showStatusMessage === 'function') showStatusMessage('Resources collected!', 3200);
     if (typeof saveSaveData === 'function') saveSaveData();
     if (isGatherStrengthQuest) {
@@ -7525,14 +7601,36 @@
     // Reset player to spawn — wrap in try/catch so any unexpected setup
     // failure does not block camp activation (scene is already built).
     try {
-      _playerPos.x = SPAWN_POS.x;
-      _playerPos.z = SPAWN_POS.z;
+      const _portalPos = (_eyeOfHorusDoors && _eyeOfHorusDoors.pos) ? _eyeOfHorusDoors.pos : { x: 0, z: 6 };
+      _playerPos.x = _portalPos.x;
+      _playerPos.z = _portalPos.z;
       _playerVel.x = 0;
       _playerVel.z = 0;
       if (_playerMesh) {
-        _playerMesh.position.set(_playerPos.x, PLAYER_RADIUS, _playerPos.z);
+        _playerMesh.position.set(_playerPos.x, -1.4, _playerPos.z); // start below ground
         _playerMesh.visible = true;
       }
+      try {
+        if (typeof window._openHorusDoors === 'function') window._openHorusDoors();
+        const _riseStart = Date.now();
+        const _riseDur   = 1100;
+        const _doorPlayer = _playerMesh;
+        function _risePlayer() {
+          if (!_doorPlayer) return;
+          const k = Math.min(1, (Date.now() - _riseStart) / _riseDur);
+          const ease = k < 0.5 ? 2*k*k : 1 - Math.pow(-2*k+2, 2)/2;
+          const targetY = -1.4 + (PLAYER_RADIUS - (-1.4)) * ease;
+          _doorPlayer.position.y = targetY;
+          if (k < 1) requestAnimationFrame(_risePlayer);
+          else {
+            _doorPlayer.position.y = PLAYER_RADIUS;
+            setTimeout(function () {
+              if (typeof window._closeHorusDoors === 'function') window._closeHorusDoors();
+            }, 250);
+          }
+        }
+        requestAnimationFrame(_risePlayer);
+      } catch (_horusErr) {}
       _updateCamera(0);
 
       // Refresh building visibility
@@ -8238,6 +8336,7 @@
     dt = Math.max(0.001, Math.min(dt, 0.05));
     _updateFire(dt);
     _updateParticles(dt);
+    _updateEyeOfHorusDoors(dt);
     _updateBennyNPC(dt);
     _updateIncubator(dt);
     _updateAidaOrbit(dt);

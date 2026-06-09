@@ -226,6 +226,10 @@ const BloodSimulatorV21 = {
       for (let i = 0; i < this._decals.length; i++) {
         this._decals[i].life = 0;
         this._decals[i].mesh.visible = false;
+        if (this._decals[i].mesh.material) {
+          this._decals[i].mesh.material.opacity = 0;
+          this._decals[i].mesh.material.needsUpdate = true;
+        }
       }
       this._decalHead = 0;
     }
@@ -233,6 +237,10 @@ const BloodSimulatorV21 = {
       for (let i = 0; i < this._rivulets.length; i++) {
         this._rivulets[i].life = 0;
         this._rivulets[i].mesh.visible = false;
+        if (this._rivulets[i].mesh.material) {
+          this._rivulets[i].mesh.material.opacity = 0;
+          this._rivulets[i].mesh.material.needsUpdate = true;
+        }
       }
       this._rivuletHead = 0;
     }
@@ -242,6 +250,40 @@ const BloodSimulatorV21 = {
     if (this.dropIM) { this.dropIM.count = 0; this.dropIM.instanceMatrix.needsUpdate = true; }
     if (this.mistIM) { this.mistIM.count = 0; this.mistIM.instanceMatrix.needsUpdate = true; }
     this._activeCount = 0;
+    this._safetyResetTimer = 0;
+  },
+
+  _safetyResetTimer: 0,
+  _safetyScrub(dt) {
+    this._safetyResetTimer = (this._safetyResetTimer || 0) + dt;
+    if (this._safetyResetTimer < 12) return;
+    this._safetyResetTimer = 0;
+    if (this._pulseWounds && this._pulseWounds.length) {
+      for (let i = this._pulseWounds.length - 1; i >= 0; i--) {
+        const w = this._pulseWounds[i];
+        if (!w || w.life <= 0 || (w.maxLife && w.life > w.maxLife * 1.5)) {
+          this._pulseWounds.splice(i, 1);
+        }
+      }
+    }
+    if (this._decals) {
+      for (let i = 0; i < this._decals.length; i++) {
+        const dc = this._decals[i];
+        if (dc.life <= 0 && dc.mesh.visible) {
+          dc.mesh.visible = false;
+          if (dc.mesh.material) { dc.mesh.material.opacity = 0; dc.mesh.material.needsUpdate = true; }
+        }
+      }
+    }
+    if (this._rivulets) {
+      for (let i = 0; i < this._rivulets.length; i++) {
+        const rv = this._rivulets[i];
+        if (rv.life <= 0 && rv.mesh.visible) {
+          rv.mesh.visible = false;
+          if (rv.mesh.material) { rv.mesh.material.opacity = 0; rv.mesh.material.needsUpdate = true; }
+        }
+      }
+    }
   },
 
   _spawnDecal(x, z, radius, hexColor, lifetime) {
@@ -283,6 +325,7 @@ const BloodSimulatorV21 = {
   update(dt) {
     if (!this.dropIM || !this._pool) return;
     dt = Math.min(Math.max(dt || 0.016, 0.001), 0.05);
+    this._safetyScrub(dt);
     const matrix = this._matrix;
     const color  = this._color;
 
