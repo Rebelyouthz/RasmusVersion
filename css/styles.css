@@ -13294,3 +13294,19 @@
   75% { transform: translate(-2px, -2px); }
 }
 body.screen-shake { animation: screenShakeKf 0.09s ease-out; }
+
+/* ── Section C — Spawn cinematic name slash ──────────────────────── */
+.horus-name-slash {
+  position: fixed; left: 50%; top: 50%;
+  font: 900 60px 'Bangers', 'Anton', sans-serif;
+  color: #FFD700;
+  text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 0 0 20px rgba(255,215,0,0.55);
+  letter-spacing: 4px;
+  pointer-events: none;
+  z-index: 9998;
+  white-space: nowrap;
+  transform: translate(-50%, 80px) translateX(120vw);
+  transition: transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+.horus-name-slash.show { transform: translate(-50%, 80px) translateX(0); }
+.horus-name-slash.exit { transform: translate(-50%, 80px) translateX(-120vw); transition: transform 0.22s cubic-bezier(0.7, 0, 0.8, 0.1); }

@@ -1296,7 +1296,158 @@
     _horusDoorT     = 0;
   }
 
-  window._openHorusDoors  = function () { if (!_eyeOfHorusDoors) return; _horusDoorState = 'opening'; _horusDoorT = 0; };
+  // ── Player name (read from saveData / localStorage / fallback) ──────
+  function _playerName() {
+    try {
+      const sd = (typeof saveData !== 'undefined') ? saveData : (window.saveData || {});
+      return sd.playerName || sd.username || sd.name || (typeof localStorage !== 'undefined' && localStorage.getItem('wds_playerName')) || 'Initiate';
+    } catch (_) { return 'Initiate'; }
+  }
+
+  // ── Camera state snapshot for cinematic ──────────────────────────────
+  let _cinSavedCam = null;
+  let _cinPhase = 'idle'; // 'idle' | 'zoom-in' | 'rise' | 'shutter' | 'zoom-out'
+  let _cinT = 0;
+  let _cinCallback = null;
+  const _cinDust = [];
+
+  function _playSpawnCinematic() {
+    const THREE = T();
+    if (!_campCamera || !_campScene) return;
+    _cinSavedCam = {
+      pos: _campCamera.position.clone(),
+      fov: _campCamera.fov
+    };
+    if (typeof window._openHorusDoors === 'function') window._openHorusDoors();
+    try {
+      const r = new Audio('assets/sounds/door_rumble.mp3');
+      r.volume = 0.7;
+      r.play().catch(function(){});
+    } catch (_) {}
+    try {
+      const dustGeo = new THREE.SphereGeometry(0.04, 4, 4);
+      const dustMat = new THREE.MeshBasicMaterial({ color: 0xaaaaaa, transparent: true, opacity: 0.65 });
+      for (let i = 0; i < 30; i++) {
+        const d = new THREE.Mesh(dustGeo, dustMat.clone());
+        d.position.set(0, 0.05, 6);
+        const a = Math.random() * Math.PI * 2;
+        d.userData.vx = Math.cos(a) * (0.8 + Math.random() * 1.5);
+        d.userData.vy = 0.6 + Math.random() * 1.4;
+        d.userData.vz = Math.sin(a) * (0.8 + Math.random() * 1.5);
+        d.userData.life = 1.2;
+        _campScene.add(d);
+        _cinDust.push(d);
+      }
+    } catch (_) {}
+    _cinPhase = 'zoom-in';
+    _cinT = 0;
+  }
+
+  function _updateSpawnCinematic(dt) {
+    if (_cinPhase === 'idle') return;
+    _cinT += dt;
+    const THREE = T();
+    // Update dust particles
+    for (let i = _cinDust.length - 1; i >= 0; i--) {
+      const d = _cinDust[i];
+      d.userData.life -= dt;
+      d.position.x += d.userData.vx * dt;
+      d.position.y += d.userData.vy * dt;
+      d.position.z += d.userData.vz * dt;
+      d.userData.vy -= 4 * dt;
+      if (d.material) d.material.opacity = Math.max(0, d.userData.life / 1.2 * 0.65);
+      if (d.userData.life <= 0) {
+        _campScene.remove(d);
+        if (d.material) d.material.dispose();
+        _cinDust.splice(i, 1);
+      }
+    }
+    if (!_cinSavedCam) return;
+    if (_cinPhase === 'zoom-in') {
+      const t = Math.min(1, _cinT / 0.8);
+      const ease = t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2;
+      const target = new THREE.Vector3(0, 1.6, 4.0);
+      _campCamera.position.lerpVectors(_cinSavedCam.pos, target, ease);
+      _campCamera.fov = 60 - (60 - 35) * ease;
+      _campCamera.updateProjectionMatrix();
+      _campCamera.lookAt(0, 0.6, 6);
+      if (t >= 1) { _cinPhase = 'rise'; _cinT = 0; }
+    }
+    else if (_cinPhase === 'rise') {
+      const t = Math.min(1, _cinT / 1.2);
+      const ease = t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2;
+      const PLAYER_RADIUS_CIN = 0.4;
+      if (_playerMesh) _playerMesh.position.y = -1.4 + (PLAYER_RADIUS_CIN - (-1.4)) * ease;
+      if (t >= 1) { _cinPhase = 'shutter'; _cinT = 0; _doShutterFlash(); _doNameSlash(); }
+    }
+    else if (_cinPhase === 'shutter') {
+      window._timeScale = 0.15;
+      if (_cinT >= 0.6) { window._timeScale = 1.0; _cinPhase = 'zoom-out'; _cinT = 0; }
+    }
+    else if (_cinPhase === 'zoom-out') {
+      const t = Math.min(1, _cinT / 0.9);
+      const ease = t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2;
+      const fromPos = new THREE.Vector3(0, 1.6, 4.0);
+      _campCamera.position.lerpVectors(fromPos, _cinSavedCam.pos, ease);
+      _campCamera.fov = 35 + (60 - 35) * ease;
+      _campCamera.updateProjectionMatrix();
+      if (t >= 1) {
+        _cinPhase = 'idle';
+        _campCamera.position.copy(_cinSavedCam.pos);
+        _campCamera.fov = _cinSavedCam.fov;
+        _campCamera.updateProjectionMatrix();
+        _cinSavedCam = null;
+        if (typeof window._closeHorusDoors === 'function') window._closeHorusDoors();
+        if (_cinCallback) { try { _cinCallback(); } catch(_) {} _cinCallback = null; }
+      }
+    }
+  }
+
+  function _doShutterFlash() {
+    try {
+      const flash = document.createElement('div');
+      flash.style.cssText = 'position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:9997;transition:opacity 0.08s ease-out;';
+      document.body.appendChild(flash);
+      requestAnimationFrame(function () {
+        flash.style.opacity = '0.9';
+        setTimeout(function () {
+          flash.style.transition = 'opacity 0.25s ease-out';
+          flash.style.opacity = '0';
+          setTimeout(function () { try { flash.remove(); } catch (_) {} }, 280);
+        }, 80);
+      });
+      document.body.classList.add('screen-shake');
+      setTimeout(function () { document.body.classList.remove('screen-shake'); }, 100);
+      try {
+        const s = new Audio('assets/sounds/camera_shutter.mp3');
+        s.volume = 0.5; s.play().catch(function(){});
+      } catch (_) {}
+    } catch (_) {}
+  }
+
+  function _doNameSlash() {
+    try {
+      const name = _playerName();
+      const slash = document.createElement('div');
+      slash.className = 'horus-name-slash';
+      slash.textContent = name;
+      document.body.appendChild(slash);
+      try {
+        const s = new Audio('assets/sounds/swoosh.mp3');
+        s.volume = 0.55; s.play().catch(function(){});
+      } catch (_) {}
+      requestAnimationFrame(function () {
+        slash.classList.add('show');
+        setTimeout(function () {
+          slash.classList.remove('show');
+          slash.classList.add('exit');
+          setTimeout(function () { try { slash.remove(); } catch (_) {} }, 280);
+        }, 450);
+      });
+    } catch (_) {}
+  }
+
+    window._openHorusDoors  = function () { if (!_eyeOfHorusDoors) return; _horusDoorState = 'opening'; _horusDoorT = 0; };
   window._closeHorusDoors = function () { if (!_eyeOfHorusDoors) return; _horusDoorState = 'closing'; _horusDoorT = 0; };
 
   function _updateEyeOfHorusDoors(dt) {
@@ -7610,27 +7761,7 @@
         _playerMesh.position.set(_playerPos.x, -1.4, _playerPos.z); // start below ground
         _playerMesh.visible = true;
       }
-      try {
-        if (typeof window._openHorusDoors === 'function') window._openHorusDoors();
-        const _riseStart = Date.now();
-        const _riseDur   = 1100;
-        const _doorPlayer = _playerMesh;
-        function _risePlayer() {
-          if (!_doorPlayer) return;
-          const k = Math.min(1, (Date.now() - _riseStart) / _riseDur);
-          const ease = k < 0.5 ? 2*k*k : 1 - Math.pow(-2*k+2, 2)/2;
-          const targetY = -1.4 + (PLAYER_RADIUS - (-1.4)) * ease;
-          _doorPlayer.position.y = targetY;
-          if (k < 1) requestAnimationFrame(_risePlayer);
-          else {
-            _doorPlayer.position.y = PLAYER_RADIUS;
-            setTimeout(function () {
-              if (typeof window._closeHorusDoors === 'function') window._closeHorusDoors();
-            }, 250);
-          }
-        }
-        requestAnimationFrame(_risePlayer);
-      } catch (_horusErr) {}
+      try { _playSpawnCinematic(); } catch (_cinErr) { console.warn('[CampWorld] cinematic failed:', _cinErr); }
       _updateCamera(0);
 
       // Refresh building visibility
@@ -8337,6 +8468,7 @@
     _updateFire(dt);
     _updateParticles(dt);
     _updateEyeOfHorusDoors(dt);
+    _updateSpawnCinematic(dt);
     _updateBennyNPC(dt);
     _updateIncubator(dt);
     _updateAidaOrbit(dt);
