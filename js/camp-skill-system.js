@@ -3737,6 +3737,19 @@
 
         // Premium Challenge Complete board — slides from top with confetti and gold count-up
         showChallengeComplete(quest.name, (quest.rewardGold || 0) + 50);
+
+        // Also route through NotificationQueue so quest claims never overlap other notifications
+        if (window.NotificationQueue) {
+          window.NotificationQueue.enqueue({
+            type: 'quest',
+            title: quest.name || 'Quest Complete',
+            subtitle: quest.summary || quest.description || '',
+            icon: '📜',
+            rarity: quest.rarity || 'uncommon',
+            rewardLabel: '+' + ((quest.rewardGold || 0) + 50) + ' Gold'
+              + (quest.rewardSkillPoints ? ', +' + quest.rewardSkillPoints + ' Skill Pts' : '')
+          });
+        }
       }
       if (quest.rewardSkillPoints) {
         saveData.skillPoints += quest.rewardSkillPoints;

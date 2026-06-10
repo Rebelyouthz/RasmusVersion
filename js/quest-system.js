@@ -891,8 +891,17 @@
             if (typeof saveSaveData === 'function') saveSaveData();
             if (typeof updateGoldDisplays === 'function') updateGoldDisplays();
             if (typeof showStatusMessage === 'function') showStatusMessage(`🏅 ${ch.label} complete! +${ch.reward.xp} XP, +${ch.reward.gold} 💰`, 3000);
-            // RewardDisplay dopamine popup
-            if (window.RewardDisplay) {
+            // Route through NotificationQueue so it never overlaps
+            if (window.NotificationQueue) {
+              window.NotificationQueue.enqueue({
+                type: 'challenge',
+                title: ch.label.toUpperCase(),
+                subtitle: ch.desc || '',
+                icon: ch.icon || '🎯',
+                rarity: 'rare',
+                rewardLabel: '+' + ch.reward.gold + ' Gold, +' + ch.reward.xp + ' XP'
+              });
+            } else if (window.RewardDisplay) {
               window.RewardDisplay.show({
                 title: '🏅 ' + ch.label.toUpperCase() + '!',
                 rewards: [

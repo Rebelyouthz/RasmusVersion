@@ -98,24 +98,31 @@ function checkAchievements(saveData) {
       if (def.rewardAttributePoints && saveData.account) {
         saveData.account.coreAttributePoints = (saveData.account.coreAttributePoints || 0) + def.rewardAttributePoints;
       }
-      // Show via RewardDisplay for dopamine
-      if (window.RewardDisplay) {
-        (function(d) {
-          setTimeout(function() {
-            var rdItems = [];
-            if (d.rewardXP)            rdItems.push({ icon: '⭐', label: 'Account XP', amount: d.rewardXP });
-            if (d.rewardGold)          rdItems.push({ icon: '💰', label: 'Gold', amount: d.rewardGold });
-            if (d.rewardSlotCoins)     rdItems.push({ icon: '🎰', label: 'Fate Coins', amount: d.rewardSlotCoins });
-            if (d.rewardSkillPoints)   rdItems.push({ icon: '⭐', label: 'Skill Points', amount: d.rewardSkillPoints });
-            window.RewardDisplay.show({
-              title: '🏅 ACHIEVEMENT!',
+      // Route through NotificationQueue so achievements never overlap
+      (function(d) {
+        setTimeout(function() {
+          var rewardParts = [];
+          if (d.rewardXP)        rewardParts.push('+' + d.rewardXP + ' XP');
+          if (d.rewardGold)      rewardParts.push('+' + d.rewardGold + ' Gold');
+          if (d.rewardSlotCoins) rewardParts.push('+' + d.rewardSlotCoins + ' Fate Coins');
+          if (window.NotificationQueue) {
+            window.NotificationQueue.enqueue({
+              type: 'achievement',
+              title: d.name || 'Achievement Unlocked',
+              subtitle: d.description || '',
+              icon: '🏅',
               rarity: d.rarity || 'common',
-              rewards: rdItems,
-              source: 'achievement'
+              rewardLabel: rewardParts.length ? rewardParts.join(', ') : null
             });
-          }, 300);
-        })(def);
-      }
+          } else if (window.RewardDisplay) {
+            var rdItems = [];
+            if (d.rewardXP)        rdItems.push({ icon: '⭐', label: 'Account XP', amount: d.rewardXP });
+            if (d.rewardGold)      rdItems.push({ icon: '💰', label: 'Gold', amount: d.rewardGold });
+            if (d.rewardSlotCoins) rdItems.push({ icon: '🎰', label: 'Fate Coins', amount: d.rewardSlotCoins });
+            window.RewardDisplay.show({ title: '🏅 ACHIEVEMENT!', rarity: d.rarity || 'common', rewards: rdItems, source: 'achievement' });
+          }
+        }, 300);
+      })(def);
     }
   }
 
