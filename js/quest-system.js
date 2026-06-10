@@ -1192,22 +1192,29 @@
         : '';
       const isMilestone = rankTitle && rankTitle !== prevTitle;
 
-      // ── Regular level-up: small right-side notification ──────────────────
+      // ── Regular level-up: route through NotificationQueue ──────────────
       if (!isMilestone) {
         const rarity = _getLevelUpRarity(newLevel);
-        const rarityColors = { common: '#aaddff', epic: '#aa44ff', legendary: '#ffaa00', mythic: '#ff4444' };
-        const col = rarityColors[rarity] || rarityColors.common;
-        const n = document.createElement('div');
-        n.style.cssText = 'position:fixed;top:20%;right:16px;background:linear-gradient(135deg,rgba(0,0,0,0.92),rgba(10,10,30,0.96));border:2px solid ' + col + ';border-radius:14px;padding:12px 18px;z-index:9999;display:flex;align-items:center;gap:12px;min-width:210px;box-shadow:0 0 18px ' + col + '55;animation:slideInRight 0.4s ease-out;pointer-events:none;';
-        n.innerHTML = '<span style="font-size:26px;">🏆</span><div><div style="color:' + col + ';font-family:Bangers,cursive;font-size:16px;letter-spacing:1px;">PROFILE LEVEL ' + newLevel + '</div><div style="color:#aaa;font-size:11px;">' + rewardLabel + '</div></div>';
-        document.body.appendChild(n);
-        setTimeout(function() {
-          n.style.transition = 'opacity 0.5s,transform 0.5s';
-          n.style.opacity = '0';
-          n.style.transform = 'translateX(120%)';
-          setTimeout(function() { n.remove(); }, 500);
-        }, 3500);
-        if (typeof playSound === 'function') playSound('levelup');
+        if (window.NotificationQueue) {
+          window.NotificationQueue.enqueue({
+            type: 'level-up',
+            title: 'PROFILE LEVEL ' + newLevel,
+            subtitle: 'You reached account level ' + newLevel,
+            icon: '⭐',
+            rarity: rarity,
+            rewardLabel: rewardLabel || null
+          });
+        } else {
+          // Legacy fallback
+          const rarityColors = { common: '#aaddff', epic: '#aa44ff', legendary: '#ffaa00', mythic: '#ff4444' };
+          const col = rarityColors[rarity] || rarityColors.common;
+          const n = document.createElement('div');
+          n.style.cssText = 'position:fixed;top:20%;right:16px;background:linear-gradient(135deg,rgba(0,0,0,0.92),rgba(10,10,30,0.96));border:2px solid ' + col + ';border-radius:14px;padding:12px 18px;z-index:9999;display:flex;align-items:center;gap:12px;min-width:210px;box-shadow:0 0 18px ' + col + '55;animation:slideInRight 0.4s ease-out;pointer-events:none;';
+          n.innerHTML = '<span style="font-size:26px;">🏆</span><div><div style="color:' + col + ';font-family:Bangers,cursive;font-size:16px;letter-spacing:1px;">PROFILE LEVEL ' + newLevel + '</div><div style="color:#aaa;font-size:11px;">' + rewardLabel + '</div></div>';
+          document.body.appendChild(n);
+          setTimeout(function() { n.style.transition='opacity 0.5s,transform 0.5s'; n.style.opacity='0'; n.style.transform='translateX(120%)'; setTimeout(function(){ n.remove(); }, 500); }, 3500);
+          if (typeof playSound === 'function') playSound('levelup');
+        }
         return;
       }
 
