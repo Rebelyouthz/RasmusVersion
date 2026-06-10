@@ -2183,12 +2183,14 @@
       saveData.totalKills = (saveData.totalKills || 0) + 1;
     }
     if (window.GameAccount && typeof window.GameAccount.addXP === 'function') window.GameAccount.addXP(2, 'Kill', saveData);
+    if (window.XpStarSystem && typeof enemy !== 'undefined' && enemy && enemy.mesh) window.XpStarSystem.spawn(enemy.mesh.position, 2, null, window.camera);
     // Codex discovery
     if (window.CodexSystem && typeof window.CodexSystem.discover === 'function') {
       var _codexData = saveData && saveData.codexData;
       if (!_codexData || !_codexData.discovered || !_codexData.discovered['enemy_balanced']) {
         window.CodexSystem.discover('enemy_balanced');
         if (window.GameAccount && typeof window.GameAccount.addXP === 'function') window.GameAccount.addXP(5, 'Codex Discovery', saveData);
+        if (window.XpStarSystem && enemy && enemy.mesh) window.XpStarSystem.spawn(enemy.mesh.position, 5, null, window.camera);
       }
     }
     _checkSandboxAchievements();
@@ -2434,12 +2436,14 @@
       saveData.totalKills = (saveData.totalKills || 0) + 1;
     }
     if (window.GameAccount && typeof window.GameAccount.addXP === 'function') window.GameAccount.addXP(2, 'Kill', saveData);
+    if (window.XpStarSystem && typeof enemy !== 'undefined' && enemy && enemy.mesh) window.XpStarSystem.spawn(enemy.mesh.position, 2, null, window.camera);
     // Codex discovery
     if (window.CodexSystem && typeof window.CodexSystem.discover === 'function') {
       var _codexData = saveData && saveData.codexData;
       if (!_codexData || !_codexData.discovered || !_codexData.discovered['enemy_bug']) {
         window.CodexSystem.discover('enemy_bug');
         if (window.GameAccount && typeof window.GameAccount.addXP === 'function') window.GameAccount.addXP(5, 'Codex Discovery', saveData);
+        if (window.XpStarSystem && enemy && enemy.mesh) window.XpStarSystem.spawn(enemy.mesh.position, 5, null, window.camera);
       }
     }
     _checkSandboxAchievements();
@@ -2755,12 +2759,14 @@
       saveData.totalKills = (saveData.totalKills || 0) + 1;
     }
     if (window.GameAccount && typeof window.GameAccount.addXP === 'function') window.GameAccount.addXP(2, 'Kill', saveData);
+    if (window.XpStarSystem && typeof enemy !== 'undefined' && enemy && enemy.mesh) window.XpStarSystem.spawn(enemy.mesh.position, 2, null, window.camera);
     // Codex discovery
     if (window.CodexSystem && typeof window.CodexSystem.discover === 'function') {
       var _codexData = saveData && saveData.codexData;
       if (!_codexData || !_codexData.discovered || !_codexData.discovered['enemy_fast']) {
         window.CodexSystem.discover('enemy_fast');
         if (window.GameAccount && typeof window.GameAccount.addXP === 'function') window.GameAccount.addXP(5, 'Codex Discovery', saveData);
+        if (window.XpStarSystem && enemy && enemy.mesh) window.XpStarSystem.spawn(enemy.mesh.position, 5, null, window.camera);
       }
     }
     _checkSandboxAchievements();
@@ -4268,6 +4274,7 @@
       if (!_codexData2 || !_codexData2.discovered || !_codexData2.discovered['char_waterdrop']) {
         window.CodexSystem.discover('char_waterdrop');
         if (window.GameAccount && typeof window.GameAccount.addXP === 'function') window.GameAccount.addXP(5, 'Codex Discovery', saveData);
+        if (window.XpStarSystem && enemy && enemy.mesh) window.XpStarSystem.spawn(enemy.mesh.position, 5, null, window.camera);
       }
     }
     _checkSandboxAchievements();
@@ -6828,12 +6835,14 @@
       saveData.totalKills = (saveData.totalKills || 0) + 1;
     }
     if (window.GameAccount && typeof window.GameAccount.addXP === 'function') window.GameAccount.addXP(2, 'Kill', saveData);
+    if (window.XpStarSystem && typeof enemy !== 'undefined' && enemy && enemy.mesh) window.XpStarSystem.spawn(enemy.mesh.position, 2, null, window.camera);
     // Codex discovery
     if (window.CodexSystem && typeof window.CodexSystem.discover === 'function') {
       var _codexData = saveData && saveData.codexData;
       if (!_codexData || !_codexData.discovered || !_codexData.discovered['enemy_hardfast']) {
         window.CodexSystem.discover('enemy_hardfast');
         if (window.GameAccount && typeof window.GameAccount.addXP === 'function') window.GameAccount.addXP(5, 'Codex Discovery', saveData);
+        if (window.XpStarSystem && enemy && enemy.mesh) window.XpStarSystem.spawn(enemy.mesh.position, 5, null, window.camera);
       }
     }
     _checkSandboxAchievements();

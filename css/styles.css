@@ -13240,3 +13240,14 @@
   will-change: transform, opacity;
   pointer-events: none;
 }
+
+/* ── XP Star particles (xp-star-system.js) ──────────────────────── */
+.xp-star-particle {
+  font-size: 18px;
+  position: fixed;
+  pointer-events: none;
+  z-index: 9995;
+  will-change: transform, opacity;
+  user-select: none;
+  text-shadow: 0 0 6px rgba(255,215,0,0.8);
+}
