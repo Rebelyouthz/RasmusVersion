@@ -94,7 +94,7 @@ window.RunEndScreen = (function () {
         'height:100%;width:0%;border-radius:11px;',
         'background:linear-gradient(90deg,#FFD700,#ff8c00,#ff4400);',
         'box-shadow:0 0 12px #FFD700,0 0 24px rgba(255,140,0,0.5);',
-        'transition:width 0.05s linear;',
+        'transition:width 0.05s linear,box-shadow 0.25s ease-out;',
       '}',
       '#res-bar-pct{',
         'position:absolute;right:10px;top:50%;transform:translateY(-50%);',
@@ -350,8 +350,9 @@ window.RunEndScreen = (function () {
   function _runSequence(stats) {
     var runStats = window.currentRunStats || {};
     // Use pre-run account state so bar animates from where the player started this run
-    var accountLevel = runStats.startAccountLevel || (window.saveData && window.saveData.accountLevel) || 1;
-    var accountXP    = runStats.startAccountXP    || (window.saveData && window.saveData.accountXP)    || 0;
+    // startAccountLevel/XP must reflect state at RUN START, not end. Fallback to saveData only if missing.
+    var accountLevel = (runStats.startAccountLevel != null) ? runStats.startAccountLevel : ((window.saveData && window.saveData.accountLevel) || 1);
+    var accountXP    = (runStats.startAccountXP    != null) ? runStats.startAccountXP    : 0;
     var xpRequired   = (typeof getAccountLevelXPRequired === 'function')
                        ? getAccountLevelXPRequired(accountLevel) : (accountLevel * 100);
 
