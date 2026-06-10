@@ -6939,80 +6939,40 @@
     .camp-util-icon:hover { background: rgba(30,30,30,0.9); color: #fff; }
     .camp-util-icon:active { transform: scale(0.92); }
 
-    /* Camp header — single centralized Epic NEW RUN button */
-    .camp-header-btns {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-
-    /* ── Epic "NEW RUN" button — Annunaki Cyan+Purple 3D physical button ── */
-    @keyframes new-run-pulse {
-      0%,100% {
-        box-shadow: 0 7px 0 #3300aa, 0 0 22px rgba(0,220,255,0.55), 0 0 55px rgba(150,0,255,0.35),
-                    inset 0 0 20px rgba(0,255,255,0.08);
-      }
-      50% {
-        box-shadow: 0 7px 0 #220077, 0 0 40px rgba(0,240,255,0.85), 0 0 90px rgba(180,0,255,0.55),
-                    inset 0 0 30px rgba(0,255,255,0.14);
-      }
-    }
-    @keyframes new-run-sweep {
-      0% { left: -130%; opacity: 0; }
-      8%  { opacity: 1; }
-      88% { opacity: 1; }
-      100% { left: 130%; opacity: 0; }
-    }
-    @keyframes new-run-icon-pulse {
-      0%,100% { opacity: 0.7; transform: scale(1); }
-      50% { opacity: 1; transform: scale(1.25); }
-    }
-    #camp-action-btn {
-      position: relative;
-      font-family: 'Bangers', cursive;
-      font-size: clamp(22px, 4vw, 30px);
-      letter-spacing: 5px;
-      padding: 14px 40px;
-      background: linear-gradient(180deg,
-        #00eeff 0%, #00bbdd 18%,
-        #6600ee 55%, #4400aa 80%, #2a006a 100%);
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      border-bottom: 8px solid #3300aa;
-      border-right: 4px solid #220077;
-      border-top: 2px solid rgba(0,255,255,0.5);
-      box-shadow: 0 7px 0 #3300aa, 0 0 22px rgba(0,220,255,0.55), 0 0 55px rgba(150,0,255,0.35);
+    /* ── Circular NEW RUN button — bottom-right ────────────────────── */
+    #camp-action-btn.new-run-circle {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #2a0d4a 0%, #050010 100%);
+      border: 3px solid #FFD700;
+      box-shadow: 0 0 22px rgba(255,215,0,0.6), inset 0 0 14px rgba(255,215,0,0.18), 0 6px 16px rgba(0,0,0,0.55);
+      display: flex; align-items: center; justify-content: center;
       cursor: pointer;
-      text-transform: uppercase;
-      text-shadow: 0 0 8px rgba(0,255,255,0.9), 0 2px 0 rgba(0,0,0,0.5);
-      overflow: hidden;
-      animation: new-run-pulse 2.2s ease-in-out infinite;
-      transition: transform 0.08s, border-bottom-width 0.08s, box-shadow 0.08s;
-      touch-action: manipulation;
-      min-width: 220px;
+      padding: 0;
+      z-index: 100;
+      animation: newRunCirclePulse 2.4s ease-in-out infinite;
+      transition: transform 0.18s ease-out, box-shadow 0.18s ease-out;
+      -webkit-tap-highlight-color: transparent;
     }
-    #camp-action-btn .new-run-icon {
-      display: inline-block;
-      animation: new-run-icon-pulse 1.1s ease-in-out infinite;
-      font-style: normal;
+    #camp-action-btn.new-run-circle:hover {
+      transform: scale(1.08);
+      box-shadow: 0 0 32px rgba(255,215,0,0.9), inset 0 0 22px rgba(255,215,0,0.35), 0 6px 22px rgba(0,0,0,0.6);
     }
-    #camp-action-btn::before {
-      content: '';
-      position: absolute;
-      top: 0; left: -130%; width: 55%; height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.38), transparent);
-      animation: new-run-sweep 3.2s ease-in-out infinite;
-      pointer-events: none;
+    #camp-action-btn.new-run-circle:active { transform: scale(0.94); }
+    #camp-action-btn.new-run-circle .new-run-icon-svg {
+      width: 48px; height: 48px;
+      filter: drop-shadow(0 0 6px rgba(255,215,0,0.7));
     }
-    #camp-action-btn:hover { filter: brightness(1.15) saturate(1.1); }
-    #camp-action-btn:active {
-      transform: translateY(6px);
-      border-bottom-width: 2px;
-      box-shadow: 0 2px 0 #3300aa, 0 0 10px rgba(0,220,255,0.4);
-      animation: none;
+    @keyframes newRunCirclePulse {
+      0%, 100% { box-shadow: 0 0 22px rgba(255,215,0,0.6), inset 0 0 14px rgba(255,215,0,0.18), 0 6px 16px rgba(0,0,0,0.55); }
+      50%      { box-shadow: 0 0 36px rgba(255,215,0,0.95), inset 0 0 22px rgba(255,215,0,0.4), 0 6px 18px rgba(0,0,0,0.6); }
     }
+    /* Hide old wrapper if still exists */
+    .camp-header-btns { display: none !important; }
 
     /* Building title dome header inside popups */
     .building-popup-title {

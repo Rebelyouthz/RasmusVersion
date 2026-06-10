@@ -205,13 +205,18 @@
         onclick="if(typeof showAccountBuildingOverlay==='function'){showAccountBuildingOverlay();}else if(typeof showAccountSection==='function'){showAccountSection();}">👤</button>
     </div>
 
-    <!-- Epic centralized NEW RUN button -->
-    <div class="camp-header-btns">
-      <button id="camp-action-btn"
-        onclick="if(typeof playSound==='function'){try{playSound('click');}catch(e){}}window.location.href='sandbox.html'">
-        <span class="new-run-icon">⚡</span> NEW RUN <span class="new-run-icon">⚡</span>
-      </button>
-    </div>
+    <!-- Circular NEW RUN button — Eye of Horus + arrow, bottom-right -->
+    <button id="camp-action-btn" data-testid="new-run-btn" class="new-run-circle"
+      title="Start Run"
+      onclick="if(typeof playSound==='function'){try{playSound('click');}catch(e){}}window.location.href='sandbox.html'">
+      <svg viewBox="0 0 60 60" class="new-run-icon-svg" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="30" cy="30" rx="22" ry="12" fill="none" stroke="#FFD700" stroke-width="2.5"/>
+        <circle cx="30" cy="30" r="7" fill="#FFD700"/>
+        <circle cx="30" cy="30" r="3" fill="#1a0033"/>
+        <path d="M 30,42 Q 35,48 44,52" fill="none" stroke="#FFD700" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M 38,30 L 50,30 M 46,26 L 50,30 L 46,34" stroke="#FFD700" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
 
     <!-- Top Corner Widgets: Daily Reward (left) + Spin Wheel (right) -->
     <div class="camp-corner-widgets" id="camp-corner-widgets" style="display:none;">
