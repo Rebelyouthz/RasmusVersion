@@ -1733,7 +1733,7 @@ window.spawnBossChest = function(x, z) {
           updateHUD();
         }
 
-        choices.forEach((u) => {
+        choices.forEach((u, _cardIdx) => {
           const card = document.createElement('div');
           card.className = 'upgrade-card';
           if (u._rarity && u._rarity.cssClass) card.classList.add(u._rarity.cssClass);
@@ -1741,6 +1741,28 @@ window.spawnBossChest = function(x, z) {
           else if (u.id && u.id.startsWith('perk_')) card.classList.add('perk');
           else if (u.id && (u.id.includes('_up') || u.id.includes('_evo') || u.id.startsWith('wup_') || u.id.includes('gun_') || u.id.includes('sword_') || u.id.includes('aura_'))) card.classList.add('weapon');
           if (!Array.from(card.classList).some(c => c.startsWith('rarity-'))) card.classList.add('rarity-common');
+
+          // Disable interaction until after flip completes
+          card.style.pointerEvents = 'none';
+
+          // ── 3D flip wrapper ──────────────────────────────────────────────
+          const cardInner = document.createElement('div');
+          cardInner.className = 'card-inner';
+
+          // ── BACK FACE — Eye of Horus on black/gold ──────────────────────
+          const cardBack = document.createElement('div');
+          cardBack.className = 'card-face card-back-face';
+          cardBack.innerHTML = '<svg viewBox="0 0 100 60" width="86" height="52" xmlns="http://www.w3.org/2000/svg">' +
+            '<path d="M 5,30 Q 50,5 95,30 Q 50,55 5,30 Z" fill="none" stroke="#FFD700" stroke-width="2.5"/>' +
+            '<circle cx="50" cy="30" r="9" fill="#FFD700" opacity="0.92"/>' +
+            '<circle cx="50" cy="30" r="4" fill="#1a1a0a"/>' +
+            '<path d="M 50,40 Q 55,50 70,55" fill="none" stroke="#FFD700" stroke-width="2.5" stroke-linecap="round"/>' +
+            '<line x1="35" y1="20" x2="15" y2="12" stroke="#FFD700" stroke-width="2.5" stroke-linecap="round"/>' +
+            '</svg>';
+
+          // ── FRONT FACE — existing card content ──────────────────────────
+          const cardFront = document.createElement('div');
+          cardFront.className = 'card-face card-front';
 
           const horus = document.createElement('div');
           horus.className = 'uc-horus';
@@ -1768,8 +1790,14 @@ window.spawnBossChest = function(x, z) {
           const bottomBar = document.createElement('div');
           bottomBar.className = 'uc-bottom-bar';
 
-          card.append(horus, rarityLabel, divider, icon, name, desc, bottomBar);
+          cardFront.append(horus, rarityLabel, divider, icon, name, desc, bottomBar);
 
+          // Assemble: card > cardInner > [back, front]
+          cardInner.appendChild(cardBack);
+          cardInner.appendChild(cardFront);
+          card.appendChild(cardInner);
+
+          // ── Click handler ────────────────────────────────────────────────
           card.addEventListener('click', () => {
             const cards = Array.from(list.querySelectorAll('.upgrade-card'));
             cards.forEach(c => c.style.pointerEvents = 'none');
@@ -1859,6 +1887,32 @@ window.spawnBossChest = function(x, z) {
           });
         }
 
+        // ── Card flip sequence: back-face shown first, then flip one by one ──
+        const _numCards = choices.length;
+        const _entryDoneMs = Math.round((0.3 + (_numCards - 1) * 0.22 + 0.65) * 1000) + 60;
+        setTimeout(function () {
+          const _flipCards = list.querySelectorAll('.upgrade-card');
+          _flipCards.forEach(function (c, idx) {
+            setTimeout(function () {
+              c.classList.add('card-flipped');
+              // Play smack sound at half-flip (~260ms into 520ms flip)
+              setTimeout(function () {
+                try {
+                  if (window.GameAudio && window.GameAudio.playSound) window.GameAudio.playSound('card_smack');
+                } catch (_) {}
+                // Brief screen shake
+                try {
+                  document.body.classList.add('screen-shake');
+                  setTimeout(function () { document.body.classList.remove('screen-shake'); }, 90);
+                } catch (_) {}
+              }, 260);
+              // Enable interaction after flip completes
+              setTimeout(function () {
+                c.style.pointerEvents = 'auto';
+              }, 540);
+            }, idx * 160);
+          });
+        }, _entryDoneMs);
 
         // Show skip button after 5 seconds as safety valve if player can't select an upgrade
         const skipBtn = document.getElementById('levelup-skip-btn');
