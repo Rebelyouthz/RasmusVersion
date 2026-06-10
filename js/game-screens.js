@@ -2789,7 +2789,8 @@ function levelUp(freeLevel = false) {
   try {
     checkAchievements();
     createSlowMotionEffect();
-    createCenteredLevelUpText();
+    // OLD createCenteredLevelUpText() removed — replaced by levelup-fx.js _showLevelUpText (single yellow text from LevelUpFX.playExplosion)
+    // The new text is spawned by LevelUpFX which is called via DopamineSystem.LevelUpFX hook before the modal shows.
     if (renderer) renderer.setPixelRatio(0.55);
   } catch(e) {
     console.error('[LevelUp] Pre-modal synchronous error:', e);
@@ -2857,141 +2858,10 @@ function awardLevels(count) {
   }
 }
 
-function createCenteredLevelUpText() {
-  const levelUpText = document.createElement('div');
-  
-  let startX = window.innerWidth / 2;
-  let startY = window.innerHeight / 2;
-  if (player && player.mesh && camera) {
-    const headPos = player.mesh.position.clone();
-    headPos.y += 2;
-    headPos.project(camera);
-    startX = (headPos.x * 0.5 + 0.5) * window.innerWidth;
-    startY = (-(headPos.y * 0.5) + 0.5) * window.innerHeight;
-  }
-  
-  levelUpText.style.cssText = `
-    position: fixed;
-    left: ${startX}px;
-    top: ${startY}px;
-    transform: translate(-50%, -50%) scale(0);
-    font-family: 'Bangers', cursive;
-    font-size: 44px;
-    font-weight: 500;
-    color: #FFD700;
-    text-shadow: 
-      0 0 10px rgba(255,165,0,0.95),
-      0 0 22px rgba(255,80,0,0.7),
-      0 0 40px rgba(255,215,0,0.5),
-      2px 2px 0 #000,
-      -1px -1px 0 #000,
-      1px -1px 0 #000,
-      -1px 1px 0 #000;
-    z-index: 200;
-    pointer-events: none;
-    letter-spacing: 6px;
-    will-change: transform, opacity;
-  `;
-  levelUpText.textContent = 'LEVEL UP!';
-  document.body.appendChild(levelUpText);
-
-  const _embers = [];
-  const _EMBER_COUNT = 18;
-  function _spawnEmbers(cx, cy) {
-    for (let i = 0; i < _EMBER_COUNT; i++) {
-      const em = document.createElement('div');
-      const size = 4 + Math.random() * 7;
-      const emberColor = Math.random() < 0.5 ? '#FF4500' : (Math.random() < 0.5 ? '#FFD700' : '#FF8C00');
-      em.style.cssText = `position:fixed;width:${size}px;height:${size}px;border-radius:50%;background:${emberColor};box-shadow:0 0 ${size*1.5}px ${emberColor};left:${cx}px;top:${cy}px;pointer-events:none;z-index:199;transform:translate(-50%,-50%);will-change:transform,opacity;`;
-      document.body.appendChild(em);
-      const angle  = (Math.random() * Math.PI * 2);
-      const speed  = 1.5 + Math.random() * 2.8;
-      const drift  = (Math.random() - 0.5) * 0.6;
-      const life   = 600 + Math.random() * 600;
-      _embers.push({ el: em, vx: Math.cos(angle)*speed+drift, vy: -(speed*0.8+Math.random()*1.2), startTime: Date.now(), life });
-    }
-  }
-
-  function _tickEmbers() {
-    const now = Date.now();
-    for (let i = _embers.length - 1; i >= 0; i--) {
-      const e = _embers[i];
-      const t = (now - e.startTime) / e.life;
-      if (t >= 1) {
-        if (e.el.parentNode) e.el.parentNode.removeChild(e.el);
-        _embers.splice(i, 1);
-        continue;
-      }
-      const px = parseFloat(e.el.style.left) + e.vx;
-      const py = parseFloat(e.el.style.top)  + e.vy;
-      e.vy  -= 0.04;
-      e.vx  *= 0.97;
-      e.el.style.left    = px + 'px';
-      e.el.style.top     = py + 'px';
-      e.el.style.opacity = (1 - t * t).toFixed(3);
-    }
-    if (_embers.length > 0) requestAnimationFrame(_tickEmbers);
-  }
-  
-  const startTime = Date.now();
-  const totalDuration = 2200;
-  const centerX = window.innerWidth / 2;
-  const centerY = window.innerHeight / 2;
-  let _embersSpawned = false;
-  
-  const animFn = () => {
-    const elapsed = Date.now() - startTime;
-    const progress = elapsed / totalDuration;
-    
-    if (progress < 0.15) {
-      const t = progress / 0.15;
-      const scale = t * 1.3;
-      const curY = startY - t * 90;
-      levelUpText.style.top = curY + 'px';
-      levelUpText.style.transform = `translate(-50%, -50%) scale(${scale})`;
-      levelUpText.style.opacity = t;
-    } else if (progress < 0.25) {
-      levelUpText.style.transform = `translate(-50%, -50%) scale(1.3)`;
-      levelUpText.style.opacity = '1';
-      if (!_embersSpawned) {
-        _embersSpawned = true;
-        const rect = levelUpText.getBoundingClientRect();
-        _spawnEmbers(rect.left + rect.width / 2, rect.top + rect.height / 2);
-        requestAnimationFrame(_tickEmbers);
-      }
-    } else if (progress < 0.65) {
-      const t = (progress - 0.25) / 0.40;
-      const curX = startX + (centerX - startX) * t;
-      const curY = (startY - 90) + (centerY - (startY - 90)) * t;
-      const scale = 1.3 + t * 0.2;
-      levelUpText.style.left = curX + 'px';
-      levelUpText.style.top  = curY + 'px';
-      levelUpText.style.transform = `translate(-50%, -50%) scale(${scale})`;
-      levelUpText.style.opacity = '1';
-    } else if (progress < 1) {
-      const fp = (progress - 0.65) / 0.35;
-      const burnHue = fp < 0.4 ? `#FFD700`
-        : fp < 0.7 ? `hsl(${30 - fp*80},100%,${60 - fp*50}%)`
-        : `hsl(0,80%,${Math.max(0,20 - (fp-0.7)*70)}%)`;
-      levelUpText.style.left   = centerX + 'px';
-      levelUpText.style.top    = centerY + 'px';
-      levelUpText.style.color  = burnHue;
-      levelUpText.style.textShadow = `0 0 ${30*(1-fp)}px ${burnHue}, 2px 2px 0 #000`;
-      const scale = 1.5 - fp * 0.4;
-      levelUpText.style.transform = `translate(-50%, -50%) scale(${scale}) skewX(${fp*6}deg)`;
-      levelUpText.style.opacity = Math.max(0, 1 - fp * 1.1);
-      if (fp > 0.05 && fp < 0.35 && Math.random() < 0.25) {
-        const rect = levelUpText.getBoundingClientRect();
-        _spawnEmbers(rect.left + rect.width/2 + (Math.random()-0.5)*60, rect.top + rect.height/2 + (Math.random()-0.5)*20);
-      }
-    } else {
-      if (levelUpText.parentNode) levelUpText.parentNode.removeChild(levelUpText);
-      return;
-    }
-    requestAnimationFrame(animFn);
-  };
-  animFn();
-}
+// ─── createCenteredLevelUpText REMOVED (2026-01) ───────────────────────
+// The level-up text is now spawned by js/levelup-fx.js via DopamineSystem.LevelUpFX
+// playExplosion(). Keep this stub only so any leftover reference does not throw.
+function createCenteredLevelUpText() { /* no-op — see levelup-fx.js */ }
 
 function createSmallFloatingText(text, pos) {
   const statusEl = document.getElementById('status-message');
