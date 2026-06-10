@@ -1000,6 +1000,28 @@ function showCamp() {
   }
 }
 
+// ── Profile Widget updater ───────────────────────────────────────────────
+function updateProfileWidget() {
+  try {
+    const w = document.getElementById('profile-widget');
+    if (!w) return;
+    const sd = (typeof saveData !== 'undefined') ? saveData : (window.saveData || {});
+    const name = sd.playerName || sd.username || sd.name ||
+      (typeof localStorage !== 'undefined' && localStorage.getItem('wds_playerName')) || 'Initiate';
+    const lvl  = sd.accountLevel || 1;
+    const xp   = sd.accountXP    || 0;
+    const req  = (typeof getAccountLevelXPRequired === 'function') ? getAccountLevelXPRequired(lvl) : (lvl * 100);
+    const pct  = Math.max(0, Math.min(100, (xp / req) * 100));
+    const rank = (typeof getRankName === 'function') ? getRankName(lvl) :
+                 (typeof getRankTitle === 'function' ? getRankTitle(lvl) : 'Recruit');
+    const nameEl = w.querySelector('.pw-name'); if (nameEl) nameEl.textContent = name;
+    const rankEl = w.querySelector('.pw-rank'); if (rankEl) rankEl.textContent = rank;
+    const lvlEl  = w.querySelector('.pw-level'); if (lvlEl)  lvlEl.textContent  = 'LVL ' + lvl;
+    const fillEl = w.querySelector('.pw-xpfill'); if (fillEl) fillEl.style.width = pct + '%';
+  } catch (_) {}
+}
+window.updateProfileWidget = updateProfileWidget;
+
 function showMainMenu() {
   document.getElementById('main-menu').style.display = 'flex';
   updateGoldDisplays();

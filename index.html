@@ -195,9 +195,20 @@
       <div id="account-level-progress-text" style="font-size:10px;color:#aaa;">0 / 100 XP</div>
     </div>
 
-    <!-- Menu icon — top-left -->
+    <!-- Menu icon — top-left (small) -->
     <div id="camp-util-icons">
       <button class="camp-util-icon" id="camp-menu-btn" title="Menu">☰</button>
+    </div>
+    <!-- Profile widget — top-left, below menu icon -->
+    <div id="profile-widget" data-testid="profile-widget" class="profile-widget"
+      onclick="if(typeof showAccountBuildingOverlay==='function'){showAccountBuildingOverlay();}else if(typeof showAccountSection==='function'){showAccountSection();}">
+      <div class="pw-avatar"><span class="pw-avatar-emoji">👤</span></div>
+      <div class="pw-info">
+        <div class="pw-name">Initiate</div>
+        <div class="pw-rank">Recruit</div>
+        <div class="pw-level">LVL 1</div>
+        <div class="pw-xpbar"><div class="pw-xpfill" style="width:0%"></div></div>
+      </div>
     </div>
     <!-- Profile icon — top-right -->
     <div id="camp-util-icons-right">

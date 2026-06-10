@@ -13270,3 +13270,56 @@ body.screen-shake { animation: screenShakeKf 0.09s ease-out; }
 }
 .horus-name-slash.show { transform: translate(-50%, 80px) translateX(0); }
 .horus-name-slash.exit { transform: translate(-50%, 80px) translateX(-120vw); transition: transform 0.22s cubic-bezier(0.7, 0, 0.8, 0.1); }
+
+/* ── Section E — Profile widget upper-left ───────────────────────── */
+.profile-widget {
+  position: fixed;
+  top: 64px;
+  left: 14px;
+  width: 200px;
+  padding: 10px 12px;
+  background: rgba(15,8,30,0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 2px solid #FFD700;
+  border-radius: 16px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.5), 0 0 14px rgba(255,215,0,0.22);
+  z-index: 90;
+  cursor: pointer;
+  transition: transform 0.18s ease-out, box-shadow 0.18s ease-out;
+}
+.profile-widget:hover { transform: scale(1.03); box-shadow: 0 4px 22px rgba(0,0,0,0.6), 0 0 22px rgba(255,215,0,0.4); }
+.profile-widget .pw-avatar {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  border: 2px solid #FFD700;
+  background: radial-gradient(circle, #2a0d4a 0%, #050010 100%);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.profile-widget .pw-avatar-emoji { font-size: 26px; }
+.profile-widget .pw-info { flex: 1; min-width: 0; }
+.profile-widget .pw-name {
+  font: 700 16px 'Bangers', sans-serif;
+  color: #FFD700;
+  letter-spacing: 0.5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.profile-widget .pw-rank { font: italic 11px sans-serif; color: #C0C0C0; margin-top: 1px; }
+.profile-widget .pw-level { font: 700 13px sans-serif; color: #fff; margin-top: 2px; }
+.profile-widget .pw-xpbar {
+  margin-top: 5px;
+  height: 4px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.profile-widget .pw-xpfill {
+  height: 100%;
+  background: linear-gradient(90deg, #FFD700, #FFE45A);
+  box-shadow: 0 0 6px rgba(255,215,0,0.55);
+  transition: width 0.4s ease-out;
+}

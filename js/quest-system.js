@@ -1066,6 +1066,7 @@
       }
       if (leveledUp) saveSaveData();
       updateAccountLevelDisplay();
+      try { if (typeof window.updateProfileWidget === 'function') window.updateProfileWidget(); } catch (_) {}
     }
 
     // ── Level-Up Rarity Effects ───────────────────────────────────
@@ -5182,6 +5183,8 @@
       if (window.GameIdleBootstrap) window.GameIdleBootstrap.refreshPanel();
       // Update account level display whenever camp is opened
       updateAccountLevelDisplay();
+      // Update profile widget (name, rank, level, XP bar)
+      try { if (typeof window.updateProfileWidget === 'function') window.updateProfileWidget(); } catch (_) {}
       // Update corner notification dots and streak label
       _updateCampCornerWidgets();
       // ── Aida guidance: nudge player toward Profile Building if they have pending rewards ──
