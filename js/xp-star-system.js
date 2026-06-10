@@ -30,12 +30,17 @@ window.XpStarSystem = (function() {
   }
 
   function _getXpBarPos() {
-    const bar = document.getElementById('xp-bar-fill') ||
+    // Try every known XP bar ID/class across sandbox.html and index.html
+    const bar = document.getElementById('bottom-exp-fill') ||
+                document.getElementById('exp-fill') ||
+                document.getElementById('xp-bar-fill') ||
                 document.getElementById('xp-bar') ||
                 document.getElementById('account-xp-bar') ||
-                document.querySelector('.xp-bar-fill, .xp-fill, [id*="xp-bar"]');
-    if (!bar) return { x: window.innerWidth * 0.5, y: 20 };
+                document.querySelector('.xp-bar-fill,.xp-fill,.acc-xp-bar,[id*="xp-bar"],[id*="exp-fill"]');
+    if (!bar) return { x: window.innerWidth * 0.5, y: window.innerHeight - 30 };
     const r = bar.getBoundingClientRect();
+    // If bar has zero dimensions (hidden/collapsed), fall back to bottom of screen
+    if (r.width === 0 && r.height === 0) return { x: window.innerWidth * 0.5, y: window.innerHeight - 30 };
     return { x: r.left + r.width * 0.35, y: r.top + r.height * 0.5 };
   }
 
@@ -105,9 +110,11 @@ window.XpStarSystem = (function() {
   }
 
   function _flashXpBar() {
-    const bar = document.getElementById('xp-bar-fill') ||
+    const bar = document.getElementById('bottom-exp-fill') ||
+                document.getElementById('exp-fill') ||
+                document.getElementById('xp-bar-fill') ||
                 document.getElementById('xp-bar') ||
-                document.querySelector('.xp-bar-fill, .xp-fill, [id*="xp-bar"]');
+                document.querySelector('.xp-bar-fill,.xp-fill,.acc-xp-bar,[id*="xp-bar"],[id*="exp-fill"]');
     if (!bar) return;
     bar.style.transition = 'box-shadow 0.08s ease-out';
     bar.style.boxShadow = '0 0 12px 4px rgba(255,215,0,0.9)';
