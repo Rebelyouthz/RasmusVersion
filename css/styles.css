@@ -13207,3 +13207,36 @@
 .unified-notification.rarity-epic      { box-shadow: 0 10px 40px rgba(0,0,0,0.6), 0 0 36px rgba(170,0,255,0.45); }
 .unified-notification.rarity-legendary { box-shadow: 0 10px 40px rgba(0,0,0,0.6), 0 0 40px rgba(255,215,0,0.55); }
 .unified-notification.rarity-mythical  { box-shadow: 0 10px 40px rgba(0,0,0,0.6), 0 0 44px rgba(255,32,32,0.55); }
+
+/* ── LevelUp FX (levelup-fx.js) ─────────────────────────────────── */
+/* Black-hole overlay */
+.levelup-blackhole {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 0; height: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, #000000 0%, #1a0030 45%, #2d0050 65%, transparent 100%);
+  box-shadow: 0 0 80px 40px rgba(80,0,180,0.6), 0 0 160px 80px rgba(0,0,0,0.85);
+  transform: translate(-50%,-50%);
+  pointer-events: none;
+  z-index: 9997;
+  will-change: width, height, opacity;
+}
+
+/* Eye of Horus card badge — already referenced as .horus in level-up-system.js */
+.upgrade-card .card-horus-glyph {
+  position: absolute;
+  top: 8px; right: 10px;
+  font-size: 18px;
+  opacity: 0.45;
+  filter: drop-shadow(0 0 4px rgba(201,162,39,0.6));
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Confetti physics pieces (shared with notif-queue) */
+.confetti-piece {
+  will-change: transform, opacity;
+  pointer-events: none;
+}

@@ -347,3 +347,28 @@ window.LevelUpFX = (function () {
     _state: function() { return _state; }
   };
 })();
+
+// ── Wire into DopamineSystem hook expected by level-up-system.js ─────────
+(function() {
+  function _registerHook() {
+    if (!window.DopamineSystem) window.DopamineSystem = {};
+    window.DopamineSystem.LevelUpFX = {
+      play: function(onComplete) {
+        // Find the player object from the global scope
+        const player = window.player || window._player || null;
+        const scene  = window.scene  || window._scene  || null;
+        if (player && scene) {
+          window.LevelUpFX.playExplosion(player, scene, onComplete);
+        } else {
+          // No 3D scene available — just call through immediately
+          onComplete && onComplete();
+        }
+      }
+    };
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _registerHook);
+  } else {
+    _registerHook();
+  }
+})();

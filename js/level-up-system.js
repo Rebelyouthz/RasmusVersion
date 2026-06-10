@@ -1774,30 +1774,36 @@ window.spawnBossChest = function(x, z) {
             const cards = Array.from(list.querySelectorAll('.upgrade-card'));
             cards.forEach(c => c.style.pointerEvents = 'none');
             if (window.GameAudio && window.GameAudio.playSound) window.GameAudio.playSound('card_select');
-            let vortex = document.getElementById('levelup-vortex');
-            if (!vortex) {
-              vortex = document.createElement('div');
-              vortex.id = 'levelup-vortex';
-              document.body.appendChild(vortex);
-            }
-            requestAnimationFrame(() => { requestAnimationFrame(() => { vortex.style.width = '320px'; vortex.style.height = '320px'; }); });
-            card.classList.add('selected-card');
-            _explodeCardShards(card);
+
+            // Dismiss unselected cards immediately
             const cx = window.innerWidth / 2;
             const cy = window.innerHeight / 2;
             cards.forEach(other => {
               if (other === card) return;
               const rect = other.getBoundingClientRect();
-              other.style.transition = 'transform 0.38s cubic-bezier(0.55,0,1,0.45), opacity 0.38s ease-in';
+              other.style.transition = 'transform 0.3s cubic-bezier(0.55,0,1,0.45), opacity 0.3s ease-in';
               other.style.transform = `translate(${cx - rect.left - rect.width / 2}px, ${cy - rect.top - rect.height / 2}px) scale(0) rotate(540deg)`;
               other.style.opacity = '0';
               other.classList.add('reject-card');
             });
-            setTimeout(() => {
-              const v = document.getElementById('levelup-vortex');
-              if (v && v.parentNode) v.parentNode.removeChild(v);
-              _applyAndClose(u);
-            }, 550);
+
+            card.classList.add('selected-card');
+
+            // Confetti + black hole FX, then apply
+            if (window.LevelUpFX && window.LevelUpFX.confettiAndBlackHole) {
+              window.LevelUpFX.confettiAndBlackHole(card, u.rarity || 'common', function() {
+                const v = document.getElementById('levelup-vortex');
+                if (v && v.parentNode) v.parentNode.removeChild(v);
+                _applyAndClose(u);
+              });
+            } else {
+              _explodeCardShards(card);
+              setTimeout(() => {
+                const v = document.getElementById('levelup-vortex');
+                if (v && v.parentNode) v.parentNode.removeChild(v);
+                _applyAndClose(u);
+              }, 550);
+            }
           }, { once: true });
 
           cardFrag.appendChild(card);
