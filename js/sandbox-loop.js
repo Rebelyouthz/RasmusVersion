@@ -5664,6 +5664,8 @@
     window.scene = scene = new THREE.Scene();
     scene.background = new THREE.Color(0x1a1a2e);
     scene.fog = new THREE.Fog(0x1a1a2e, 40, 120);
+    // XP Star system init (Prompt A STEP 5)
+    try { if (window.XpStarSystem && typeof window.XpStarSystem.init === 'function') window.XpStarSystem.init(scene); } catch(_) {}
 
     // Camera (top-down, slightly angled — matching main game)
     window.camera = camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 400);
@@ -7466,6 +7468,12 @@
       if (window.BloodSystem && typeof BloodSystem.update === 'function') {
         BloodSystem.update();
       }
+      // XP Star system update (Prompt A STEP 4)
+      try {
+        if (window.XpStarSystem && typeof window.XpStarSystem.update === 'function' && player && player.mesh) {
+          window.XpStarSystem.update(dt, player.mesh.position);
+        }
+      } catch (_xpStarUpdateErr) { /* silent */ }
       if (window.GoreSim && typeof window.GoreSim.update === 'function') {
         window.GoreSim.update(dt);
       }

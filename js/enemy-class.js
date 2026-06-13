@@ -3286,6 +3286,14 @@
         const _isBossKill  = !!this.isFlyingBoss;
         const _isEliteKill = !!this.isMiniBoss;
         const xpAmount = _isBossKill ? 50 : (_isEliteKill ? 20 : 5);
+        // ── XP Star spawn (STEP 3 - Prompt A) ──────────────────────
+        try {
+          if (window.XpStarSystem && typeof window.XpStarSystem.spawn === 'function') {
+            const _rarity = _isBossKill ? 'legendary' : (_isEliteKill ? 'rare' : 'common');
+            const _pos = this.mesh ? this.mesh.position : { x: 0, y: 0.5, z: 0 };
+            window.XpStarSystem.spawn(_pos, xpAmount, null, window.camera);
+          }
+        } catch (_xpStarErr) { console.warn('[XPStar] spawn failed:', _xpStarErr); }
         if (typeof addAccountXP === 'function') {
           addAccountXP(xpAmount);
         } else if (window.GameAccount && typeof window.GameAccount.addXP === 'function' && window.saveData) {

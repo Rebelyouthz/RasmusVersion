@@ -803,6 +803,8 @@
         window.BloodSimulatorV21._initScene = null;
       }
       if (window.BloodV2 && typeof window.BloodV2.reset === 'function') window.BloodV2.reset();
+      // XP Star reset (Prompt A STEP 6)
+      try { if (window.XpStarSystem && typeof window.XpStarSystem.reset === 'function') window.XpStarSystem.reset(); } catch (_) {}
       
       // Reset lava timers
       window._lavaDamageTimer = 0;
