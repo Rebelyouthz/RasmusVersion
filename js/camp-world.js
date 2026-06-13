@@ -438,7 +438,7 @@
     try { _buildMapFence(); } catch(e) { console.error('[CampWorld] _buildMapFence failed:', e); }
 
     // ── Spawn elevator (black cylinder with gold contours) ──
-    try { _buildSpawnElevator(); } catch(e) { console.error('[CampWorld] _buildSpawnElevator failed:', e); }
+    try { _buildWaterSpawnPool(); } catch(e) { console.error('[CampWorld] water pool build failed:', e); }
 
     // ── Extra trees, branches, logs, and grass patches ──────
     try { _buildExtraVegetation(); } catch(e) { console.error('[CampWorld] _buildExtraVegetation failed:', e); }
@@ -1196,104 +1196,155 @@
 
   // ── Spawn elevator – black cylinder with gold/silver contours ──
   // ── Eye of Horus Spawn Portal (animated black/gold doors) ─────────────
-  let _eyeOfHorusDoors = null;
-  let _horusDoorState  = 'closed'; // 'closed' | 'opening' | 'open' | 'closing'
-  let _horusDoorT      = 0;
-  const HORUS_DOOR_DURATION = 1.1;
-  function _buildSpawnElevator() {
+
+  // ─── Water Spawn Pool (replaces old elevator) ──────────────────────────
+  let _waterPool = null;       // { root, water, waterMat, ripples[], light, pos }
+  let _waterSpawnPhase = 'idle'; // 'idle' | 'pre' | 'splash' | 'rise' | 'settle'
+  let _waterSpawnT = 0;
+  const _splashDrops = [];
+
+  function _buildWaterSpawnPool() {
     const THREE = T();
     const POS = { x: 0, y: 0, z: 6 };
     const group = new THREE.Group();
-    group.position.set(POS.x, 0.005, POS.z);
+    group.position.set(POS.x, 0.02, POS.z);
 
-    // Black oval base ring
-    const baseRingGeo = new THREE.RingGeometry(1.9, 2.15, 64);
-    const baseRingMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, metalness: 1.0, roughness: 0.25, side: THREE.DoubleSide });
-    const baseRing = new THREE.Mesh(baseRingGeo, baseRingMat);
-    baseRing.rotation.x = -Math.PI / 2;
-    baseRing.scale.set(1.0, 1.0, 0.62);
-    group.add(baseRing);
+    // ── Stone rim around the pool ─────────────────────────────
+    const rimGeo = new THREE.TorusGeometry(2.0, 0.18, 8, 48);
+    const rimMat = new THREE.MeshStandardMaterial({ color: 0x3a2a1a, metalness: 0.2, roughness: 0.85 });
+    const rim = new THREE.Mesh(rimGeo, rimMat);
+    rim.rotation.x = -Math.PI / 2;
+    group.add(rim);
 
-    // Gold trim outside the base ring
-    const goldTrimGeo = new THREE.RingGeometry(2.12, 2.22, 64);
-    const goldTrimMat = new THREE.MeshStandardMaterial({ color: 0xFFD700, emissive: 0xC9A227, emissiveIntensity: 0.9, metalness: 1.0, roughness: 0.18, side: THREE.DoubleSide });
-    const goldTrim = new THREE.Mesh(goldTrimGeo, goldTrimMat);
-    goldTrim.rotation.x = -Math.PI / 2;
-    goldTrim.scale.set(1.0, 1.0, 0.62);
-    goldTrim.position.y = 0.002;
-    group.add(goldTrim);
+    // ── Gold inlay on top of rim ──────────────────────────────
+    const inlayGeo = new THREE.TorusGeometry(2.0, 0.04, 6, 48);
+    const inlayMat = new THREE.MeshStandardMaterial({ color: 0xFFD700, emissive: 0xC9A227, emissiveIntensity: 0.7, metalness: 1.0, roughness: 0.2 });
+    const inlay = new THREE.Mesh(inlayGeo, inlayMat);
+    inlay.rotation.x = -Math.PI / 2;
+    inlay.position.y = 0.12;
+    group.add(inlay);
 
-    // Inner pupil group (gold iris + glowing yellow pupil + Horus teardrop)
-    const pupilGroup = new THREE.Group();
-    pupilGroup.position.y = 0.012;
+    // ── Water surface ─────────────────────────────────────────
+    const waterGeo = new THREE.CircleGeometry(1.92, 64);
+    const waterMat = new THREE.MeshStandardMaterial({
+      color: 0x1a6090, transparent: true, opacity: 0.92,
+      metalness: 0.4, roughness: 0.15, emissive: 0x062035, emissiveIntensity: 0.4
+    });
+    const water = new THREE.Mesh(waterGeo, waterMat);
+    water.rotation.x = -Math.PI / 2;
+    water.position.y = -0.02;
+    group.add(water);
 
-    const irisGeo = new THREE.RingGeometry(0.42, 0.55, 48);
-    const irisMat = new THREE.MeshStandardMaterial({ color: 0xFFD700, emissive: 0xC9A227, emissiveIntensity: 1.1, metalness: 0.9, roughness: 0.2, side: THREE.DoubleSide });
-    const iris = new THREE.Mesh(irisGeo, irisMat);
-    iris.rotation.x = -Math.PI / 2;
-    pupilGroup.add(iris);
-
-    const pupilGeo = new THREE.CircleGeometry(0.40, 32);
-    const pupilMat = new THREE.MeshBasicMaterial({ color: 0xFFE45A, transparent: true, opacity: 0.95, side: THREE.DoubleSide });
-    const pupil = new THREE.Mesh(pupilGeo, pupilMat);
-    pupil.rotation.x = -Math.PI / 2;
-    pupil.position.y = 0.002;
-    pupilGroup.add(pupil);
-
-    const tearShape = new THREE.Shape();
-    tearShape.moveTo(0, 0);
-    tearShape.bezierCurveTo(0.05, -0.20, 0.30, -0.45, 0.55, -0.50);
-    tearShape.bezierCurveTo(0.30, -0.55, 0.10, -0.40, 0.10, -0.05);
-    tearShape.lineTo(0, 0);
-    const tearGeo = new THREE.ShapeGeometry(tearShape);
-    const tearMat = new THREE.MeshBasicMaterial({ color: 0xFFD700, transparent: true, opacity: 0.85, side: THREE.DoubleSide });
-    const tear = new THREE.Mesh(tearGeo, tearMat);
-    tear.rotation.x = -Math.PI / 2;
-    tear.position.set(0.05, 0.003, 0.35);
-    pupilGroup.add(tear);
-
-    group.add(pupilGroup);
-
-    // Two black half-oval doors that slide apart along X
-    function _makeDoorMesh(side) {
-      const sgn = side === 'left' ? -1 : 1;
-      const shape = new THREE.Shape();
-      const halfW = 2.10, halfH = 1.30;
-      if (sgn < 0) {
-        shape.moveTo(0, 0);
-        shape.bezierCurveTo(0, halfH * 0.95, -halfW * 0.5, halfH, -halfW, 0);
-        shape.bezierCurveTo(-halfW * 0.5, -halfH, 0, -halfH * 0.95, 0, 0);
-      } else {
-        shape.moveTo(0, 0);
-        shape.bezierCurveTo(0, halfH * 0.95, halfW * 0.5, halfH, halfW, 0);
-        shape.bezierCurveTo(halfW * 0.5, -halfH, 0, -halfH * 0.95, 0, 0);
-      }
-      const geo = new THREE.ShapeGeometry(shape, 48);
-      const mat = new THREE.MeshStandardMaterial({ color: 0x050505, metalness: 1.0, roughness: 0.22, side: THREE.DoubleSide });
-      const m = new THREE.Mesh(geo, mat);
-      m.rotation.x = -Math.PI / 2;
-      m.position.y = 0.018;
-      m.scale.z = 0.62;
-      const wrap = new THREE.Group();
-      wrap.add(m);
-      wrap.userData.side = side;
-      return wrap;
+    // ── Ripple rings (3 of them, animated) ────────────────────
+    const ripples = [];
+    for (let i = 0; i < 3; i++) {
+      const rGeo = new THREE.RingGeometry(0.2, 0.24, 48);
+      const rMat = new THREE.MeshBasicMaterial({ color: 0x66ccff, transparent: true, opacity: 0.55, side: THREE.DoubleSide });
+      const r = new THREE.Mesh(rGeo, rMat);
+      r.rotation.x = -Math.PI / 2;
+      r.position.y = 0.005;
+      r.userData.phase = i / 3;
+      group.add(r);
+      ripples.push(r);
     }
-    const doorLeft  = _makeDoorMesh('left');
-    const doorRight = _makeDoorMesh('right');
-    group.add(doorLeft);
-    group.add(doorRight);
 
-    // Soft golden glow light from eye centre
-    const eyeLight = new THREE.PointLight(0xFFD24A, 1.4, 6, 2);
-    eyeLight.position.set(0, 0.45, 0);
-    group.add(eyeLight);
+    // ── Soft blue light from the pool ─────────────────────────
+    const poolLight = new THREE.PointLight(0x66ccff, 1.0, 5, 2);
+    poolLight.position.set(0, 0.5, 0);
+    group.add(poolLight);
 
     _campScene.add(group);
+    _waterPool = { root: group, water, waterMat, ripples, light: poolLight, pos: POS };
+  }
 
-    _eyeOfHorusDoors = { root: group, left: doorLeft, right: doorRight, pupil: pupilGroup, pupilMat, tearMat, irisMat, light: eyeLight, pos: POS };
-    _horusDoorState = 'closed';
-    _horusDoorT     = 0;
+  function _spawnFromWater() {
+    _waterSpawnPhase = 'pre';
+    _waterSpawnT = 0;
+    if (_playerMesh) {
+      _playerMesh.position.set(0, -1.0, 6);
+      _playerMesh.visible = false;
+    }
+  }
+
+  function _updateWaterSpawn(dt) {
+    if (!_waterPool) return;
+    // Always animate ripples (idle pulse)
+    for (let i = 0; i < _waterPool.ripples.length; i++) {
+      const r = _waterPool.ripples[i];
+      const phase = (_campTime * 0.35 + r.userData.phase) % 1;
+      const scale = 0.4 + phase * 2.0;
+      r.scale.set(scale, scale, 1);
+      if (r.material) r.material.opacity = Math.max(0, 0.55 * (1 - phase));
+    }
+
+    if (_waterSpawnPhase === 'idle') return;
+    _waterSpawnT += dt;
+    const THREE = T();
+
+    if (_waterSpawnPhase === 'pre') {
+      const t = Math.min(1, _waterSpawnT / 0.4);
+      _waterPool.waterMat.emissiveIntensity = 0.4 + t * 1.2;
+      _waterPool.light.intensity = 1.0 + t * 2.5;
+      if (t >= 1) { _waterSpawnPhase = 'splash'; _waterSpawnT = 0; _doSplash(); }
+    }
+    else if (_waterSpawnPhase === 'splash') {
+      if (_playerMesh) { _playerMesh.visible = true; _playerMesh.position.y = 1.5; }
+      const t = Math.min(1, _waterSpawnT / 0.25);
+      _waterPool.waterMat.emissiveIntensity = 1.6 - t * 0.6;
+      if (t >= 1) { _waterSpawnPhase = 'settle'; _waterSpawnT = 0; }
+    }
+    else if (_waterSpawnPhase === 'settle') {
+      const t = Math.min(1, _waterSpawnT / 0.6);
+      const ease = t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2;
+      const PLAYER_RADIUS_CAMP = 0.5;
+      if (_playerMesh) _playerMesh.position.y = 1.5 - (1.5 - PLAYER_RADIUS_CAMP) * ease;
+      _waterPool.waterMat.emissiveIntensity = 1.0 - 0.6 * ease;
+      _waterPool.light.intensity = 3.5 - 2.5 * ease;
+      if (t >= 1) {
+        _waterSpawnPhase = 'idle';
+        _waterPool.waterMat.emissiveIntensity = 0.4;
+        _waterPool.light.intensity = 1.0;
+        if (_playerMesh) _playerMesh.position.y = PLAYER_RADIUS_CAMP;
+      }
+    }
+  }
+
+  function _doSplash() {
+    const THREE = T();
+    try {
+      const dGeo = new THREE.SphereGeometry(0.07, 6, 6);
+      const dMat = new THREE.MeshBasicMaterial({ color: 0x66ccff, transparent: true, opacity: 0.9 });
+      for (let i = 0; i < 40; i++) {
+        const d = new THREE.Mesh(dGeo, dMat.clone());
+        d.position.set(0, 0.1, 6);
+        const a = Math.random() * Math.PI * 2;
+        const rr = 0.3 + Math.random() * 0.8;
+        d.userData.vx = Math.cos(a) * rr * 3.5;
+        d.userData.vy = 4 + Math.random() * 3;
+        d.userData.vz = Math.sin(a) * rr * 3.5;
+        d.userData.life = 1.0;
+        _campScene.add(d);
+        _splashDrops.push(d);
+      }
+      try { const s = new Audio('assets/sounds/water_splash.mp3'); s.volume = 0.6; s.play().catch(function(){}); } catch (_) {}
+    } catch (_) {}
+  }
+
+  function _updateSplashDrops(dt) {
+    for (let i = _splashDrops.length - 1; i >= 0; i--) {
+      const d = _splashDrops[i];
+      d.userData.life -= dt;
+      d.position.x += d.userData.vx * dt;
+      d.position.y += d.userData.vy * dt;
+      d.position.z += d.userData.vz * dt;
+      d.userData.vy -= 9.8 * dt;
+      if (d.material) d.material.opacity = Math.max(0, d.userData.life * 0.9);
+      if (d.userData.life <= 0 || d.position.y < -0.5) {
+        _campScene.remove(d);
+        if (d.material) d.material.dispose();
+        _splashDrops.splice(i, 1);
+      }
+    }
   }
 
   // ── Player name (read from saveData / localStorage / fallback) ──────
@@ -1311,172 +1362,6 @@
   let _cinCallback = null;
   const _cinDust = [];
 
-  function _playSpawnCinematic() {
-    const THREE = T();
-    if (!_campCamera || !_campScene) return;
-    _cinSavedCam = {
-      pos: _campCamera.position.clone(),
-      fov: _campCamera.fov
-    };
-    if (typeof window._openHorusDoors === 'function') window._openHorusDoors();
-    try {
-      const r = new Audio('assets/sounds/door_rumble.mp3');
-      r.volume = 0.7;
-      r.play().catch(function(){});
-    } catch (_) {}
-    try {
-      const dustGeo = new THREE.SphereGeometry(0.04, 4, 4);
-      const dustMat = new THREE.MeshBasicMaterial({ color: 0xaaaaaa, transparent: true, opacity: 0.65 });
-      for (let i = 0; i < 30; i++) {
-        const d = new THREE.Mesh(dustGeo, dustMat.clone());
-        d.position.set(0, 0.05, 6);
-        const a = Math.random() * Math.PI * 2;
-        d.userData.vx = Math.cos(a) * (0.8 + Math.random() * 1.5);
-        d.userData.vy = 0.6 + Math.random() * 1.4;
-        d.userData.vz = Math.sin(a) * (0.8 + Math.random() * 1.5);
-        d.userData.life = 1.2;
-        _campScene.add(d);
-        _cinDust.push(d);
-      }
-    } catch (_) {}
-    _cinPhase = 'zoom-in';
-    _cinT = 0;
-  }
-
-  function _updateSpawnCinematic(dt) {
-    if (_cinPhase === 'idle') return;
-    _cinT += dt;
-    const THREE = T();
-    // Update dust particles
-    for (let i = _cinDust.length - 1; i >= 0; i--) {
-      const d = _cinDust[i];
-      d.userData.life -= dt;
-      d.position.x += d.userData.vx * dt;
-      d.position.y += d.userData.vy * dt;
-      d.position.z += d.userData.vz * dt;
-      d.userData.vy -= 4 * dt;
-      if (d.material) d.material.opacity = Math.max(0, d.userData.life / 1.2 * 0.65);
-      if (d.userData.life <= 0) {
-        _campScene.remove(d);
-        if (d.material) d.material.dispose();
-        _cinDust.splice(i, 1);
-      }
-    }
-    if (!_cinSavedCam) return;
-    if (_cinPhase === 'zoom-in') {
-      const t = Math.min(1, _cinT / 0.8);
-      const ease = t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2;
-      const target = new THREE.Vector3(0, 1.6, 4.0);
-      _campCamera.position.lerpVectors(_cinSavedCam.pos, target, ease);
-      _campCamera.fov = 60 - (60 - 35) * ease;
-      _campCamera.updateProjectionMatrix();
-      _campCamera.lookAt(0, 0.6, 6);
-      if (t >= 1) { _cinPhase = 'rise'; _cinT = 0; }
-    }
-    else if (_cinPhase === 'rise') {
-      const t = Math.min(1, _cinT / 1.2);
-      const ease = t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2;
-      const PLAYER_RADIUS_CIN = 0.4;
-      if (_playerMesh) _playerMesh.position.y = -1.4 + (PLAYER_RADIUS_CIN - (-1.4)) * ease;
-      if (t >= 1) { _cinPhase = 'shutter'; _cinT = 0; _doShutterFlash(); _doNameSlash(); }
-    }
-    else if (_cinPhase === 'shutter') {
-      window._timeScale = 0.15;
-      if (_cinT >= 0.6) { window._timeScale = 1.0; _cinPhase = 'zoom-out'; _cinT = 0; }
-    }
-    else if (_cinPhase === 'zoom-out') {
-      const t = Math.min(1, _cinT / 0.9);
-      const ease = t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2;
-      const fromPos = new THREE.Vector3(0, 1.6, 4.0);
-      _campCamera.position.lerpVectors(fromPos, _cinSavedCam.pos, ease);
-      _campCamera.fov = 35 + (60 - 35) * ease;
-      _campCamera.updateProjectionMatrix();
-      if (t >= 1) {
-        _cinPhase = 'idle';
-        _campCamera.position.copy(_cinSavedCam.pos);
-        _campCamera.fov = _cinSavedCam.fov;
-        _campCamera.updateProjectionMatrix();
-        _cinSavedCam = null;
-        if (typeof window._closeHorusDoors === 'function') window._closeHorusDoors();
-        if (_cinCallback) { try { _cinCallback(); } catch(_) {} _cinCallback = null; }
-      }
-    }
-  }
-
-  function _doShutterFlash() {
-    try {
-      const flash = document.createElement('div');
-      flash.style.cssText = 'position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:9997;transition:opacity 0.08s ease-out;';
-      document.body.appendChild(flash);
-      requestAnimationFrame(function () {
-        flash.style.opacity = '0.9';
-        setTimeout(function () {
-          flash.style.transition = 'opacity 0.25s ease-out';
-          flash.style.opacity = '0';
-          setTimeout(function () { try { flash.remove(); } catch (_) {} }, 280);
-        }, 80);
-      });
-      document.body.classList.add('screen-shake');
-      setTimeout(function () { document.body.classList.remove('screen-shake'); }, 100);
-      try {
-        const s = new Audio('assets/sounds/camera_shutter.mp3');
-        s.volume = 0.5; s.play().catch(function(){});
-      } catch (_) {}
-    } catch (_) {}
-  }
-
-  function _doNameSlash() {
-    try {
-      const name = _playerName();
-      const slash = document.createElement('div');
-      slash.className = 'horus-name-slash';
-      slash.textContent = name;
-      document.body.appendChild(slash);
-      try {
-        const s = new Audio('assets/sounds/swoosh.mp3');
-        s.volume = 0.55; s.play().catch(function(){});
-      } catch (_) {}
-      requestAnimationFrame(function () {
-        slash.classList.add('show');
-        setTimeout(function () {
-          slash.classList.remove('show');
-          slash.classList.add('exit');
-          setTimeout(function () { try { slash.remove(); } catch (_) {} }, 280);
-        }, 450);
-      });
-    } catch (_) {}
-  }
-
-    window._openHorusDoors  = function () { if (!_eyeOfHorusDoors) return; _horusDoorState = 'opening'; _horusDoorT = 0; };
-  window._closeHorusDoors = function () { if (!_eyeOfHorusDoors) return; _horusDoorState = 'closing'; _horusDoorT = 0; };
-
-  function _updateEyeOfHorusDoors(dt) {
-    if (!_eyeOfHorusDoors) return;
-    const e = _eyeOfHorusDoors;
-    if (_horusDoorState === 'closed' && e.pupilMat) {
-      const pulse = 0.85 + 0.15 * Math.sin(_campTime * 2.4);
-      e.pupilMat.opacity = pulse;
-      if (e.irisMat) e.irisMat.emissiveIntensity = 0.7 + 0.4 * pulse;
-      if (e.light)   e.light.intensity = 1.0 + 0.6 * pulse;
-    }
-    if (_horusDoorState === 'opening' || _horusDoorState === 'closing') {
-      _horusDoorT += dt;
-      const tt = Math.min(1, _horusDoorT / HORUS_DOOR_DURATION);
-      const ease = tt < 0.5 ? 2*tt*tt : 1 - Math.pow(-2*tt+2, 2)/2;
-      const k = (_horusDoorState === 'opening') ? ease : (1 - ease);
-      const slide = k * 2.4;
-      e.left.position.x  = -slide;
-      e.right.position.x =  slide;
-      if (e.pupilMat) e.pupilMat.opacity = Math.max(0, 0.95 * (1 - k));
-      if (e.tearMat)  e.tearMat.opacity  = Math.max(0, 0.85 * (1 - k));
-      if (e.irisMat)  e.irisMat.emissiveIntensity = 0.8 + k * 1.4;
-      if (e.light)    e.light.intensity = 1.0 + k * 3.5;
-      if (tt >= 1) {
-        _horusDoorState = (_horusDoorState === 'opening') ? 'open' : 'closed';
-        _horusDoorT = 0;
-      }
-    }
-  }
   // ── Extra trees, branches, logs, and grass patches ──
   // Carefully placed to avoid overlapping existing structures.
   function _buildExtraVegetation() {
@@ -7752,16 +7637,12 @@
     // Reset player to spawn — wrap in try/catch so any unexpected setup
     // failure does not block camp activation (scene is already built).
     try {
-      const _portalPos = (_eyeOfHorusDoors && _eyeOfHorusDoors.pos) ? _eyeOfHorusDoors.pos : { x: 0, z: 6 };
-      _playerPos.x = _portalPos.x;
-      _playerPos.z = _portalPos.z;
+      _playerPos.x = 0;
+      _playerPos.z = 6;
       _playerVel.x = 0;
       _playerVel.z = 0;
-      if (_playerMesh) {
-        _playerMesh.position.set(_playerPos.x, -1.4, _playerPos.z); // start below ground
-        _playerMesh.visible = true;
-      }
-      try { _playSpawnCinematic(); } catch (_cinErr) { console.warn('[CampWorld] cinematic failed:', _cinErr); }
+      if (_playerMesh) { _playerMesh.position.set(0, -1.0, 6); _playerMesh.visible = false; }
+      try { _spawnFromWater(); } catch (e) { console.warn('[CampWorld] water spawn failed:', e); if (_playerMesh) { _playerMesh.position.set(0, 0.5, 3); _playerMesh.visible = true; } }
       _updateCamera(0);
 
       // Refresh building visibility
@@ -8467,8 +8348,8 @@
     dt = Math.max(0.001, Math.min(dt, 0.05));
     _updateFire(dt);
     _updateParticles(dt);
-    _updateEyeOfHorusDoors(dt);
-    _updateSpawnCinematic(dt);
+    _updateWaterSpawn(dt);
+    _updateSplashDrops(dt);
     _updateBennyNPC(dt);
     _updateIncubator(dt);
     _updateAidaOrbit(dt);
