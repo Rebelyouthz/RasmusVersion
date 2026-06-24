@@ -93,13 +93,18 @@
   }
   </script>
 
-  <!-- Load order important - core first (you may need to adjust if some scripts assume order) -->
+  <!-- Load rebalance FIRST so hooks are in place -->
+  <script src="js/rebalance.js"></script>
+
+  <!-- Core scripts (order matters for globals) -->
   <script src="js/input-system.js"></script>
   <script src="js/main.js"></script>
   <script src="js/player-class.js"></script>
   <script src="js/game-screens.js"></script>
+  <script src="js/level-up-system.js"></script>
+  <script src="js/quest-system.js"></script>
+  <script src="js/camp-skill-system.js"></script>
   <script src="js/sandbox-loop.js"></script>
-  <!-- Add more as needed for full features (quest, camp-skill, level-up etc will be auto if they attach to window) -->
 
 </body>
 </html>
