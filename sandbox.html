@@ -1,46 +1,105 @@
-<!-- Mobile Swipe & Dash Controls added -->
-<!-- Existing content would be here, but appending for simplicity -->
-<div id="mobile-controls" style="position: fixed; bottom: 20px; left: 20px; right: 20px; display: none; z-index: 10000; pointer-events: none;">
-  <div id="swipe-zone" style="position: absolute; bottom: 100px; left: 20px; width: 200px; height: 200px; border: 4px solid rgba(0,255,255,0.5); border-radius: 50%; background: rgba(0,255,255,0.15); pointer-events: auto;"></div>
-  <button id="dash-btn" style="position: absolute; bottom: 140px; right: 40px; width: 90px; height: 90px; background: radial-gradient(circle, #ff00ff, #aa0088); border: 5px solid #ffffff; border-radius: 50%; color: white; font-size: 20px; font-weight: bold; box-shadow: 0 0 30px #ff00ff; pointer-events: auto;">DASH</button>
-</div>
-<script>
-// Mobile controls script
-let touchStartX = 0, touchStartY = 0;
-const swipeZone = document.getElementById('swipe-zone');
-const dashBtn = document.getElementById('dash-btn');
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Waterdrop Survivor - Rasmus Version</title>
+  <style>
+    html, body { margin:0; padding:0; overflow:hidden; background:#1a1a2e; font-family: monospace; color:#fff; }
+    #game-container { position: absolute; top:0; left:0; width:100%; height:100%; }
+    canvas { display:block; }
 
-if (swipeZone) {
-  swipeZone.addEventListener('touchstart', e => {
-    touchStartX = e.changedTouches[0].screenX;
-    touchStartY = e.changedTouches[0].screenY;
-  });
-  swipeZone.addEventListener('touchmove', e => {
-    if (!window.playerInput) return;
-    const dx = (e.changedTouches[0].screenX - touchStartX) / 60;
-    const dy = (e.changedTouches[0].screenY - touchStartY) / 60;
-    window.playerInput.moveX = Math.max(-1, Math.min(1, dx));
-    window.playerInput.moveY = Math.max(-1, Math.min(1, dy));
-  });
-  swipeZone.addEventListener('touchend', () => {
-    if (window.playerInput) {
-      window.playerInput.moveX = 0;
-      window.playerInput.moveY = 0;
+    /* Responsive UI for PC + Phone */
+    .menu, .modal, #camp-screen, #battle-pass, #battlepass-panel, .levelup-modal, .quest-modal {
+      max-width: min(92vw, 520px) !important;
+      left: 50% !important;
+      right: auto !important;
+      transform: translateX(-50%) !important;
+      box-sizing: border-box;
     }
-  });
-}
 
-if (dashBtn) {
-  dashBtn.addEventListener('touchstart', e => {
-    e.preventDefault();
-    if (typeof window.performDash === 'function') window.performDash();
-    else if (window.player && typeof window.player.dash === 'function') window.player.dash();
-  });
-}
+    /* Bottom action buttons (back, camp, battle pass etc) - fit screen on PC */
+    .bottom-ui, #back-btn, #camp-btn, .camp-button, [id*="camp"], [id*="back"], [class*="bottom-btn"] {
+      position: fixed !important;
+      bottom: 12px !important;
+      right: 12px !important;
+      left: auto !important;
+      transform: none !important;
+      z-index: 10001;
+    }
 
-// Show on mobile
-if (/Mobi|Android/i.test(navigator.userAgent)) {
-  const controls = document.getElementById('mobile-controls');
-  if (controls) controls.style.display = 'block';
-}
-</script>
+    .bottom-ui.left { right: auto !important; left: 12px !important; }
+
+    /* Make sure battle pass and large panels don't go off right on wide screens */
+    #battle-pass, #battlepass, .battle-pass {
+      max-width: min(95vw, 480px);
+      overflow: auto;
+      max-height: 80vh;
+    }
+
+    /* General modals */
+    .modal { background: rgba(20,20,40,0.95); border: 3px solid #4fd; border-radius: 8px; padding: 12px; }
+
+    /* Mobile controls already in script below */
+  </style>
+</head>
+<body>
+  <div id="game-container"></div>
+
+  <!-- Mobile Swipe & Dash Controls -->
+  <div id="mobile-controls" style="position: fixed; bottom: 20px; left: 20px; right: 20px; display: none; z-index: 10000; pointer-events: none;">
+    <div id="swipe-zone" style="position: absolute; bottom: 100px; left: 20px; width: 200px; height: 200px; border: 4px solid rgba(0,255,255,0.5); border-radius: 50%; background: rgba(0,255,255,0.15); pointer-events: auto;"></div>
+    <button id="dash-btn" style="position: absolute; bottom: 140px; right: 40px; width: 90px; height: 90px; background: radial-gradient(circle, #ff00ff, #aa0088); border: 5px solid #ffffff; border-radius: 50%; color: white; font-size: 20px; font-weight: bold; box-shadow: 0 0 30px #ff00ff; pointer-events: auto;">DASH</button>
+  </div>
+
+  <script>
+  // Mobile controls script (kept from your previous fix)
+  let touchStartX = 0, touchStartY = 0;
+  const swipeZone = document.getElementById('swipe-zone');
+  const dashBtn = document.getElementById('dash-btn');
+
+  if (swipeZone) {
+    swipeZone.addEventListener('touchstart', e => {
+      touchStartX = e.changedTouches[0].screenX;
+      touchStartY = e.changedTouches[0].screenY;
+    });
+    swipeZone.addEventListener('touchmove', e => {
+      if (!window.playerInput) return;
+      const dx = (e.changedTouches[0].screenX - touchStartX) / 60;
+      const dy = (e.changedTouches[0].screenY - touchStartY) / 60;
+      window.playerInput.moveX = Math.max(-1, Math.min(1, dx));
+      window.playerInput.moveY = Math.max(-1, Math.min(1, dy));
+    });
+    swipeZone.addEventListener('touchend', () => {
+      if (window.playerInput) {
+        window.playerInput.moveX = 0;
+        window.playerInput.moveY = 0;
+      }
+    });
+  }
+
+  if (dashBtn) {
+    dashBtn.addEventListener('touchstart', e => {
+      e.preventDefault();
+      if (typeof window.performDash === 'function') window.performDash();
+      else if (window.player && typeof window.player.dash === 'function') window.player.dash();
+    });
+  }
+
+  // Show on mobile
+  if (/Mobi|Android/i.test(navigator.userAgent)) {
+    const controls = document.getElementById('mobile-controls');
+    if (controls) controls.style.display = 'block';
+  }
+  </script>
+
+  <!-- Load order important - core first (you may need to adjust if some scripts assume order) -->
+  <script src="js/input-system.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/player-class.js"></script>
+  <script src="js/game-screens.js"></script>
+  <script src="js/sandbox-loop.js"></script>
+  <!-- Add more as needed for full features (quest, camp-skill, level-up etc will be auto if they attach to window) -->
+
+</body>
+</html>
