@@ -106,5 +106,18 @@
   <script src="js/camp-skill-system.js"></script>
   <script src="js/sandbox-loop.js"></script>
 
+  <script>
+  // Final kick: make sure mouse aim + rebalance are active
+  setTimeout(() => {
+    if (window.REBALANCE) console.log('[REBALANCE] Active - roguelike rules loaded');
+    if (typeof window.continuousAimUpdate === 'function') window.continuousAimUpdate();
+    // Force one aim update after everything loaded
+    if (window.gameSettings && player && renderer) {
+      window.gameSettings.lastMouseX = window.innerWidth / 2;
+      window.gameSettings.lastMouseY = window.innerHeight / 2;
+    }
+  }, 1200);
+  </script>
+
 </body>
 </html>
