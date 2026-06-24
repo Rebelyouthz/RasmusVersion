@@ -325,15 +325,14 @@
         gameSettings.lastMouseX = window.innerWidth / 2;
         gameSettings.lastMouseY = window.innerHeight / 2;
         
-        window.addEventListener('mousemove', (e) => {
+        function applyMouseAim(e) {
           gameSettings.lastMouseX = e.clientX;
           gameSettings.lastMouseY = e.clientY;
 
-          // FIX: Make mouse actually aim the player in 3D (rotate toward cursor on the ground plane).
-          // Previously only stored coords; nothing used them to turn player or set shoot direction.
+          // ROBUST mouse aim: rotate player toward mouse on the play plane
           if (player && player.mesh && typeof THREE !== 'undefined' && camera && renderer) {
             try {
-              const rect = renderer.domElement ? renderer.domElement.getBoundingClientRect() : {left:0,top:0,width:window.innerWidth,height:window.innerHeight};
+              const rect = renderer.domElement ? renderer.domElement.getBoundingClientRect() : {left:0, top:0, width: window.innerWidth, height: window.innerHeight};
               const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
               const ndcY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
               const raycaster = new THREE.Raycaster();
@@ -345,22 +344,54 @@
                 const dz = hit.z - player.mesh.position.z;
                 if (dx*dx + dz*dz > 0.01) {
                   const yaw = Math.atan2(dz, dx);
-                  // Adjust rotation for typical character model orientation
                   player.mesh.rotation.y = yaw - Math.PI / 2;
                   player.aimDir = player.aimDir || new THREE.Vector3();
                   const len = Math.sqrt(dx*dx + dz*dz) || 1;
                   player.aimDir.set(dx / len, 0, dz / len);
-                  // Also expose simple globals that projectile/shoot code can use
                   window.lastAimDx = dx / len;
                   window.lastAimDz = dz / len;
                 }
               }
-            } catch (err) {
-              // do not crash the game on aim math error
-            }
+            } catch (err) {}
           }
-        });
-        
+        }
+
+        window.addEventListener('mousemove', applyMouseAim);
+
+        // Also listen directly on the game canvas for better capture
+        setTimeout(() => {
+          const cvs = renderer && renderer.domElement;
+          if (cvs) cvs.addEventListener('mousemove', applyMouseAim);
+        }, 500);
+
+        // Continuous aim updater in case other code overrides rotation every frame
+        function continuousAimUpdate() {
+          if (gameSettings.lastMouseX && player && player.mesh && camera && renderer) {
+            try {
+              const rect = renderer.domElement ? renderer.domElement.getBoundingClientRect() : {left:0,top:0,width:window.innerWidth,height:window.innerHeight};
+              const ndcX = ((gameSettings.lastMouseX - rect.left) / rect.width) * 2 - 1;
+              const ndcY = -((gameSettings.lastMouseY - rect.top) / rect.height) * 2 + 1;
+              const raycaster = new THREE.Raycaster();
+              raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera);
+              const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.5);
+              const hit = new THREE.Vector3();
+              if (raycaster.ray.intersectPlane(plane, hit)) {
+                const dx = hit.x - player.mesh.position.x;
+                const dz = hit.z - player.mesh.position.z;
+                if (dx*dx + dz*dz > 0.01) {
+                  const yaw = Math.atan2(dz, dx);
+                  player.mesh.rotation.y = yaw - Math.PI / 2;
+                  player.aimDir = player.aimDir || new THREE.Vector3();
+                  const len = Math.sqrt(dx*dx + dz*dz) || 1;
+                  player.aimDir.set(dx/len, 0, dz/len);
+                }
+              }
+            } catch(e){}
+          }
+          requestAnimationFrame(continuousAimUpdate);
+        }
+        requestAnimationFrame(continuousAimUpdate);
+
         // Track gamepad button states to detect button press events
         gameSettings.gamepadButtonStates = { dashButton: false };
         
